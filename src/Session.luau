@@ -18,11 +18,11 @@ function Session.new()
 	local self = setmetatable({
 		datastore = nil,
 		connection = nil :: Types.DataStoreConnection?,
-		
+
 		dataStorePages = nil,
-		
+
 		keyPages = nil,
-		
+
 		currentKey = nil,
 		currentValue = nil,
 		currentKeyInfo = nil,
@@ -36,8 +36,8 @@ end
 local actionRequestBudgets = {
 	list = { [Enum.DataStoreRequestType.ListAsync] = 1 },
 	listOrdered = { [Enum.DataStoreRequestType.GetSortedAsync] = 1 },
-	["transfer"] = { [Enum.DataStoreRequestType.SetIncrementAsync] = 1, [Enum.DataStoreRequestType.GetAsync] = 1, },
-	["rename"] = { [Enum.DataStoreRequestType.SetIncrementAsync] = 2, [Enum.DataStoreRequestType.GetAsync] = 1 }
+	["transfer"] = { [Enum.DataStoreRequestType.SetIncrementAsync] = 1, [Enum.DataStoreRequestType.GetAsync] = 1 },
+	["rename"] = { [Enum.DataStoreRequestType.SetIncrementAsync] = 2, [Enum.DataStoreRequestType.GetAsync] = 1 },
 }
 function Session:hasBudgetFor(action: "list" | "listOrdered" | "transfer" | "rename"): boolean
 	for requestType, amount in actionRequestBudgets[action] do
@@ -54,11 +54,11 @@ function Session:tryConnect(connection: Types.DataStoreConnection): (boolean, st
 		local success, err = pcall(function()
 			datastore = DataStoreService:GetOrderedDataStore(connection.name, connection.scope)
 		end)
-		
+
 		if not success then
 			return false, err
 		end
-		
+
 		self:resetKey()
 		self.datastore = datastore
 	else
@@ -68,7 +68,7 @@ function Session:tryConnect(connection: Types.DataStoreConnection): (boolean, st
 		if connection.allScopes then
 			connection.scope = "" -- Has to be to work
 		end
-		
+
 		local success, err = pcall(function()
 			datastore = DataStoreService:GetDataStore(connection.name, connection.scope, params)
 		end)
@@ -80,52 +80,52 @@ function Session:tryConnect(connection: Types.DataStoreConnection): (boolean, st
 		self:resetKey()
 		self.datastore = datastore
 	end
-	
+
 	self.keyPages = nil
 	self.connection = connection
-	
+
 	return true
 end
 
 function Session:tryLoadKey(key: string): (boolean, string?)
 	local params = Instance.new("DataStoreGetOptions")
 	params.UseCache = false
-	
+
 	local value, keyInfo = nil
 	local success, err = pcall(function()
 		value, keyInfo = self.datastore:GetAsync(key, params)
 	end)
-	
+
 	if not success then
 		return false, err
 	end
-	
+
 	self:resetKey()
-	
+
 	self.currentKey = key
 	self.currentValue = value
 	self.currentKeyInfo = keyInfo
-	
+
 	return true
 end
 
 function Session:tryLoadVersion(key: string, version: string): (boolean, string?)
 	assert(not self.connection.isOrdered)
-	
+
 	local value, keyInfo = nil
 	local success, err = pcall(function()
 		value, keyInfo = self.datastore:GetVersionAsync(key, version)
 	end)
-	
+
 	if not success then
 		return false, err
 	end
-	
+
 	self.currentKey = key
 	self.currentValue = value
 	self.currentKeyInfo = keyInfo
 	self.currentVersion = version
-	
+
 	return true
 end
 
@@ -137,9 +137,9 @@ function Session:resetKey()
 	self.versionPages = nil
 end
 
-function Session:trySaveCurrentKey(value: any, userIds: {number}, metadata: {[string]: any})
+function Session:trySaveCurrentKey(value: any, userIds: { number }, metadata: { [string]: any })
 	assert(not self.connection.isOrdered)
-	
+
 	local newValue, newKeyInfo = nil, nil
 	local success, err = pcall(function()
 		-- NOTE: error in the callback will not propagate to the pcall so
@@ -151,13 +151,13 @@ function Session:trySaveCurrentKey(value: any, userIds: {number}, metadata: {[st
 			end
 		end)
 	end)
-	
+
 	if success then
 		self.currentValue = newValue
 		self.currentKeyInfo = newKeyInfo
 		self.currentVersion = nil
 	end
-	
+
 	return success, err
 end
 
@@ -182,48 +182,52 @@ export type TransferKeyOptions = {
 function Session:tryTransferCurrentKey(options: TransferKeyOptions): (boolean, string?)
 	assert(not self.connection.isOrdered)
 	assert(self.datastore)
-	
+
 	local success, err = pcall(function()
 		local setOptions = Instance.new("DataStoreSetOptions")
 		setOptions:SetMetadata(options.metadata)
-		
+
 		self.datastore:SetAsync(options.newKey, options.data, options.userIds, setOptions)
 	end)
-	
+
 	if not success then
 		return false, err
 	end
-	
+
 	if options.deleteKey then
 		local success, err = pcall(function()
 			self.datastore:RemoveAsync(self.currentKey)
 		end)
-		
+
 		if not success then
 			return false, err
 		end
 	end
-	
+
 	return true
 end
 
 function Session:tryDeleteCurrentKeyVersion(version: string)
 	assert(not self.connection.isOrdered)
-	
+
 	local success, err = pcall(function()
 		self.datastore:RemoveVersionAsync(self.currentKey, version)
 	end)
-	
+
 	return success, err
 end
 
-function Session:tryCreateVersionPages(order: Enum.SortDirection, minDate: number?, maxDate: number?): (boolean, string?)
+function Session:tryCreateVersionPages(
+	order: Enum.SortDirection,
+	minDate: number?,
+	maxDate: number?
+): (boolean, string?)
 	assert(not self.connection.isOrdered)
-	
+
 	local pages, err = Pages.wrapListing(function()
 		return self.datastore:ListVersionsAsync(self.currentKey, order, minDate, maxDate, 16)
 	end)
-	
+
 	if err then
 		return false, err
 	else
@@ -237,7 +241,7 @@ function Session:tryCreateDataStorePages(prefix: string?): (boolean, string?)
 	local pages, err = Pages.wrapListing(function()
 		return DataStoreService:ListDataStoresAsync(prefix)
 	end)
-	
+
 	if err then
 		return false, err
 	else
@@ -263,13 +267,17 @@ function Session:tryCreateKeyPages(prefix: string?): (boolean, string?)
 end
 
 -- Ordered data store
-function Session:tryCreateOrderedKeyPages(order: "ascending" | "descending", min: number?, max: number?): (boolean, string?)
+function Session:tryCreateOrderedKeyPages(
+	order: "ascending" | "descending",
+	min: number?,
+	max: number?
+): (boolean, string?)
 	assert(self.connection.isOrdered)
-	
+
 	local pages, err = Pages.wrapListing(function()
 		return self.datastore:GetSortedAsync(order == "ascending", 50, min, max)
 	end)
-	
+
 	if err then
 		return false, err
 	else
@@ -280,11 +288,11 @@ end
 
 function Session:trySetOrderedKey(key: string, value: number): (boolean, string?)
 	assert(self.connection.isOrdered)
-	
+
 	local success, err = pcall(function()
 		self.datastore:SetAsync(key, value)
 	end)
-	
+
 	if success then
 		return true
 	else
@@ -321,8 +329,6 @@ function Session:tryGetOrderedKey(key: string): (number?, string?)
 	end
 end
 
-function Session:destroy()
-	
-end
+function Session:destroy() end
 
 return Session

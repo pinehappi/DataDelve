@@ -17,12 +17,12 @@ function SkeletonStyleState.from(theme, object: GuiObject)
 	local self = setmetatable({
 		theme = theme,
 		object = object,
-		
+
 		skeletonPlaceholders = {},
-		
+
 		_destroyed = false,
 	}, SkeletonStyleState)
-	
+
 	for _, child in object:GetDescendants() do
 		if child:GetAttribute("SkeletonPlaceholder") then
 			local gradient = script.Gradient:Clone()
@@ -36,7 +36,7 @@ function SkeletonStyleState.from(theme, object: GuiObject)
 			})
 		end
 	end
-	
+
 	self:update("instant")
 	return self
 end
@@ -47,17 +47,17 @@ function SkeletonStyleState:animate()
 		local delta = os.clock() - start
 		local a = delta % 2
 		if a <= 0.5 then
-			a = 2*a
+			a = 2 * a
 		else
 			a = 1
 		end
-		
-		local offset = Vector2.new(2*(0.5 - a), 0)
-		
+
+		local offset = Vector2.new(2 * (0.5 - a), 0)
+
 		for _, placeholder in self.skeletonPlaceholders do
 			placeholder.gradient.Offset = offset
 		end
-		
+
 		task.wait()
 	end
 end
@@ -73,9 +73,11 @@ function SkeletonStyleState:update(speed: StyleStateHelper.TransitionSpeed)
 end
 
 function SkeletonStyleState:destroy(completely: boolean)
-	if self._destroyed then return end
+	if self._destroyed then
+		return
+	end
 	self._destroyed = true
-	
+
 	for _, placeholder in self.skeletonPlaceholders do
 		if placeholder.deleteWith then
 			placeholder.object:Destroy()
@@ -85,7 +87,7 @@ function SkeletonStyleState:destroy(completely: boolean)
 			placeholder.gradient:Destroy()
 		end
 	end
-	
+
 	if completely then
 		self.object:Destroy()
 	end

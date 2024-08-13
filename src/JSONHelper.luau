@@ -2,10 +2,10 @@ local HttpService = game:GetService("HttpService")
 
 local JSONHelper = {}
 
-export type JSONType = "string" | "number" | "array"| "object" | "boolean" | "null"
-export type JSONValue = string | number | {[string]: JSONValue} | {JSONValue} | boolean | nil
+export type JSONType = "string" | "number" | "array" | "object" | "boolean" | "null"
+export type JSONValue = string | number | { [string]: JSONValue } | { JSONValue } | boolean | nil
 
--- TODO: this will error if the source string cannot be converted to JSON, like if it had an incorrect encoding issue. 
+-- TODO: this will error if the source string cannot be converted to JSON, like if it had an incorrect encoding issue.
 -- The only time this will pop up is with Import from JSON since these malformed strings cannot be stored in a DataStore.
 function JSONHelper.escapeString(source: string): string
 	return HttpService:JSONEncode(source)
@@ -24,8 +24,8 @@ function JSONHelper.parseInputString(text: string): (JSONType, JSONValue)
 	local trimmed = text:gsub("^%s+", ""):gsub("%s+$", "")
 	local lowered = trimmed:lower()
 
-	if trimmed:sub(1, 1) == "\"" then
-		if trimmed:sub(-1, -1) == "\"" then
+	if trimmed:sub(1, 1) == '"' then
+		if trimmed:sub(-1, -1) == '"' then
 			return "string", trimmed:sub(2, -2)
 		end
 		return "string", trimmed:sub(2)
@@ -54,7 +54,7 @@ function JSONHelper.parseInputString(text: string): (JSONType, JSONValue)
 		else
 			return "string", text
 		end
-	end 
+	end
 end
 
 return JSONHelper

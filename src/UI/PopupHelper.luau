@@ -17,7 +17,7 @@ export type ClampOptions = {
 function PopupHelper.clamp(object: GuiObject, container: GuiBase2d, options: ClampOptions?)
 	options = options or {}
 	options.boundaryDistance = options.boundaryDistance or 10
-	
+
 	if options.tryPivot then
 		if object.AbsolutePosition.X + object.AbsoluteSize.X > container.AbsoluteSize.X then
 			if object.AbsolutePosition.X - object.AbsoluteSize.X > 0 then
@@ -31,8 +31,11 @@ function PopupHelper.clamp(object: GuiObject, container: GuiBase2d, options: Cla
 		end
 	end
 
-	local maxX = container.AbsoluteSize.X - 2*options.boundaryDistance
-	if (object.AbsoluteSize.X >= maxX) and (object.AutomaticSize == Enum.AutomaticSize.X or object.AutomaticSize == Enum.AutomaticSize.XY) then
+	local maxX = container.AbsoluteSize.X - 2 * options.boundaryDistance
+	if
+		(object.AbsoluteSize.X >= maxX)
+		and (object.AutomaticSize == Enum.AutomaticSize.X or object.AutomaticSize == Enum.AutomaticSize.XY)
+	then
 		if object.AutomaticSize == Enum.AutomaticSize.X then
 			object.AutomaticSize = Enum.AutomaticSize.None
 		else
@@ -46,7 +49,7 @@ function PopupHelper.clamp(object: GuiObject, container: GuiBase2d, options: Cla
 
 	local topDistance = (object.AbsolutePosition.Y - container.AbsolutePosition.Y)
 	local bottomDistance = container.AbsoluteSize.Y - (object.AbsolutePosition.Y + object.AbsoluteSize.Y)
-	
+
 	object.Position += UDim2.fromOffset(
 		math.max(0, options.boundaryDistance - leftDistance) - math.max(0, options.boundaryDistance - rightDistance),
 		math.max(0, options.boundaryDistance - topDistance) - math.max(0, options.boundaryDistance - bottomDistance)
@@ -65,10 +68,9 @@ function Attachment:updatePosition()
 		end
 	end
 
-	local position =
-		self.target.AbsolutePosition
+	local position = self.target.AbsolutePosition
 		+ self.target.AbsoluteSize * self.options.anchor
-		+ 2*(self.options.anchor - Vector2.new(0.5, 0.5)) * self.options.offset
+		+ 2 * (self.options.anchor - Vector2.new(0.5, 0.5)) * self.options.offset
 
 	self.object.Position = UDim2.fromOffset(position.X, position.Y)
 end
@@ -104,17 +106,23 @@ function PopupHelper.attach(object: GuiObject, target: GuiObject, options: Attac
 		target = target,
 
 		options = options,
-		_connections = {}
+		_connections = {},
 	}, Attachment)
 
 	attachment:updatePosition()
 
-	table.insert(attachment._connections, target:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-		attachment:updatePosition()
-	end))
-	table.insert(attachment._connections, target:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		attachment:updatePosition()
-	end))
+	table.insert(
+		attachment._connections,
+		target:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+			attachment:updatePosition()
+		end)
+	)
+	table.insert(
+		attachment._connections,
+		target:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			attachment:updatePosition()
+		end)
+	)
 
 	return attachment
 end
@@ -144,7 +152,7 @@ function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: Mod
 	local modal = setmetatable({
 		object = object,
 		blockInputFrame = script.BlockInput:Clone(),
-		_cancelled = Instance.new("BindableEvent")
+		_cancelled = Instance.new("BindableEvent"),
 	}, Modal)
 
 	modal.blockInputFrame.BackgroundTransparency = options.scrimTransparency

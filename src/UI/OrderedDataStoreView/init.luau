@@ -45,35 +45,35 @@ function OrderedDataStoreView.from(
 	self.uiMessages = uiMessages
 	self.connections = {}
 	self.locked = false
-	
+
 	self.activeKey = nil :: string?
-	
+
 	self.order = "descending"
 	self._orderChanged = Instance.new("BindableEvent")
 	self.orderChanged = self._orderChanged.Event
-	
+
 	self.minValue = nil :: number?
 	self.maxValue = nil :: number?
-	
+
 	self._highlightColors = getHighlightColors(self.theme)
-	
+
 	-- Events
-	
+
 	self._listed = Instance.new("BindableEvent")
 	self.listed = self._listed.Event
-	
+
 	self._keyQueried = Instance.new("BindableEvent")
 	self.keyQueried = self._keyQueried.Event
-	
+
 	self._keyEdited = Instance.new("BindableEvent")
 	self.keyEdited = self._keyEdited.Event
-	
+
 	self._keyDeleted = Instance.new("BindableEvent")
 	self.keyDeleted = self._keyDeleted.Event
-	
+
 	self._keyAdded = Instance.new("BindableEvent")
 	self.keyAdded = self._keyAdded.Event
-	
+
 	self.styleStates = {
 		getKey = ShortcutsTextBoxStyleState.from(theme, frame.Key),
 		order = ButtonStyleState.from(theme, frame.Order),
@@ -84,7 +84,7 @@ function OrderedDataStoreView.from(
 		}),
 
 		rangeDash = LabelStyleState.from(theme, frame.RangeDash),
-		
+
 		separators = SeparatorStyleState.fromDescendants(theme, frame),
 
 		loadMore = LoadMoreListStyleState.from(theme, frame.Keys.Table, {
@@ -97,27 +97,31 @@ function OrderedDataStoreView.from(
 				key.Value.Text = info.value
 
 				local function onRightClick()
-					if not key.Key.Active then return end -- It's disabled
-					
+					if not key.Key.Active then
+						return
+					end -- It's disabled
+
 					local gui = frame:FindFirstAncestorWhichIsA("PluginGui")
-					
+
 					loadMoreListStyleState:setSelectingStyleState(styleState)
 					local option = ContextMenuStyleState.prompt(theme, gui, gui:GetRelativeMousePosition(), {
 						options = {
-							{ icon=self.theme.icons.insert, text="Insert" },
-							{ icon=self.theme.icons.delete, text="Delete" },
-						}
+							{ icon = self.theme.icons.insert, text = "Insert" },
+							{ icon = self.theme.icons.delete, text = "Delete" },
+						},
 					})
-					
+
 					if option == "Delete" then
-						if ConfirmDialogStyleState.confirm(theme, gui, gui:GetRelativeMousePosition(), {
+						if
+							ConfirmDialogStyleState.confirm(theme, gui, gui:GetRelativeMousePosition(), {
 								title = "Delete key?",
-								message = "Are you sure you want to do this?"
+								message = "Are you sure you want to do this?",
 							})
 						then
-							if ConfirmDialogStyleState.confirm(theme, gui, gui:GetRelativeMousePosition(), {
+							if
+								ConfirmDialogStyleState.confirm(theme, gui, gui:GetRelativeMousePosition(), {
 									title = "Confirm again",
-									message = `You are going to delete the key <b>{info.key}</b>. This CANNOT be undone.`
+									message = `You are going to delete the key <b>{info.key}</b>. This CANNOT be undone.`,
 								})
 							then
 								self._keyDeleted:Fire(info.key)
@@ -126,10 +130,10 @@ function OrderedDataStoreView.from(
 					elseif option == "Insert" then
 						self:_promptInsert()
 					end
-					
+
 					loadMoreListStyleState:setSelectingStyleState(nil)
 				end
-				
+
 				local function toggleSelect()
 					if loadMoreListStyleState.selectingStyleState == styleState then
 						loadMoreListStyleState:setSelectingStyleState(nil)
@@ -166,7 +170,7 @@ function OrderedDataStoreView.from(
 
 						local attachment = PopupHelper.attach(textBox, key.Value, {
 							anchor = Vector2.new(0, 0),
-							offset = Vector2.new(0, 0)
+							offset = Vector2.new(0, 0),
 						})
 						local modal = PopupHelper.modal(textBox, gui)
 
@@ -189,49 +193,55 @@ function OrderedDataStoreView.from(
 							end
 							cleanup()
 						end)
-						
+
 						-- Weird bug, without this the textbox jitters
 						task.delay(0, function()
 							textBox:CaptureFocus()
 						end)
 					end
 				end)
-				
+
 				key.Key.MouseButton2Click:Connect(onRightClick)
 				key.Value.MouseButton2Click:Connect(onRightClick)
-				
+
 				key.Parent = loadMoreListStyleState.frame
 				return styleState
-			end
+			end,
 		}),
-		
-		tableLabels = LabelStyleState.fromDescendants(theme, frame.Keys)
+
+		tableLabels = LabelStyleState.fromDescendants(theme, frame.Keys),
 	}
-	
+
 	-- Events
-	
-	table.insert(self.connections, theme.colorsChanged:Connect(function()
-		task.wait()
-		
-		self._highlightColors = getHighlightColors(self.theme)
-		self.styleStates.loadMore.frame.BackgroundColor3 = self._highlightColors.background
-		for _, styleState in self.styleStates.loadMore.itemStyleStates do
-			styleState:setHighlightColors(self._highlightColors)
-		end
-		
-		StyleStateHelper.update(self.styleStates)
-	end))
-	
-	table.insert(self.connections, Settings.changed:Connect(function(settingName)
-		if settingName == "highlightColors" then
-			self._highlightColors = getHighlightColors(theme)
+
+	table.insert(
+		self.connections,
+		theme.colorsChanged:Connect(function()
+			task.wait()
+
+			self._highlightColors = getHighlightColors(self.theme)
 			self.styleStates.loadMore.frame.BackgroundColor3 = self._highlightColors.background
 			for _, styleState in self.styleStates.loadMore.itemStyleStates do
-				styleState:setHighlightColors(self._highlightColors):update()
+				styleState:setHighlightColors(self._highlightColors)
 			end
-		end
-	end))
-	
+
+			StyleStateHelper.update(self.styleStates)
+		end)
+	)
+
+	table.insert(
+		self.connections,
+		Settings.changed:Connect(function(settingName)
+			if settingName == "highlightColors" then
+				self._highlightColors = getHighlightColors(theme)
+				self.styleStates.loadMore.frame.BackgroundColor3 = self._highlightColors.background
+				for _, styleState in self.styleStates.loadMore.itemStyleStates do
+					styleState:setHighlightColors(self._highlightColors):update()
+				end
+			end
+		end)
+	)
+
 	-- UI Events
 	self.styleStates.minValue.textBox.FocusLost:Connect(function(entered: boolean)
 		local number = tonumber(self.styleStates.minValue.textBox.Text)
@@ -243,15 +253,13 @@ function OrderedDataStoreView.from(
 		else
 			self.minValue = nil
 		end
-		self.styleStates.minValue.textBox.Text =
-			if self.minValue then tostring(self.minValue)
-			else ""
-		
+		self.styleStates.minValue.textBox.Text = if self.minValue then tostring(self.minValue) else ""
+
 		if entered then
 			self._listed:Fire()
 		end
 	end)
-	
+
 	self.styleStates.maxValue.textBox.FocusLost:Connect(function(entered: boolean)
 		local number = tonumber(self.styleStates.maxValue.textBox.Text)
 		if number then
@@ -262,15 +270,13 @@ function OrderedDataStoreView.from(
 		else
 			self.maxValue = nil
 		end
-		self.styleStates.maxValue.textBox.Text =
-			if self.maxValue then tostring(self.maxValue)
-			else ""
+		self.styleStates.maxValue.textBox.Text = if self.maxValue then tostring(self.maxValue) else ""
 
 		if entered then
 			self._listed:Fire()
 		end
 	end)
-	
+
 	self.styleStates.order.button.Activated:Connect(function()
 		if self.order == "ascending" then
 			self.order = "descending"
@@ -282,11 +288,11 @@ function OrderedDataStoreView.from(
 			self._orderChanged:Fire()
 		end
 	end)
-	
+
 	self.styleStates.list.button.Activated:Connect(function()
 		self._listed:Fire()
 	end)
-	
+
 	self.styleStates.getKey.textBox.FocusLost:Connect(function(entered)
 		if entered then
 			local function errorHandler(err: string)
@@ -297,23 +303,31 @@ function OrderedDataStoreView.from(
 	end)
 
 	self.styleStates.loadMore.frame.BackgroundColor3 = self._highlightColors.background
-	
+
 	-- Tooltip
-	Tooltip.bindButtonGeneric(self.theme, self.styleStates.order.button, "Order\nToggle between highest-to-lowest or lowest-to-highest.")
-	Tooltip.bindButtonGeneric(self.theme, self.styleStates.list.button, `List Keys\nList all keys in order. Equivalent to a call to {rfmt.code("GetSortedAsync")}.`)
+	Tooltip.bindButtonGeneric(
+		self.theme,
+		self.styleStates.order.button,
+		"Order\nToggle between highest-to-lowest or lowest-to-highest."
+	)
+	Tooltip.bindButtonGeneric(
+		self.theme,
+		self.styleStates.list.button,
+		`List Keys\nList all keys in order. Equivalent to a call to {rfmt.code("GetSortedAsync")}.`
+	)
 
 	return self
 end
 
 function OrderedDataStoreView:setLocked(locked: boolean)
 	self.locked = locked
-	
+
 	self.styleStates.order:setDisabled(locked):update()
 	self.styleStates.getKey:setDisabled(locked):update()
 	self.styleStates.minValue:setDisabled(locked):update()
 	self.styleStates.maxValue:setDisabled(locked):update()
 	self.styleStates.list:setDisabled(locked):update()
-	
+
 	for _, styleState in self.styleStates.loadMore.itemStyleStates do
 		styleState:setDisabled(locked):update()
 	end
@@ -327,7 +341,7 @@ function OrderedDataStoreView:setKeysState(state: "empty" | "notEmpty" | "notFou
 	self.frame.Keys.Table.Visible = not empty
 	self.frame.Keys.Empty.Visible = empty
 	self.frame.Keys.Instructions.Visible = false
-	
+
 	if state == "notFound" then
 		self.frame.Keys.Empty.Text = "Key not found."
 	else
@@ -336,7 +350,7 @@ function OrderedDataStoreView:setKeysState(state: "empty" | "notEmpty" | "notFou
 end
 
 function OrderedDataStoreView:addKey(key: string, value: number)
-	self.styleStates.loadMore:add({key=key, value=value})
+	self.styleStates.loadMore:add({ key = key, value = value })
 end
 
 function OrderedDataStoreView:updateKey(key: string, value: number)
@@ -350,7 +364,7 @@ function OrderedDataStoreView:deleteKey(key: string)
 	local frame = self.styleStates.loadMore.frame:FindFirstChild(key)
 	if frame then
 		frame:Destroy()
-		
+
 		for i, v in self.styleStates.loadMore.itemStyleStates do
 			if v.frame == frame then
 				v:destroy()
@@ -367,7 +381,7 @@ function OrderedDataStoreView:setActiveKey(key: string?, value: number?)
 		self.styleStates.loadMore:clear()
 		self.styleStates.loadMore:setLoadMoreVisible(false)
 		if value then
-			self.styleStates.loadMore:add({key=key, value=value})
+			self.styleStates.loadMore:add({ key = key, value = value })
 		else
 			self:setKeysState("notFound")
 		end
@@ -390,15 +404,15 @@ end
 function OrderedDataStoreView:reset()
 	self.order = "descending"
 	self.styleStates.order.button.ImageLabel.Image = DESCENDING_ICON
-	
+
 	self.styleStates.getKey.textBox.Text = ""
 	self.styleStates.minValue.textBox.Text = ""
 	self.styleStates.maxValue.textBox.Text = ""
-	
+
 	self.activeKey = nil
 	self.minValue = nil
 	self.maxValue = nil
-	
+
 	self.frame.Keys.Instructions.Visible = true
 	self.frame.Keys.Table.Visible = false
 	self.frame.Keys.Empty.Visible = false

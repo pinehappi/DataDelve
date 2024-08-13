@@ -11,29 +11,35 @@ function TextBoxStyleState.from(theme: any, textBox: TextBox & { UIStroke: UIStr
 		textBox = textBox,
 		stroke = textBox.UIStroke,
 		theme = theme,
-		
+
 		overridenBackgroundColor3 = nil :: Color3?,
 		overriddenTextColor = nil :: Color3?,
-		
+
 		disabled = false,
 		_pressing = false,
 		_hovering = false,
-		
+
 		error = nil :: string?,
 		_errorPopup = nil :: typeof(script.ErrorPopup)?,
 	}, TextBoxStyleState)
-	
+
 	self._errorChanged = Instance.new("BindableEvent")
 	self.errorChanged = self._errorChanged.Event
-	
+
 	self._beganConnection = textBox.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
 			self._pressing = true
 			self:update()
 
 			local connection = nil
 			connection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
-				if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
+				if
+					input.UserInputState == Enum.UserInputState.End
+					or input.UserInputState == Enum.UserInputState.Cancel
+				then
 					self._pressing = false
 					connection:Disconnect()
 					self:update()
@@ -51,17 +57,17 @@ function TextBoxStyleState.from(theme: any, textBox: TextBox & { UIStroke: UIStr
 			self:update()
 		end
 	end)
-	
+
 	self._focusedConnection = textBox.Focused:Connect(function()
 		self:update()
-		
+
 		if self.error then
 			if not self._errorPopup then
 				self:_makeErrorPopup()
 			end
 		end
 	end)
-	
+
 	self._focusLostConnection = textBox.FocusLost:Connect(function()
 		self:update()
 		if self._errorPopup then
@@ -74,31 +80,32 @@ function TextBoxStyleState.from(theme: any, textBox: TextBox & { UIStroke: UIStr
 end
 
 function TextBoxStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
-	local state = 
-		if self.disabled then "disable"
+	local state = if self.disabled
+		then "disable"
 		elseif self.textBox:IsFocused() then "select"
 		elseif self._pressing then "press"
 		elseif self._hovering then "hover"
 		else "default"
 
 	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
-	
+
 	StyleStateHelper.tween(self.textBox, tweenInfo, {
 		BackgroundColor3 = self.overridenBackgroundColor or self.theme.colors.button.input.body[state],
 		TextColor3 = self.overriddenTextColor or self.theme.colors.button.input.text[state],
-		PlaceholderColor3 = self.theme.colors.button.input.text.default:lerp(self.theme.colors.button.input.body.default, 0.5),
+		PlaceholderColor3 = self.theme.colors.button.input.text.default:lerp(
+			self.theme.colors.button.input.body.default,
+			0.5
+		),
 	})
 	StyleStateHelper.tween(self.stroke, tweenInfo, {
-		Color =
-			if self.error then self.theme.colors.error
-			else self.theme.colors.button.input.outline[state]
+		Color = if self.error then self.theme.colors.error else self.theme.colors.button.input.outline[state],
 	})
 end
 
 function TextBoxStyleState:setDisabled(disabled: boolean)
 	self.disabled = disabled
 	self.textBox.TextEditable = not disabled
-	
+
 	return self
 end
 
@@ -125,27 +132,23 @@ function TextBoxStyleState:_makeErrorPopup()
 		popupFrame.Text = self.error
 		popupFrame.ZIndex = 100
 		popupFrame.Parent = self.textBox:FindFirstAncestorWhichIsA("LayerCollector")
-		self._errorPopup = PopupHelper.attach(
-			popupFrame,
-			self.textBox,
-			{
-				anchor = Vector2.new(0.5, 1),
-				offset = Vector2.new(0, 6),
-			}
-		)
+		self._errorPopup = PopupHelper.attach(popupFrame, self.textBox, {
+			anchor = Vector2.new(0.5, 1),
+			offset = Vector2.new(0, 6),
+		})
 	end
 end
 
 function TextBoxStyleState:setError(err: string?)
 	local lastError = self.error
 	self.error = err
-	
+
 	if lastError ~= err then
 		self._errorChanged:Fire(err)
 		self:_deleteErrorPopup()
 		self:_makeErrorPopup()
 	end
-	
+
 	return self
 end
 
@@ -159,11 +162,11 @@ function TextBoxStyleState:destroy(completely: boolean)
 	self._endedConnection:Disconnect()
 	self._focusedConnection:Disconnect()
 	self._focusLostConnection:Disconnect()
-	
+
 	if self._errorPopup then
 		self._errorPopup:destroy(true)
 	end
-	
+
 	if completely then
 		self.textBox:Destroy()
 	end

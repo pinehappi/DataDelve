@@ -8,23 +8,27 @@ CheckboxStyleState.__index = CheckboxStyleState
 type CheckboxOptions = {
 	default: boolean?,
 }
-function CheckboxStyleState.from(theme, checkbox: TextButton & {UIStroke: UIStroke, Check: ImageLabel}, options: CheckboxOptions?)
+function CheckboxStyleState.from(
+	theme,
+	checkbox: TextButton & { UIStroke: UIStroke, Check: ImageLabel },
+	options: CheckboxOptions?
+)
 	options = options or {}
 	checkbox.Check:SetAttribute("Exclude", true) -- Exclude it from button theming
-	
+
 	local self = setmetatable({
 		value = options.default or false,
 		checkbox = checkbox,
 		theme = theme,
-		
+
 		buttonStyleState = ButtonStyleState.from(theme, checkbox, {
-			style = "input"
-		})
+			style = "input",
+		}),
 	}, CheckboxStyleState)
-	
+
 	self._toggled = Instance.new("BindableEvent")
 	self.toggled = self._toggled.Event
-	
+
 	self._clickedConnection = self.checkbox.Activated:Connect(function()
 		self:setValue(not self.value)
 	end)
@@ -39,7 +43,7 @@ function CheckboxStyleState:update(speed: StyleStateHelper.TransitionSpeed)
 	self.buttonStyleState:update(speed)
 	if self.checkbox.Check.Visible then
 		TweenService:Create(self.checkbox.Check, tweenInfo, {
-			ImageColor3 = self.theme.colors.mainAccent
+			ImageColor3 = self.theme.colors.mainAccent,
 		}):Play()
 	end
 end

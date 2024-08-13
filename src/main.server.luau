@@ -1,6 +1,6 @@
 type App = {
 	new: (id: string) -> App,
-	
+
 	toggleEnabled: (App) -> (),
 	getEnabled: (App) -> boolean,
 	enabledChanged: RBXScriptSignal,
@@ -29,9 +29,7 @@ Settings.changed:Connect(function(key, value)
 	end
 end)
 
-local appName =
-	if IS_CANARY then "DataDelve Canary"
-	else "DataDelve"
+local appName = if IS_CANARY then "DataDelve Canary" else "DataDelve"
 
 local app
 if RunService:IsRunning() and RunService:IsClient() then
@@ -45,9 +43,7 @@ local toolbar: PluginToolbar = plugin:CreateToolbar(appName)
 local pluginButton: PluginToolbarButton = toolbar:CreateButton(
 	appName,
 	"easy interface for datastores",
-	if IS_CANARY
-		then "rbxassetid://18476887048"
-		else "rbxassetid://18476917665"
+	if IS_CANARY then "rbxassetid://18476887048" else "rbxassetid://18476917665"
 )
 pluginButton.ClickableWhenViewportHidden = true
 

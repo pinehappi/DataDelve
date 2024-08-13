@@ -33,7 +33,7 @@ local function spinIcon(icon: ImageLabel)
 		local delta = math.min(duration, os.clock() - start)
 		local alpha = delta / duration
 
-		icon.Rotation = 180 * ((alpha - 1)^3 + 1)
+		icon.Rotation = 180 * ((alpha - 1) ^ 3 + 1)
 
 		if delta >= duration then
 			break
@@ -52,7 +52,7 @@ local function rockIcon(icon: ImageLabel)
 		local delta = math.min(duration, os.clock() - start)
 		local alpha = delta / duration
 
-		icon.Rotation = 90 * math.sin(4*math.pi*alpha) * math.pow(10, -alpha)
+		icon.Rotation = 90 * math.sin(4 * math.pi * alpha) * math.pow(10, -alpha)
 
 		if delta >= duration then
 			break
@@ -70,8 +70,8 @@ local function jumpIcon(icon: ImageLabel)
 	while true do
 		local delta = math.min(duration, os.clock() - start)
 		local alpha = delta / duration
-		
-		icon.Position = UDim2.new(0.5, 0, 0.5, -5*( -(2*alpha - 1)^2 + 1))
+
+		icon.Position = UDim2.new(0.5, 0, 0.5, -5 * (-(2 * alpha - 1) ^ 2 + 1))
 
 		if delta >= duration then
 			break
@@ -92,23 +92,18 @@ local function bindSettingTooltip(theme: Theme.Theme, setting: any, message: str
 	})
 end
 
-function SettingsView.from(
-	theme: Theme.Theme,
-	uiMessages: UIMessages.UIMessages,
-	frame: typeof(Assets.Widget.Settings)
-)
+function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages, frame: typeof(Assets.Widget.Settings))
 	local accentColorButtonStyleStates = {}
 	for _, row in frame.Content.Accent.Buttons:GetChildren() do
 		if row:IsA("Frame") then
 			for _, button in row:GetChildren() do
 				if button:IsA("TextButton") then
-					accentColorButtonStyleStates[button.Name] =
-						AccentColorButtonStyleState.from(theme, button)
+					accentColorButtonStyleStates[button.Name] = AccentColorButtonStyleState.from(theme, button)
 				end
 			end
 		end
 	end
-	
+
 	local settingLabels = {}
 	for _, child in frame.Content:GetChildren() do
 		local label = child:FindFirstChild("Title")
@@ -118,7 +113,7 @@ function SettingsView.from(
 			settingLabels[child.Name] = LabelStyleState.from(theme, child)
 		end
 	end
-	
+
 	local self = setmetatable({
 		theme = theme,
 		frame = frame,
@@ -134,56 +129,62 @@ function SettingsView.from(
 				default = Settings.get("highlightColors"),
 				options = {
 					"Default",
-					"Script Editor"
-				}
+					"Script Editor",
+				},
 			}),
 			allScopesSwitch = SwitchStyleState.from(theme, frame.Content.AllScopes.Switch, {
-				default = Settings.get("allScopes")
+				default = Settings.get("allScopes"),
 			}),
 			hideGameNameSwitch = SwitchStyleState.from(theme, frame.Content.HideGameName.Switch, {
-				default = Settings.get("hideGameName")
+				default = Settings.get("hideGameName"),
 			}),
 			listDeletedKeysSwitch = SwitchStyleState.from(theme, frame.Content.ListDeletedKeys.Switch, {
-				default = Settings.get("listDeletedKeys")
+				default = Settings.get("listDeletedKeys"),
 			}),
 			automaticallyListSwitch = SwitchStyleState.from(theme, frame.Content.AutomaticallyList.Switch, {
-				default = Settings.get("automaticallyList")
+				default = Settings.get("automaticallyList"),
 			}),
-			
+
 			settingLabels = settingLabels,
 			separators = SeparatorStyleState.fromDescendants(theme, frame),
 		},
-		
+
 		connections = {},
-		
+
 		_tree = nil,
 	}, SettingsView)
-	
+
 	self:loadFrom(Settings.data)
-	
+
 	-- Events
-	
-	table.insert(self.connections, Settings.changed:Connect(function(key, value)
-		if key == "themePreset" then
-			self:_updatePresetButtons(value)
-			self:_updateAccentButtons(Settings.data.themeAccent)
-			if value == "dark" then
-				rockIcon(self.styleStates.presetButtons.dark.button.ImageHolder.ImageLabel)
-			elseif value == "light" then
-				spinIcon(self.styleStates.presetButtons.light.button.ImageHolder.ImageLabel)
-			elseif value == "studio" then
-				jumpIcon(self.styleStates.presetButtons.studio.button.ImageHolder.ImageLabel)
+
+	table.insert(
+		self.connections,
+		Settings.changed:Connect(function(key, value)
+			if key == "themePreset" then
+				self:_updatePresetButtons(value)
+				self:_updateAccentButtons(Settings.data.themeAccent)
+				if value == "dark" then
+					rockIcon(self.styleStates.presetButtons.dark.button.ImageHolder.ImageLabel)
+				elseif value == "light" then
+					spinIcon(self.styleStates.presetButtons.light.button.ImageHolder.ImageLabel)
+				elseif value == "studio" then
+					jumpIcon(self.styleStates.presetButtons.studio.button.ImageHolder.ImageLabel)
+				end
+			elseif key == "themeAccent" then
+				self:_updateAccentButtons(value)
 			end
-		elseif key == "themeAccent" then
-			self:_updateAccentButtons(value)
-		end
-	end))
-	
-	table.insert(self.connections, theme.colorsChanged:Connect(function()
-		task.wait()
-		StyleStateHelper.update(self.styleStates :: any) -- TODO: why is this a warning without :: any
-	end))
-	
+		end)
+	)
+
+	table.insert(
+		self.connections,
+		theme.colorsChanged:Connect(function()
+			task.wait()
+			StyleStateHelper.update(self.styleStates :: any) -- TODO: why is this a warning without :: any
+		end)
+	)
+
 	-- UI Events
 	for _, button: any in self.styleStates.presetButtons do
 		button.button.Activated:Connect(function()
@@ -192,7 +193,7 @@ function SettingsView.from(
 			end
 		end)
 	end
-	
+
 	for _, button: any in self.styleStates.accentColorButtons do
 		button.button.Activated:Connect(function()
 			if Settings.data.themeAccent ~= button.button.Name then
@@ -200,59 +201,57 @@ function SettingsView.from(
 			end
 		end)
 	end
-	
+
 	self.styleStates.highlightColorsSelect.changed:Connect(function(value)
 		Settings.set("highlightColors", value)
 	end)
-	
+
 	self.styleStates.allScopesSwitch.toggled:Connect(function(value)
 		Settings.set("allScopes", value)
 	end)
-	
+
 	self.styleStates.hideGameNameSwitch.toggled:Connect(function(value)
 		Settings.set("hideGameName", value)
 	end)
-	
+
 	self.styleStates.listDeletedKeysSwitch.toggled:Connect(function(value)
 		Settings.set("listDeletedKeys", value)
 	end)
-	
+
 	self.styleStates.automaticallyListSwitch.toggled:Connect(function(value)
 		Settings.set("automaticallyList", value)
 	end)
-	
+
 	-- Tooltips
-	
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.HighlightColors,
-		"Colors used for highlighting in the editor."
-	)
-	
+
+	bindSettingTooltip(self.theme, self.frame.Content.HighlightColors, "Colors used for highlighting in the editor.")
+
 	bindSettingTooltip(
 		self.theme,
 		self.frame.Content.HideGameName,
 		"Whether to show the game name in the breadcrumbs. This is useful if you have a long game name."
 	)
-	
+
 	bindSettingTooltip(
 		self.theme,
 		self.frame.Content.AllScopes,
-		`When this is turned on, keys will be accessed as {rfmt.code("scope/key")}. The default scope is {rfmt.code("global")}.`
+		`When this is turned on, keys will be accessed as {rfmt.code("scope/key")}. The default scope is {rfmt.code(
+			"global"
+		)}.`
 	)
-	
+
 	bindSettingTooltip(
 		self.theme,
 		self.frame.Content.ListDeletedKeys,
 		`Whether deleted keys should appear when you are listing keys for a DataStore. Note that there is no way to tell if a key is deleted without first loading it.`
 	)
-	
+
 	bindSettingTooltip(
 		self.theme,
 		self.frame.Content.AutomaticallyList,
 		`When this is enabled, items will be listed automatically without you having to press the {rfmt.code("List")} button, if possible.`
 	)
-	
+
 	return self
 end
 
@@ -285,7 +284,7 @@ function SettingsView:beforeOpen()
 	if self._tree then
 		self._tree:destroy()
 	end
-	
+
 	self._tree = Tree.new(self.theme, self.uiMessages, self.frame.Content.TreePreview, {
 		data = {
 			number = 100,
@@ -311,7 +310,7 @@ end
 
 function SettingsView:afterClose()
 	self = self :: any
-	
+
 	if self._tree then
 		self._tree:destroy()
 		self._tree = nil

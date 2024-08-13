@@ -24,7 +24,7 @@ Theme.accentHues = {
 
 -- Reference: https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
 function Theme.getLuminance(color: Color3)
-	return math.sqrt( 0.299*color.R^2 + 0.587*color.G^2 + 0.114*color.B^2 )
+	return math.sqrt(0.299 * color.R ^ 2 + 0.587 * color.G ^ 2 + 0.114 * color.B ^ 2)
 end
 
 function Theme.new()
@@ -45,10 +45,10 @@ function Theme.new()
 		unpin = "rbxassetid://18886277155",
 		rename = "rbxassetid://18901732408",
 	}
-	
+
 	self._colorsChanged = Instance.new("BindableEvent")
 	self.colorsChanged = self._colorsChanged.Event
-	
+
 	return self
 end
 
@@ -56,17 +56,18 @@ end
 function Theme.getAccentComponents(preset: string, accent: string): (number, number, number)
 	local StudioTheme = StudioSettings.Theme :: StudioTheme
 	if preset == "studio" then
-		return StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Default):ToHSV()
+		return StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Default)
+			:ToHSV()
 	elseif preset == "light" then
 		if accent == "neutral" then
 			return 0, 0, 0
 		end
-		return Theme.accentHues[accent]/360, 0.8, 0.8
-	else--if preset == "dark" then
+		return Theme.accentHues[accent] / 360, 0.8, 0.8
+	else --if preset == "dark" then
 		if accent == "neutral" then
 			return 0, 0, 1
 		end
-		return Theme.accentHues[accent]/360, 0.55, 0.9
+		return Theme.accentHues[accent] / 360, 0.55, 0.9
 	end
 end
 
@@ -77,60 +78,61 @@ end
 function Theme.generatePreset(preset: string, accent: string)
 	local accentHue, accentSaturation, accentValue = Theme.getAccentComponents(preset, accent)
 	local accentColor = Theme.getAccentColor(preset, accent)
-	
-	local selectedText =
-		if Theme.getLuminance(accentColor) >= 0.55
+
+	local selectedText = if Theme.getLuminance(accentColor) >= 0.55
 		then Color3.fromRGB(20, 20, 20)
 		else Color3.fromRGB(230, 230, 230)
 
 	if preset == "dark" then
 		local colors = {
 			button = {
-				primary = if accent == "neutral" then {
-					text = {
-						select = selectedText,
-						disable = Color3.new(0.25, 0.25, 0.25),
-						default = selectedText,
-						hover = selectedText,
-						press = selectedText
-					},
-					body = {
-						select = accentColor,
-						disable = Color3.new(0.4, 0.4, 0.4),
-						default = accentColor,
-						hover = Color3.new(0.9, 0.9, 0.9),
-						press = Color3.new(0.8, 0.8, 0.8),
-					},
-					outline = {
-						select = accentColor,
-						disable = Color3.new(0.4, 0.4, 0.4),
-						default = accentColor,
-						hover = Color3.new(0.9, 0.9, 0.9),
-						press = Color3.new(0.8, 0.8, 0.8),
+				primary = if accent == "neutral"
+					then {
+						text = {
+							select = selectedText,
+							disable = Color3.new(0.25, 0.25, 0.25),
+							default = selectedText,
+							hover = selectedText,
+							press = selectedText,
+						},
+						body = {
+							select = accentColor,
+							disable = Color3.new(0.4, 0.4, 0.4),
+							default = accentColor,
+							hover = Color3.new(0.9, 0.9, 0.9),
+							press = Color3.new(0.8, 0.8, 0.8),
+						},
+						outline = {
+							select = accentColor,
+							disable = Color3.new(0.4, 0.4, 0.4),
+							default = accentColor,
+							hover = Color3.new(0.9, 0.9, 0.9),
+							press = Color3.new(0.8, 0.8, 0.8),
+						},
 					}
-				} else {
-					text = {
-						select = selectedText,
-						disable = Color3.fromHSV(accentHue, 100 / 255, 100 / 255),
-						default = selectedText,
-						hover = selectedText,
-						press = selectedText,
+					else {
+						text = {
+							select = selectedText,
+							disable = Color3.fromHSV(accentHue, 100 / 255, 100 / 255),
+							default = selectedText,
+							hover = selectedText,
+							press = selectedText,
+						},
+						body = {
+							select = accentColor,
+							disable = Color3.fromHSV(accentHue, 62 / 255, 62 / 255),
+							default = accentColor,
+							hover = Color3.fromHSV(accentHue, 0.85 * accentSaturation, 1.1 * accentValue),
+							press = Color3.fromHSV(accentHue, 0.7 * accentSaturation, accentValue),
+						},
+						outline = {
+							select = accentColor,
+							disable = Color3.fromHSV(accentHue, 62 / 255, 62 / 255),
+							default = accentColor,
+							hover = Color3.fromHSV(accentHue, 0.85 * accentSaturation, 1.1 * accentValue),
+							press = Color3.fromHSV(accentHue, 0.7 * accentSaturation, accentValue),
+						},
 					},
-					body = {
-						select = accentColor,
-						disable = Color3.fromHSV(accentHue, 62 / 255, 62 / 255),
-						default = accentColor,
-						hover = Color3.fromHSV(accentHue, 0.85*accentSaturation, 1.1*accentValue),
-						press = Color3.fromHSV(accentHue, 0.7*accentSaturation, accentValue),
-					},
-					outline = {
-						select = accentColor,
-						disable = Color3.fromHSV(accentHue, 62 / 255, 62 / 255),
-						default = accentColor,
-						hover = Color3.fromHSV(accentHue, 0.85*accentSaturation, 1.1*accentValue),
-						press = Color3.fromHSV(accentHue, 0.7*accentSaturation, accentValue),
-					}
-				},
 				secondary = {
 					text = {
 						select = selectedText,
@@ -155,9 +157,8 @@ function Theme.generatePreset(preset: string, accent: string)
 					},
 				},
 				transparent = {
-					baseColor =
-						if accent == "neutral" then accentColor else Color3.fromHSV(accentHue, 0.9, 1),
-					
+					baseColor = if accent == "neutral" then accentColor else Color3.fromHSV(accentHue, 0.9, 1),
+
 					select = 0.7,
 					disable = 1,
 					default = 1,
@@ -170,49 +171,49 @@ function Theme.generatePreset(preset: string, accent: string)
 					default = Color3.fromRGB(140, 140, 140),
 					hover = Color3.fromRGB(180, 180, 180),
 					press = Color3.fromRGB(200, 200, 200),
-				}
+				},
 			},
-			
+
 			message = {
 				text = Color3.fromRGB(220, 220, 220),
 				background = Color3.fromRGB(16, 16, 16),
 				outline = Color3.fromRGB(50, 50, 50),
 			},
-			
+
 			error = Color3.fromRGB(209, 13, 13),
 			warn = Color3.fromRGB(186, 138, 15),
 			success = Color3.fromRGB(20, 182, 66),
-			
+
 			text = Color3.fromRGB(220, 220, 220),
 			disabledText = Color3.fromRGB(100, 100, 100),
-			
+
 			background = Color3.fromRGB(26, 26, 26), --Color3.fromRGB(40, 40, 40),
 			backgroundOutline = Color3.fromRGB(62, 62, 62),
-			
+
 			popupBackground = Color3.fromRGB(40, 40, 40),
 			popupBackgroundOutline = Color3.fromRGB(72, 72, 72),
-			
+
 			defaultScrimTransparency = 0.8,
-			
+
 			imageBackground = Color3.fromRGB(60, 60, 60),
 			imageBackgroundOutline = Color3.fromRGB(70, 70, 70),
-			
+
 			separator = Color3.fromRGB(72, 72, 72),
-			
+
 			mainAccent = accentColor,
-			
+
 			syntaxHighlight = {
 				root = Color3.fromRGB(247, 17, 255),
 				key = Color3.fromRGB(90, 223, 106),
 				index = Color3.fromRGB(150, 60, 223),
-				
+
 				array = Color3.fromRGB(116, 116, 116),
 				object = Color3.fromRGB(116, 116, 116),
 				boolean = Color3.fromRGB(243, 45, 88),
 				number = Color3.fromRGB(241, 190, 36),
 				string = Color3.fromRGB(78, 199, 243),
 				null = Color3.fromRGB(243, 243, 243),
-			}
+			},
 		}
 		colors.button.input = {
 			text = table.clone(colors.button.secondary.text),
@@ -226,14 +227,14 @@ function Theme.generatePreset(preset: string, accent: string)
 	elseif preset == "light" then
 		local colors = {
 			button = {
-				primary =
-					if accent == "neutral" then {
+				primary = if accent == "neutral"
+					then {
 						text = {
 							select = selectedText,
 							disable = Color3.new(0.6, 0.6, 0.6),
 							default = selectedText,
 							hover = selectedText,
-							press = selectedText
+							press = selectedText,
 						},
 						body = {
 							select = accentColor,
@@ -248,11 +249,12 @@ function Theme.generatePreset(preset: string, accent: string)
 							default = accentColor,
 							hover = Color3.new(0.1, 0.1, 0.1),
 							press = Color3.new(0.2, 0.2, 0.2),
-						}
-					} else {
+						},
+					}
+					else {
 						text = {
 							select = selectedText,
-							disable = Color3.fromHSV(accentHue, 0.15, 0.6*accentValue),
+							disable = Color3.fromHSV(accentHue, 0.15, 0.6 * accentValue),
 							default = selectedText,
 							hover = selectedText,
 							press = selectedText,
@@ -261,16 +263,16 @@ function Theme.generatePreset(preset: string, accent: string)
 							select = accentColor,
 							disable = Color3.fromHSV(accentHue, 0.15, accentValue),
 							default = accentColor,
-							hover = Color3.fromHSV(accentHue, 0.85*accentSaturation, 1.1*accentValue),
-							press = Color3.fromHSV(accentHue, 0.7*accentSaturation, accentValue),
+							hover = Color3.fromHSV(accentHue, 0.85 * accentSaturation, 1.1 * accentValue),
+							press = Color3.fromHSV(accentHue, 0.7 * accentSaturation, accentValue),
 						},
 						outline = {
 							select = accentColor,
 							disable = Color3.fromHSV(accentHue, 0.15, accentValue),
 							default = accentColor,
-							hover = Color3.fromHSV(accentHue, 0.85*accentSaturation, 1.1*accentValue),
-							press = Color3.fromHSV(accentHue, 0.7*accentSaturation, accentValue),
-						}
+							hover = Color3.fromHSV(accentHue, 0.85 * accentSaturation, 1.1 * accentValue),
+							press = Color3.fromHSV(accentHue, 0.7 * accentSaturation, accentValue),
+						},
 					},
 				secondary = {
 					text = {
@@ -296,8 +298,7 @@ function Theme.generatePreset(preset: string, accent: string)
 					},
 				},
 				transparent = {
-					baseColor =
-						if accent == "neutral" then accentColor else Color3.fromHSV(accentHue, 0.9, 0.7),
+					baseColor = if accent == "neutral" then accentColor else Color3.fromHSV(accentHue, 0.9, 0.7),
 
 					select = 0.7,
 					disable = 1,
@@ -313,7 +314,7 @@ function Theme.generatePreset(preset: string, accent: string)
 					press = Color3.fromRGB(60, 60, 60),
 				},
 			},
-			
+
 			message = {
 				text = Color3.fromRGB(20, 20, 20),
 				background = Color3.fromRGB(240, 240, 240),
@@ -332,9 +333,9 @@ function Theme.generatePreset(preset: string, accent: string)
 
 			popupBackground = Color3.fromRGB(238, 238, 238),
 			popupBackgroundOutline = Color3.fromRGB(160, 160, 160),
-			
+
 			defaultScrimTransparency = 0.8,
-			
+
 			imageBackground = Color3.fromRGB(210, 210, 210),
 			imageBackgroundOutline = Color3.fromRGB(190, 190, 190),
 
@@ -353,7 +354,7 @@ function Theme.generatePreset(preset: string, accent: string)
 				number = Color3.fromRGB(147, 116, 22),
 				string = Color3.fromRGB(44, 113, 138),
 				null = Color3.fromRGB(29, 29, 29),
-			}
+			},
 		}
 		colors.button.input = {
 			text = table.clone(colors.button.secondary.text),
@@ -371,101 +372,241 @@ function Theme.generatePreset(preset: string, accent: string)
 			button = {
 				primary = {
 					text = {
-						select = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButtonText, Enum.StudioStyleGuideModifier.Selected),
-						disable = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButtonText, Enum.StudioStyleGuideModifier.Disabled),
-						default = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButtonText, Enum.StudioStyleGuideModifier.Default),
-						hover = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButtonText, Enum.StudioStyleGuideModifier.Hover),
-						press = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButtonText, Enum.StudioStyleGuideModifier.Pressed),
+						select = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButtonText,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						disable = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButtonText,
+							Enum.StudioStyleGuideModifier.Disabled
+						),
+						default = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButtonText,
+							Enum.StudioStyleGuideModifier.Default
+						),
+						hover = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButtonText,
+							Enum.StudioStyleGuideModifier.Hover
+						),
+						press = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButtonText,
+							Enum.StudioStyleGuideModifier.Pressed
+						),
 					},
 					body = {
-						select = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Selected),
-						disable = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Disabled),
-						default = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Default),
-						hover = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Hover),
-						press = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Pressed),
+						select = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						disable = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Disabled
+						),
+						default = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Default
+						),
+						hover = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Hover
+						),
+						press = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Pressed
+						),
 					},
 					outline = {
-						select = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Selected),
-						disable = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Disabled),
-						default = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Default),
-						hover = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Hover),
-						press = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Pressed),
-					}
+						select = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						disable = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Disabled
+						),
+						default = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Default
+						),
+						hover = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Hover
+						),
+						press = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Pressed
+						),
+					},
 				},
 				secondary = {
 					text = {
-						select = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Selected),
-						disable = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Disabled),
-						default = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Default),
-						hover = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Hover),
-						press = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Pressed),
+						select = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						disable = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Disabled
+						),
+						default = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Default
+						),
+						hover = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Hover
+						),
+						press = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Pressed
+						),
 					},
 					body = {
-						select = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Button, Enum.StudioStyleGuideModifier.Selected),
-						disable = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Button, Enum.StudioStyleGuideModifier.Disabled),
-						default =
-							if isDark then Color3.fromRGB(69, 69, 69)
-							else StudioTheme:GetColor(Enum.StudioStyleGuideColor.Button, Enum.StudioStyleGuideModifier.Default),
-						hover =
-							if isDark then Color3.fromRGB(77, 77, 77)
-							else StudioTheme:GetColor(Enum.StudioStyleGuideColor.Button, Enum.StudioStyleGuideModifier.Selected),
-						press = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Button, Enum.StudioStyleGuideModifier.Pressed),
+						select = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.Button,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						disable = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.Button,
+							Enum.StudioStyleGuideModifier.Disabled
+						),
+						default = if isDark
+							then Color3.fromRGB(69, 69, 69)
+							else StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.Button,
+								Enum.StudioStyleGuideModifier.Default
+							),
+						hover = if isDark
+							then Color3.fromRGB(77, 77, 77)
+							else StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.Button,
+								Enum.StudioStyleGuideModifier.Selected
+							),
+						press = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.Button,
+							Enum.StudioStyleGuideModifier.Pressed
+						),
 					},
 					outline = {
-						select = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonBorder, Enum.StudioStyleGuideModifier.Selected),
-						disable = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonBorder, Enum.StudioStyleGuideModifier.Disabled),
-						default = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonBorder, Enum.StudioStyleGuideModifier.Default),
-						hover = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonBorder, Enum.StudioStyleGuideModifier.Hover),
-						press = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonBorder, Enum.StudioStyleGuideModifier.Pressed),
+						select = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonBorder,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						disable = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonBorder,
+							Enum.StudioStyleGuideModifier.Disabled
+						),
+						default = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonBorder,
+							Enum.StudioStyleGuideModifier.Default
+						),
+						hover = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonBorder,
+							Enum.StudioStyleGuideModifier.Hover
+						),
+						press = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonBorder,
+							Enum.StudioStyleGuideModifier.Pressed
+						),
 					},
 				},
 				input = {
 					text = {
-						select = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Selected),
-						disable = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Disabled),
-						default = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Default),
-						hover = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Hover),
-						press = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ButtonText, Enum.StudioStyleGuideModifier.Pressed),
+						select = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						disable = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Disabled
+						),
+						default = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Default
+						),
+						hover = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Hover
+						),
+						press = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.ButtonText,
+							Enum.StudioStyleGuideModifier.Pressed
+						),
 					},
 					body = {
-						select = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground, Enum.StudioStyleGuideModifier.Selected),
-						disable = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground, Enum.StudioStyleGuideModifier.Disabled),
-						default = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground, Enum.StudioStyleGuideModifier.Default),
-						hover = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground, Enum.StudioStyleGuideModifier.Hover),
-						press = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground, Enum.StudioStyleGuideModifier.Pressed),
+						select = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBackground,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						disable = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBackground,
+							Enum.StudioStyleGuideModifier.Disabled
+						),
+						default = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBackground,
+							Enum.StudioStyleGuideModifier.Default
+						),
+						hover = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBackground,
+							Enum.StudioStyleGuideModifier.Hover
+						),
+						press = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBackground,
+							Enum.StudioStyleGuideModifier.Pressed
+						),
 					},
 					outline = {
-						select = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBorder, Enum.StudioStyleGuideModifier.Selected),
-						disable = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBorder, Enum.StudioStyleGuideModifier.Disabled),
-						default = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBorder, Enum.StudioStyleGuideModifier.Default),
-						hover = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBorder, Enum.StudioStyleGuideModifier.Hover),
-						press = StudioTheme:GetColor(Enum.StudioStyleGuideColor.InputFieldBorder, Enum.StudioStyleGuideModifier.Pressed),
+						select = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBorder,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						disable = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBorder,
+							Enum.StudioStyleGuideModifier.Disabled
+						),
+						default = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBorder,
+							Enum.StudioStyleGuideModifier.Default
+						),
+						hover = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBorder,
+							Enum.StudioStyleGuideModifier.Hover
+						),
+						press = StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBorder,
+							Enum.StudioStyleGuideModifier.Pressed
+						),
 					},
 				},
 				transparent = {
-					baseColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.TableItem, Enum.StudioStyleGuideModifier.Selected),
+					baseColor = StudioTheme:GetColor(
+						Enum.StudioStyleGuideColor.TableItem,
+						Enum.StudioStyleGuideModifier.Selected
+					),
 
 					select = 0.5,
 					disable = 1,
 					default = 1,
 					hover = 0.75,
-					press = 0.6
+					press = 0.6,
 				},
-				dormant = if isDark then {
-					select = Color3.new(1, 1, 1),
-					disable = Color3.new(0.2, 0.2 ,0.2),
-					default = Color3.new(0.4, 0.4, 0.4),
-					hover = Color3.new(0.5, 0.5, 0.5),
-					press = Color3.new(0.6, 0.6, 0.6),
-				} else {
-					select = Color3.new(0, 0, 0),
-					disable = Color3.new(0.8, 0.8 ,0.8),
-					default = Color3.new(0.6, 0.6, 0.6),
-					hover = Color3.new(0.5, 0.5, 0.5),
-					press = Color3.new(0.4, 0.4, 0.4),
-				}
+				dormant = if isDark
+					then {
+						select = Color3.new(1, 1, 1),
+						disable = Color3.new(0.2, 0.2, 0.2),
+						default = Color3.new(0.4, 0.4, 0.4),
+						hover = Color3.new(0.5, 0.5, 0.5),
+						press = Color3.new(0.6, 0.6, 0.6),
+					}
+					else {
+						select = Color3.new(0, 0, 0),
+						disable = Color3.new(0.8, 0.8, 0.8),
+						default = Color3.new(0.6, 0.6, 0.6),
+						hover = Color3.new(0.5, 0.5, 0.5),
+						press = Color3.new(0.4, 0.4, 0.4),
+					},
 			},
-			
+
 			message = {
 				text = Color3.fromRGB(250, 250, 250),
 				background = Color3.fromRGB(24, 24, 24),
@@ -477,52 +618,74 @@ function Theme.generatePreset(preset: string, accent: string)
 			success = accentColor,
 
 			text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText, Enum.StudioStyleGuideModifier.Default),
-			disabledText = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DimmedText, Enum.StudioStyleGuideModifier.Default),
+			disabledText = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.DimmedText,
+				Enum.StudioStyleGuideModifier.Default
+			),
 
-			background = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground, Enum.StudioStyleGuideModifier.Default),
-			backgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground, Enum.StudioStyleGuideModifier.Default),
+			background = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.MainBackground,
+				Enum.StudioStyleGuideModifier.Default
+			),
+			backgroundOutline = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.MainBackground,
+				Enum.StudioStyleGuideModifier.Default
+			),
 
-			popupBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground, Enum.StudioStyleGuideModifier.Default),
-			popupBackgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground, Enum.StudioStyleGuideModifier.Default),
+			popupBackground = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.MainBackground,
+				Enum.StudioStyleGuideModifier.Default
+			),
+			popupBackgroundOutline = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.MainBackground,
+				Enum.StudioStyleGuideModifier.Default
+			),
 
 			defaultScrimTransparency = 0.5,
 
-			imageBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ViewPortBackground, Enum.StudioStyleGuideModifier.Default),
-			imageBackgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ViewPortBackground, Enum.StudioStyleGuideModifier.Default),
+			imageBackground = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.ViewPortBackground,
+				Enum.StudioStyleGuideModifier.Default
+			),
+			imageBackgroundOutline = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.ViewPortBackground,
+				Enum.StudioStyleGuideModifier.Default
+			),
 
 			separator = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Border, Enum.StudioStyleGuideModifier.Default),
 
 			mainAccent = accentColor,
 
-			syntaxHighlight = if isDark then {
-				root = Color3.fromRGB(248, 109, 124),
-				index = Color3.fromRGB(132, 214, 247),
-				key = Color3.fromRGB(97, 161, 241),
+			syntaxHighlight = if isDark
+				then {
+					root = Color3.fromRGB(248, 109, 124),
+					index = Color3.fromRGB(132, 214, 247),
+					key = Color3.fromRGB(97, 161, 241),
 
-				array = Color3.fromRGB(102, 102, 102),
-				object = Color3.fromRGB(102, 102, 102),
-				boolean = Color3.fromRGB(253, 251, 172),
-				number = Color3.fromRGB(255, 198, 0),
-				string = Color3.fromRGB(173, 241, 149),
-				null = Color3.fromRGB(204, 204, 204),
-			} else {
-				root = Color3.fromRGB(0, 0, 127),
-				key = Color3.fromRGB(72, 92, 142),
-				index = Color3.fromRGB(0, 116, 189),
+					array = Color3.fromRGB(102, 102, 102),
+					object = Color3.fromRGB(102, 102, 102),
+					boolean = Color3.fromRGB(253, 251, 172),
+					number = Color3.fromRGB(255, 198, 0),
+					string = Color3.fromRGB(173, 241, 149),
+					null = Color3.fromRGB(204, 204, 204),
+				}
+				else {
+					root = Color3.fromRGB(0, 0, 127),
+					key = Color3.fromRGB(72, 92, 142),
+					index = Color3.fromRGB(0, 116, 189),
 
-				array = Color3.fromRGB(127, 127, 127),
-				object = Color3.fromRGB(127, 127, 127),
-				boolean = Color3.fromRGB(0, 127, 9),
-				number = Color3.fromRGB(0, 127, 127),
-				string = Color3.fromRGB(127, 0, 127),
-				null = Color3.fromRGB(127, 127, 0),
-			}
+					array = Color3.fromRGB(127, 127, 127),
+					object = Color3.fromRGB(127, 127, 127),
+					boolean = Color3.fromRGB(0, 127, 9),
+					number = Color3.fromRGB(0, 127, 127),
+					string = Color3.fromRGB(127, 0, 127),
+					null = Color3.fromRGB(127, 127, 0),
+				},
 		}
 	else
 		error(`{preset} is not valid theme reset`, 2)
 	end
 end
-
 
 function Theme:_updateColors()
 	self.colors = Theme.generatePreset(self.preset, self.accent)

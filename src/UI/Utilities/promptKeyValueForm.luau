@@ -16,10 +16,10 @@ export type Options = {
 	position: Vector2?,
 	anchorPoint: Vector2?,
 	title: string,
-	
+
 	includeKey: boolean,
 	includeValue: boolean,
-	
+
 	yesText: string?,
 	noText: string?,
 
@@ -32,37 +32,36 @@ return function(theme, gui, options: Options): { key: string, value: JSONHelper.
 	local wrapper = StyleStateWrapper.new(theme, {
 		title = LabelStyleState.from(theme, frame.Title),
 		background = BackgroundStyleState.from(theme, frame, {
-			style = "popup"
+			style = "popup",
 		}),
 
 		keyLabel = LabelStyleState.from(theme, frame.Form.Key.Title),
-		keyTextBox =
-			if options.constraint == "rename" or options.constraint == "renameAllScopes" then ShortcutsTextBoxStyleState.from(theme, frame.Form.Key.TextBox)
+		keyTextBox = if options.constraint == "rename" or options.constraint == "renameAllScopes"
+			then ShortcutsTextBoxStyleState.from(theme, frame.Form.Key.TextBox)
 			else TextBoxStyleState.from(theme, frame.Form.Key.TextBox),
 
 		valueLabel = LabelStyleState.from(theme, frame.Form.Value.Title),
 		valueTextBox = TextBoxStyleState.from(theme, frame.Form.Value.TextBox),
 
 		insert = ButtonStyleState.from(theme, frame.Form.Buttons.Insert, {
-			style = "primary"
+			style = "primary",
 		}),
 		cancel = ButtonStyleState.from(theme, frame.Form.Buttons.Cancel, {
-			style = "secondary"
+			style = "secondary",
 		}),
 	})
-	
+
 	wrapper.styleStates.insert.button.TextLabel.Text = options.yesText or "Insert"
 	wrapper.styleStates.cancel.button.TextLabel.Text = options.noText or "Cancel"
 
 	local keyTextBoxStyleState = wrapper.styleStates.keyTextBox
 	local valueTextBoxStyleState = wrapper.styleStates.valueTextBox
 	local function updateDisabled(instant)
-		local disabled =
-			(options.includeKey and keyTextBoxStyleState.textBox.Text == "")
+		local disabled = (options.includeKey and keyTextBoxStyleState.textBox.Text == "")
 			or (options.includeValue and valueTextBoxStyleState.textBox.Text == "")
 			or keyTextBoxStyleState.error
 			or valueTextBoxStyleState.error
-		
+
 		wrapper.styleStates.insert:setDisabled(disabled):update(if instant then "instant" else nil)
 	end
 
@@ -72,9 +71,9 @@ return function(theme, gui, options: Options): { key: string, value: JSONHelper.
 			updateDisabled()
 			return
 		end
-		
-		local validator =
-			if options.constraint == "orderedDataStore" then Validators.dataStoreKey
+
+		local validator = if options.constraint == "orderedDataStore"
+			then Validators.dataStoreKey
 			elseif options.constraint == "renameAllScopes" then Validators.allScopesKey
 			elseif options.constraint == "rename" then Validators.dataStoreKey
 			else Validators.empty
@@ -84,7 +83,7 @@ return function(theme, gui, options: Options): { key: string, value: JSONHelper.
 		else
 			keyTextBoxStyleState:setError(err):update("veryFast")
 		end
-		
+
 		updateDisabled()
 	end)
 	valueTextBoxStyleState.textBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -98,19 +97,19 @@ return function(theme, gui, options: Options): { key: string, value: JSONHelper.
 			updateDisabled()
 			return
 		end
-		
-		local validator =
-			if options.constraint == "orderedDataStore" then Validators.orderedDataStoreValue
+
+		local validator = if options.constraint == "orderedDataStore"
+			then Validators.orderedDataStoreValue
 			elseif options.constraint == "userId" then Validators.userId
 			else Validators.empty
-		
+
 		local valid, err = validator(valueTextBoxStyleState.textBox.Text)
 		if valid then
 			valueTextBoxStyleState:setError(nil):update("veryFast")
 		else
 			valueTextBoxStyleState:setError(err):update("veryFast")
 		end
-		
+
 		updateDisabled()
 	end)
 
@@ -122,10 +121,7 @@ return function(theme, gui, options: Options): { key: string, value: JSONHelper.
 	end
 
 	local position = options.position or gui:GetRelativeMousePosition()
-	frame.Position = UDim2.fromOffset(
-		position.X,
-		position.Y
-	)
+	frame.Position = UDim2.fromOffset(position.X, position.Y)
 	frame.AnchorPoint = options.anchorPoint or frame.AnchorPoint
 	frame.Parent = gui
 
@@ -158,7 +154,7 @@ return function(theme, gui, options: Options): { key: string, value: JSONHelper.
 	wrapper.styleStates.insert.button.Activated:Connect(function()
 		status = "insert"
 	end)
-	
+
 	updateDisabled(true)
 
 	while status == nil do
@@ -177,7 +173,7 @@ return function(theme, gui, options: Options): { key: string, value: JSONHelper.
 				warn(err)
 			end),
 			value = value,
-			type = type
+			type = type,
 		}
 	else
 		return nil

@@ -22,16 +22,11 @@ local TextBoxStyleState = require(script.Parent.TextBoxStyleState)
 
 local parseShortcuts = require(script.parseShortcuts)
 
-local ShortcutsTextBoxStyleState = setmetatable({}, {__index = TextBoxStyleState})
+local ShortcutsTextBoxStyleState = setmetatable({}, { __index = TextBoxStyleState })
 ShortcutsTextBoxStyleState.__index = ShortcutsTextBoxStyleState
 
 local function escapeRichText(source: string): string
-	return source
-		:gsub("&", "&amp;")
-		:gsub("'", "&apos;")
-		:gsub("\"", "&quot;")
-		:gsub("<", "&lt;")
-		:gsub(">", "&gt;")
+	return source:gsub("&", "&amp;"):gsub("'", "&apos;"):gsub('"', "&quot;"):gsub("<", "&lt;"):gsub(">", "&gt;")
 end
 
 local function getLengthToCursor(textBox: TextBox)
@@ -46,7 +41,7 @@ end
 
 function ShortcutsTextBoxStyleState.from(theme: Theme.Theme, textBox: TextBox & { UIStroke: UIStroke })
 	local self = setmetatable(TextBoxStyleState.from(theme, textBox), ShortcutsTextBoxStyleState)
-	
+
 	self.overlay = Instance.new("TextLabel")
 	self.overlay.BackgroundTransparency = 1
 	self.overlay.TextColor3 = Color3.new(1, 0, 0)
@@ -59,7 +54,7 @@ function ShortcutsTextBoxStyleState.from(theme: Theme.Theme, textBox: TextBox & 
 	self.overlay.TextWrapped = false
 	self.overlay.Text = textBox.Text
 	self.overlay.Parent = textBox
-	
+
 	local paddingX = 0
 	do
 		local uiPadding = textBox:FindFirstChildOfClass("UIPadding")
@@ -68,8 +63,8 @@ function ShortcutsTextBoxStyleState.from(theme: Theme.Theme, textBox: TextBox & 
 		end
 	end
 	self._lastShift = 0
-	self._pieces = ({} :: parseShortcuts.ShortcutsString)
-	
+	self._pieces = {} :: parseShortcuts.ShortcutsString
+
 	self._shortcutsConnections = {
 		textBox:GetPropertyChangedSignal("Text"):Connect(function()
 			self:_updateOverlayText(false)
@@ -88,26 +83,34 @@ function ShortcutsTextBoxStyleState.from(theme: Theme.Theme, textBox: TextBox & 
 					self:_updateShift(self._lastShift + shifted)
 				end
 			end
-		end)
+		end),
 	}
-	
+
 	return self
 end
 
 function ShortcutsTextBoxStyleState:_updateOverlayText(useCachedPieces: boolean)
-	local pieces = if useCachedPieces then (self._pieces :: parseShortcuts.ShortcutsString) else parseShortcuts(self.textBox.Text)
+	local pieces = if useCachedPieces
+		then self._pieces :: parseShortcuts.ShortcutsString
+		else parseShortcuts(self.textBox.Text)
 	local text = table.create(#pieces)
 	for _, piece in pieces do
 		if piece.type == "normal" then
 			table.insert(text, `<font transparency="1">{escapeRichText(piece.content)}</font>`)
 		elseif piece.type == "escapedNormal" then
-			table.insert(text, `<font color="#{self.theme.colors.syntaxHighlight.string:ToHex()}">{escapeRichText(piece.content)}</font>`)
+			table.insert(
+				text,
+				`<font color="#{self.theme.colors.syntaxHighlight.string:ToHex()}">{escapeRichText(piece.content)}</font>`
+			)
 		elseif piece.type == "mention" then
-			table.insert(text, `<font color="#{self.theme.colors.syntaxHighlight.root:ToHex()}">{escapeRichText(piece.content)}</font>`)
+			table.insert(
+				text,
+				`<font color="#{self.theme.colors.syntaxHighlight.root:ToHex()}">{escapeRichText(piece.content)}</font>`
+			)
 		end
 	end
 	self.overlay.Text = table.concat(text)
-	
+
 	self._pieces = pieces
 end
 
@@ -119,7 +122,7 @@ end
 function ShortcutsTextBoxStyleState:update(speed: StyleStateHelper.TransitionSpeed)
 	TextBoxStyleState.update(self, speed)
 	StyleStateHelper.tween(self.overlay, StyleStateHelper.getTweenInfoForSpeed(speed), {
-		TextTransparency = if self.disabled then 0.75 else 0
+		TextTransparency = if self.disabled then 0.75 else 0,
 	})
 	self:_updateOverlayText(true)
 end
@@ -134,7 +137,7 @@ type TextResult = {
 function ShortcutsTextBoxStyleState:getText(errorHandler: TextBoxStyleState.GetTextErrorHandler): string
 	local pieces = self._pieces :: parseShortcuts.ShortcutsString
 	local text = table.create(#pieces)
-	
+
 	for _, piece in pieces do
 		if piece.type == "normal" then
 			table.insert(text, piece.content)
@@ -146,7 +149,7 @@ function ShortcutsTextBoxStyleState:getText(errorHandler: TextBoxStyleState.GetT
 			local success, err = pcall(function()
 				name = Players:GetUserIdFromNameAsync(id)
 			end)
-			
+
 			if not success then
 				if err:find("Unknown user") then
 					errorHandler(`User not found: {id}`)
@@ -159,7 +162,7 @@ function ShortcutsTextBoxStyleState:getText(errorHandler: TextBoxStyleState.GetT
 			end
 		end
 	end
-	
+
 	return table.concat(text)
 end
 

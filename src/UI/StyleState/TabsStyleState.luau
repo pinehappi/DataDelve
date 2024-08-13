@@ -12,38 +12,38 @@ function TabsStyleState.from(theme, frame: Frame)
 			buttons[v.Name] = v
 		end
 	end
-	
+
 	local self = setmetatable({
 		theme = theme,
 		frame = frame,
-		
+
 		buttons = buttons,
 		buttonStyleStates = {},
-		
+
 		selecting = nil,
 		_selectingStyleState = nil,
-		
-		selectBar = script.SelectBar:Clone()
+
+		selectBar = script.SelectBar:Clone(),
 	}, TabsStyleState)
-	
+
 	for _, button in buttons do
 		local styleState = ButtonStyleState.from(self.theme, button, {
-			style = "dormant"
+			style = "dormant",
 		})
 		self.buttonStyleStates[button.Name] = styleState
-		
+
 		local fakeBar = nil
-		
+
 		button.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
-				if (not fakeBar) and (not styleState.selecting) then
+				if (not fakeBar) and not styleState.selecting then
 					fakeBar = self.selectBar:Clone()
 					fakeBar.BackgroundTransparency = 0.75
 					fakeBar.Parent = button
 				end
 			end
 		end)
-		
+
 		button.InputEnded:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
 				if fakeBar then
@@ -52,12 +52,12 @@ function TabsStyleState.from(theme, frame: Frame)
 				end
 			end
 		end)
-		
+
 		button.Activated:Connect(function()
 			self:select(button.Name)
 		end)
 	end
-	
+
 	self._selectingChanged = Instance.new("BindableEvent")
 	self.selectingChanged = self._selectingChanged.Event
 
@@ -66,7 +66,9 @@ function TabsStyleState.from(theme, frame: Frame)
 end
 
 function TabsStyleState:select(name: string)
-	if self.selecting == name then return end
+	if self.selecting == name then
+		return
+	end
 
 	local lastSelectedStyleState = self._selectingStyleState
 	if lastSelectedStyleState then
@@ -84,13 +86,13 @@ function TabsStyleState:select(name: string)
 	self.selectBar.BackgroundTransparency = 1
 	self.selectBar.Parent = self.buttons[name]
 	TweenService:Create(self.selectBar, StyleStateHelper.getTweenInfoForSpeed("fast"), {
-		BackgroundTransparency = 0
+		BackgroundTransparency = 0,
 	}):Play()
 end
 
 function TabsStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 	TweenService:Create(self.selectBar, StyleStateHelper.getTweenInfoForSpeed(speed), {
-		BackgroundColor3 = self.theme.colors.mainAccent
+		BackgroundColor3 = self.theme.colors.mainAccent,
 	}):Play()
 	for _, button in self.buttonStyleStates do
 		button:update(speed)

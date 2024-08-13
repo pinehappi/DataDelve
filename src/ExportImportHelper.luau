@@ -17,15 +17,15 @@ function ExportImportHelper.export(fileName: string, value: any): (boolean, stri
 	if RunService:IsRunning() then
 		return false, "Cannot export while game is running."
 	end
-	
+
 	local originalSelection = SelectionService:Get()
-	
+
 	local json = HttpService:JSONEncode(value)
 	local moduleScript = Instance.new("ModuleScript")
-	
+
 	moduleScript.Archivable = false
 	moduleScript.Name = "DataDelve Export"
-	
+
 	-- Write to source
 	local success, err = pcall(function()
 		if #json > STRING_PROPERTY_SIZE_LIMIT then
@@ -45,22 +45,23 @@ function ExportImportHelper.export(fileName: string, value: any): (boolean, stri
 			end)
 		end
 	end)
-	
+
 	if not success then
 		if err:find("denied") then
-			return false, "Script injection permissions is required to export to JSON (a script must be created for export)."
+			return false,
+				"Script injection permissions is required to export to JSON (a script must be created for export)."
 		else
 			return false, err
 		end
 	end
-	
+
 	-- Prompt export
-	
+
 	moduleScript.Parent = game:GetService("TweenService")
-	
-	SelectionService:Set({moduleScript})
+
+	SelectionService:Set({ moduleScript })
 	local exported = plugin:PromptSaveSelection(`{fileName}_json`)
-	
+
 	SelectionService:Set(originalSelection)
 	moduleScript:Destroy()
 	return exported
@@ -69,14 +70,14 @@ end
 -- Returns if the user selected a valid JSON file
 -- The second return is either the JSON value or error message
 function ExportImportHelper.import(): (boolean, (string | unknown)?)
-	local file = StudioService:PromptImportFile({"json"})
+	local file = StudioService:PromptImportFile({ "json" })
 	if file then
 		local contents = file:GetBinaryContents()
 		local json: unknown?
 		local success, err = pcall(function()
 			json = HttpService:JSONDecode(contents)
 		end)
-		
+
 		if not success then
 			return false, "Failed to parse JSON."
 		else

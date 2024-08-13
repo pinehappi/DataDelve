@@ -5,25 +5,21 @@ local Tree = require(script.Parent.Parent.UI.Viewers.Tree)
 
 local fuzzUserIds = require(script.fuzzUserIds)
 
-type Operation =
-	{
-		type: "delete",
-		index: number,
-		onlyChildren: boolean,
-	}
-	| {
-		type: "insertInto",
-		index: number,
-		key: string?,
-		value: number,
-	}
-	| {
-		type: "insertAfter",
-		index: number,
-		key: string?,
-		value: number
-	}
-	
+type Operation = {
+	type: "delete",
+	index: number,
+	onlyChildren: boolean,
+} | {
+	type: "insertInto",
+	index: number,
+	key: string?,
+	value: number,
+} | {
+	type: "insertAfter",
+	index: number,
+	key: string?,
+	value: number,
+}
 
 local fakeKeyInfo = {
 	CreatedTime = 0,
@@ -40,8 +36,18 @@ local testTree1 = {
 		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
 		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
 		moreNEsted = {
-			3,4,5,6,6,"slayy",{"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup", 43, {"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false}}
-		}
+			3,
+			4,
+			5,
+			6,
+			6,
+			"slayy",
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+			},
+		},
 	},
 	car = 34,
 	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
@@ -62,7 +68,17 @@ local testTree2 = {
 				hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
 				aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
 				moreNEsted = {
-					3,4,5,6,6,"slayy",{"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup", 43, {"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false}},
+					3,
+					4,
+					5,
+					6,
+					6,
+					"slayy",
+					{
+						"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+						43,
+						{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+					},
 					{
 						hello = 5,
 						taxi = 3,
@@ -70,21 +86,36 @@ local testTree2 = {
 							hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
 							aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
 							moreNEsted = {
-								3,4,5,6,6,"slayy",{"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup", 43, {"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false}}
+								3,
+								4,
+								5,
+								6,
+								6,
+								"slayy",
+								{
+									"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+									43,
+									{
+										"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus",
+										45,
+										true,
+										false,
+									},
+								},
 							},
 						},
 						car = 34,
 						tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
 						city = false,
 						abc = true,
-					}
-				}
+					},
+				},
 			},
 			car = 34,
 			tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
 			city = false,
 			abc = true,
-		}
+		},
 	},
 	car = 34,
 	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
@@ -93,17 +124,28 @@ local testTree2 = {
 }
 
 local testTree3 = {
-	1,2,3,nil,4,5, nil, nil, nil, nil, nil, 6
+	1,
+	2,
+	3,
+	nil,
+	4,
+	5,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	6,
 }
 
 local testTree4 = {
-	{1,2, 3},
-	{4,5,6},
-	{7,8,9},
-	{10,11,12}
+	{ 1, 2, 3 },
+	{ 4, 5, 6 },
+	{ 7, 8, 9 },
+	{ 10, 11, 12 },
 }
 
-local testTree5 = {1/0}
+local testTree5 = { 1 / 0 }
 
 local function tablesEqual(a, b): boolean
 	for i, v in a do
@@ -129,7 +171,7 @@ end
 
 local function runOperation(tree, operation: Operation)
 	if operation.type == "delete" then
-		tree:_deleteBranch(operation.index, { onlyChildren=operation.onlyChildren })
+		tree:_deleteBranch(operation.index, { onlyChildren = operation.onlyChildren })
 	elseif operation.type == "insertAfter" then
 		tree:_tryInsertAfter(operation.index, operation.key, operation.value)
 	elseif operation.type == "insertInto" then
@@ -137,7 +179,7 @@ local function runOperation(tree, operation: Operation)
 	end
 end
 
-local function testOutput(name: string, data, expected, operations: {Operation})
+local function testOutput(name: string, data, expected, operations: { Operation })
 	local success, err = pcall(function()
 		local fake = script.Parent.Parent.UI.Assets.Widget.EditKey.Content.ScrollingFrame:Clone()
 		local keyInfo = table.clone(fakeKeyInfo)
@@ -145,16 +187,16 @@ local function testOutput(name: string, data, expected, operations: {Operation})
 		if typeof(data) == "table" then
 			keyInfo.Metadata = data
 		end
-		
+
 		local viewer = Tree.new(Theme.global, {}, fake, {
 			rootName = "test",
 			data = data,
-			keyInfo = keyInfo
+			keyInfo = keyInfo,
 		})
 		for _, operation in operations do
 			runOperation(viewer, operation)
 		end
-		
+
 		local value = viewer:getValue()
 		local userIds, metadata = viewer:getKeyInfo()
 		if typeof(expected) == "table" then
@@ -170,7 +212,7 @@ local function testOutput(name: string, data, expected, operations: {Operation})
 			warn("expected:", expected)
 			return
 		end
-		
+
 		if not tablesEqual(userIds, keyInfo.UserIds) then
 			warn(`userIds {name} failed`)
 			warn("got:", userIds)
@@ -203,7 +245,6 @@ testOutput("Test Preserves Number", randomNumber, randomNumber, {})
 testOutput("Test Preserves Bool", false, false, {})
 testOutput("Test Preserves Nil", nil, nil, {})
 testOutput("Test Preserves Number", 1e+123, 1e+123, {})
-
 
 -- These tests will not work because key order is not preserved
 

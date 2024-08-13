@@ -1,7 +1,7 @@
 export type TransitionSpeed = "fast" | "slow" | "instant" | "veryFast" | nil
 export type StyleState = {
 	from: (theme: any, object: GuiObject, ...any) -> StyleState,
-	
+
 	update: (StyleState, TransitionSpeed) -> (),
 	destroy: (StyleState, completely: boolean?) -> (),
 }
@@ -24,13 +24,13 @@ function StyleStateHelper.getTweenInfoForSpeed(speed: TransitionSpeed)
 	elseif speed == "veryFast" then
 		tweenInfo = StyleStateHelper.veryFastTween
 	end
-	
+
 	return tweenInfo
 end
 
 -- Updates a table that contains style states or more tables that contain style states
 type StyleStateTable = {
-	[string]: StyleState | StyleStateTable
+	[string]: StyleState | StyleStateTable,
 }
 function StyleStateHelper.update(t: StyleStateTable, speed: TransitionSpeed)
 	for _, styleState in t do
@@ -43,7 +43,7 @@ function StyleStateHelper.update(t: StyleStateTable, speed: TransitionSpeed)
 end
 
 -- TODO: handle race conditions
-function StyleStateHelper.tween(object: Instance, info: TweenInfo, props: {[string]: unknown})
+function StyleStateHelper.tween(object: Instance, info: TweenInfo, props: { [string]: unknown })
 	if info.Time == 0 then
 		for prop, val in props do
 			object[prop] = val

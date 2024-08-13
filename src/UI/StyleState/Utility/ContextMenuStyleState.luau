@@ -12,7 +12,7 @@ ContextMenuStyleState.SEPARATOR = newproxy()
 
 export type Options = { string | { icon: string, text: string } }
 export type ContextMenuOptions = {
-	options: Options
+	options: Options,
 }
 
 -- For convenience
@@ -23,7 +23,7 @@ function ContextMenuStyleState.prompt(theme, container: GuiObject, position: Vec
 
 	modal:destroy()
 	contextMenu:destroy(true)
-	
+
 	return option
 end
 
@@ -31,21 +31,21 @@ function ContextMenuStyleState.createMenu(theme, container: GuiObject, position:
 	local frame = script.ContextMenu:Clone()
 	frame.Parent = container
 	frame.Position = UDim2.fromOffset(position.X, position.Y)
-	
+
 	local styleState = ContextMenuStyleState.from(theme, frame, options)
-	
+
 	local modal = PopupHelper.modal(frame, container, {
-		zIndex = 20
+		zIndex = 20,
 	})
 	modal.cancelled:Connect(function()
 		styleState:selectOption(nil)
 	end)
-	
+
 	PopupHelper.clamp(frame, container, {
 		boundaryDistance = 5,
 		tryPivot = true,
 	})
-	
+
 	return styleState, modal
 end
 
@@ -63,14 +63,14 @@ function ContextMenuStyleState.from(theme, contextMenu: typeof(script.ContextMen
 		theme = theme,
 		frame = contextMenu,
 		options = options.options,
-		
+
 		_hasIcons = optionsHasIcon(options.options),
-		
+
 		_buttons = table.create(#options.options),
 		_separators = table.create(1),
 		_hoveringOption = nil,
 	}, ContextMenuStyleState)
-	
+
 	local lastInserted: "option" | "separator" | nil = nil
 	for i, option in options.options do
 		if option == ContextMenuStyleState.SEPARATOR then
@@ -78,7 +78,7 @@ function ContextMenuStyleState.from(theme, contextMenu: typeof(script.ContextMen
 				local separator = script.Separator:Clone()
 				table.insert(self._separators, separator)
 				separator.Parent = self.frame
-				
+
 				lastInserted = "separator"
 			end
 		else
@@ -88,20 +88,20 @@ function ContextMenuStyleState.from(theme, contextMenu: typeof(script.ContextMen
 				text = option.text
 				icon = option.icon
 			end
-			
+
 			local button = script.Option:Clone()
 			button.Name = text
 			button.TextLabel.Text = text
-			
+
 			if self._hasIcons then
 				button.Icon.Visible = true
 				button.Icon.Image = icon
-				
+
 				button.UIPadding.PaddingLeft = UDim.new(0, 3)
 			end
-			
+
 			table.insert(self._buttons, button)
-			
+
 			button.InputBegan:Connect(function(input)
 				if input.UserInputType == Enum.UserInputType.MouseMovement then
 					self._hoveringOption = text
@@ -119,21 +119,21 @@ function ContextMenuStyleState.from(theme, contextMenu: typeof(script.ContextMen
 			button.Activated:Connect(function()
 				self:selectOption(text)
 			end)
-			
+
 			button.Parent = self.frame
-			
+
 			lastInserted = "option"
 		end
 	end
-	
+
 	self._selected = Instance.new("BindableEvent")
 	self.selected = self._selected.Event
-	
+
 	self:_updateSeparatorSizes()
 	contextMenu:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		self:_updateSeparatorSizes()
 	end)
-	
+
 	self:update("instant")
 	return self
 end
@@ -141,7 +141,11 @@ end
 -- Can't use scale because AutomaticSize will expand it all the way
 function ContextMenuStyleState:_updateSeparatorSizes()
 	for _, separator in self._separators do
-		separator.Size = UDim2.fromOffset(self.frame.AbsoluteSize.X - (script.ContextMenu.UIPadding.PaddingLeft.Offset + script.ContextMenu.UIPadding.PaddingRight.Offset), 1)
+		separator.Size = UDim2.fromOffset(
+			self.frame.AbsoluteSize.X
+				- (script.ContextMenu.UIPadding.PaddingLeft.Offset + script.ContextMenu.UIPadding.PaddingRight.Offset),
+			1
+		)
 	end
 end
 
@@ -152,14 +156,14 @@ end
 function ContextMenuStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
 	TweenService:Create(self.frame, tweenInfo, {
-		BackgroundColor3 = self.theme.colors.button.secondary.body.default
+		BackgroundColor3 = self.theme.colors.button.secondary.body.default,
 	}):Play()
 	TweenService:Create(self.frame.UIStroke, tweenInfo, {
-		Color = self.theme.colors.button.secondary.outline.default
+		Color = self.theme.colors.button.secondary.outline.default,
 	}):Play()
 	for _, separator in self._separators do
 		StyleStateHelper.tween(separator, tweenInfo, {
-			BackgroundColor3 = self.theme.colors.button.secondary.outline.default
+			BackgroundColor3 = self.theme.colors.button.secondary.outline.default,
 		})
 	end
 	for _, button in self._buttons do

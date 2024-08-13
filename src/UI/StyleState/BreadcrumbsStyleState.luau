@@ -16,7 +16,7 @@ type Crumb = {
 	styleState: ButtonStyleState.ButtonStyleState,
 	category: string,
 	name: string,
-	
+
 	unselectedIcon: string,
 	selectedIcon: string,
 }
@@ -47,7 +47,9 @@ function BreadcrumbsStyleState.from(theme, frame: Frame & { UIListLayout: UIList
 		self._lastContentSizeX = frame.UIListLayout.AbsoluteContentSize.X
 
 		local function updateLayout()
-			if not frame.Visible then return end
+			if not frame.Visible then
+				return
+			end
 
 			if self.layout == "breadcrumbs" then
 				self._lastContentSizeX = frame.UIListLayout.AbsoluteContentSize.X
@@ -60,7 +62,10 @@ function BreadcrumbsStyleState.from(theme, frame: Frame & { UIListLayout: UIList
 			end
 		end
 
-		table.insert(self._connections, frame.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateLayout))
+		table.insert(
+			self._connections,
+			frame.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateLayout)
+		)
 		table.insert(self._connections, frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout))
 		table.insert(self._connections, frame:GetPropertyChangedSignal("Visible"):Connect(updateLayout))
 	end)
@@ -85,7 +90,7 @@ function BreadcrumbsStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
 	for _, pointer in self._pointers do
 		TweenService:Create(pointer, tweenInfo, {
-			ImageColor3 = self.theme.colors.text
+			ImageColor3 = self.theme.colors.text,
 		}):Play()
 	end
 end
@@ -103,11 +108,8 @@ function BreadcrumbsStyleState:jumpTo(crumbIndex: number)
 
 	local currentCrumb = self.crumbs[crumbIndex]
 	self.currentCrumbIndex = crumbIndex
-	currentCrumb.styleState.button.TextLabel.FontFace = Font.new(
-		script.Crumb.TextLabel.FontFace.Family,
-		Enum.FontWeight.Bold,
-		script.Crumb.TextLabel.FontFace.Style
-	)
+	currentCrumb.styleState.button.TextLabel.FontFace =
+		Font.new(script.Crumb.TextLabel.FontFace.Family, Enum.FontWeight.Bold, script.Crumb.TextLabel.FontFace.Style)
 	currentCrumb.styleState.button.Icon.Image = currentCrumb.selectedIcon
 
 	if self._selectStyleState then
@@ -121,13 +123,17 @@ function BreadcrumbsStyleState:jumpTo(crumbIndex: number)
 end
 
 -- Icon can be an image id or a table with the image ids for the selected and unselected states
-function BreadcrumbsStyleState:addCrumb(icon: string | { selected: string, unselected: string }, category: string, name: string)
+function BreadcrumbsStyleState:addCrumb(
+	icon: string | { selected: string, unselected: string },
+	category: string,
+	name: string
+)
 	local index = nil
 	local button = script.Crumb:Clone()
 	local styleState = ButtonStyleState.from(self.theme, button, {
-		style = "transparent"
+		style = "transparent",
 	})
-	
+
 	local unselectedIcon: string
 	local selectedIcon: string
 	if typeof(icon) == "table" then
@@ -176,7 +182,7 @@ function BreadcrumbsStyleState:addCrumb(icon: string | { selected: string, unsel
 	self:_updatePointers()
 end
 
-function BreadcrumbsStyleState:popCrumb(options: ({ silently: boolean })?)
+function BreadcrumbsStyleState:popCrumb(options: { silently: boolean }?)
 	options = options or {}
 
 	local crumb = table.remove(self.crumbs)
@@ -207,10 +213,10 @@ function BreadcrumbsStyleState:setCrumbNameVisibleSafe(index: number, visible: b
 	local crumb = self.crumbs[index]
 	if crumb then
 		crumb.styleState.button.TextLabel.Visible = visible
-		
+
 		-- AutomaticSize does not shrink it enough for some reason
 		-- So manually set the size
-		
+
 		if visible then
 			crumb.styleState.button.AutomaticSize = Enum.AutomaticSize.X
 			crumb.styleState.button.Size = script.Crumb.Size
@@ -236,7 +242,7 @@ function BreadcrumbsStyleState:setDisabled(disabled: boolean)
 	return self
 end
 
-function BreadcrumbsStyleState:destroy(completely: boolean)	
+function BreadcrumbsStyleState:destroy(completely: boolean)
 	for _, crumb in self.crumbs do
 		self:_cleanupCrumb(crumb)
 	end
@@ -252,7 +258,6 @@ function BreadcrumbsStyleState:destroy(completely: boolean)
 	end
 end
 
-
 -- Private
 
 function BreadcrumbsStyleState:_cleanupCrumb(crumb: Crumb)
@@ -267,14 +272,14 @@ function BreadcrumbsStyleState:_updatePointers()
 	end
 
 	for i, crumb in self.crumbs do
-		crumb.styleState.button.LayoutOrder = 2*i
+		crumb.styleState.button.LayoutOrder = 2 * i
 		if i > 1 then
 			local pointer = self._pointers[i - 1]
 			if not pointer then
 				pointer = script.Pointer:Clone()
 				table.insert(self._pointers, pointer)
 			end
-			pointer.LayoutOrder = 2*i - 1
+			pointer.LayoutOrder = 2 * i - 1
 			pointer.ImageColor3 = self.theme.colors.text
 
 			if self.layout == "breadcrumbs" then
@@ -287,7 +292,7 @@ end
 function BreadcrumbsStyleState:_getSelectOptions(): SelectStyleState.Options
 	local options = {}
 	for _, crumb in self.crumbs do
-		table.insert(options, {name=crumb.name, icon=crumb.unselectedIcon})
+		table.insert(options, { name = crumb.name, icon = crumb.unselectedIcon })
 	end
 	return options
 end

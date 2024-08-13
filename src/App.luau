@@ -36,13 +36,13 @@ local ExportImportHelper = require(script.Parent.ExportImportHelper)
 local promptKeyValueForm = require(script.Parent.UI.Utilities.promptKeyValueForm)
 
 local WIDGET_INFO = DockWidgetPluginGuiInfo.new(
-	Enum.InitialDockState.Float,  -- Widget will be initialized in floating panel
-	false,   -- Widget will be initially enabled
-	false,  -- Don't override the previous enabled state
-	400,    -- Default width of the floating window
-	250,    -- Default height of the floating window
-	350,    -- Minimum width of the floating window
-	230     -- Minimum height of the floating window
+	Enum.InitialDockState.Float, -- Widget will be initialized in floating panel
+	false, -- Widget will be initially enabled
+	false, -- Don't override the previous enabled state
+	400, -- Default width of the floating window
+	250, -- Default height of the floating window
+	350, -- Minimum width of the floating window
+	230 -- Minimum height of the floating window
 )
 
 local gameName = game.Name
@@ -71,39 +71,39 @@ function App.new(id: string)
 		session = Session.new(),
 		ui = BUI.new(Theme, uiMessages),
 		uiMessages = uiMessages,
-		
+
 		viewer = nil,
-		
+
 		connections = {},
-		
+
 		_isUpdatingKey = false,
 		_isGettingKey = false,
 	}, App)
-	
+
 	self.widget = plugin:CreateDockWidgetPluginGui(id, WIDGET_INFO)
 	self.widget.Title = id
 	self.widget.Name = id
 	self.widget.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	
+
 	self.ui:setParent(self.widget)
 	self.uiMessages:setParent(self.widget)
-	
+
 	-- Breadcrumbs
-	
+
 	self.ui.styleStates.breadcrumbs.crumbChanged:Connect(function(crumb)
 		self.ui:setActiveView(crumb.category)
 		self.ui:updateBreadcrumbsVisibility()
 	end)
-	
+
 	self.ui:hideBreadcrumbs()
-	
+
 	-- Connect form
-	
+
 	self:_updateConnectButton()
 	self.ui.gui.ConnectDataStore.Content.Form.DataStoreName.TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 		self:_updateConnectButton()
 	end)
-	
+
 	self.ui.styleStates.connect.dataStoreNameTextBox.textBox.FocusLost:Connect(function(entered)
 		if entered then
 			self:_submitConnectForm()
@@ -114,21 +114,21 @@ function App.new(id: string)
 			self:_submitConnectForm()
 		end
 	end)
-	
+
 	self.ui.gui.ConnectDataStore.Content.Form.Connect.Connect.Activated:Connect(function()
 		self:_submitConnectForm()
 	end)
-	
+
 	-- History
-	
+
 	self.ui:updateConnectionsHistory(History.connectionRecords)
-	
+
 	table.insert(self.connections, {
 		History.connectionsChanged:Connect(function()
 			self.ui:updateConnectionsHistory(History.connectionRecords)
-		end)
+		end),
 	})
-	
+
 	self.ui.connectionRecordSelected:Connect(function(record: Types.DataStoreConnectionRecord)
 		self:tryConnect(record.connection)
 	end)
@@ -152,13 +152,16 @@ function App.new(id: string)
 		self.ui.gui.ConnectDataStore.Content.CanvasPosition = Vector2.new(0, 0)
 		self.uiMessages:success("Loaded connection.")
 	end)
-	
+
 	-- DataStore listing
-	
+
 	self.ui.gui.ConnectDataStore.Content.DataStoreList.Table.LoadMore.Activated:Connect(function()
 		if self.session.dataStorePages then
 			if not self.session.dataStorePages.isFinished then
-				local loadingBar = LoadingBarStyleState.from(Theme, self.ui.gui.ConnectDataStore.Content.DataStoreList.Table.LoadingBar)
+				local loadingBar = LoadingBarStyleState.from(
+					Theme,
+					self.ui.gui.ConnectDataStore.Content.DataStoreList.Table.LoadingBar
+				)
 				self.ui.gui.ConnectDataStore.Content.DataStoreList.Table.LoadingBar.Visible = true
 				task.spawn(loadingBar.animate, loadingBar)
 
@@ -176,7 +179,7 @@ function App.new(id: string)
 			end
 		end
 	end)
-	
+
 	self.ui.dataStoreInfoSelected:Connect(function(info: DataStoreInfo)
 		self:tryConnect({
 			name = info.DataStoreName,
@@ -184,7 +187,7 @@ function App.new(id: string)
 			isOrdered = false,
 		})
 	end)
-	
+
 	self.ui.gui.ConnectDataStore.Content.Form.Prefix.List.Activated:Connect(function()
 		self:tryListDataStores()
 	end)
@@ -194,9 +197,9 @@ function App.new(id: string)
 			self:tryListDataStores()
 		end
 	end)
-	
+
 	-- Key Getting
-	
+
 	self.ui.styleStates.browse.key.textBox:GetPropertyChangedSignal("Text"):Connect(function()
 		local text = self.ui.styleStates.browse.key.textBox.Text
 		if (#text > 0) and self.session.connection.allScopes then
@@ -210,7 +213,7 @@ function App.new(id: string)
 			self.ui.styleStates.browse.key:setError(nil):update("veryFast")
 		end
 	end)
-	
+
 	self.ui.styleStates.browse.key.textBox.FocusLost:Connect(function(enterPressed, input)
 		if not enterPressed then
 			return
@@ -226,11 +229,11 @@ function App.new(id: string)
 		loadingBar.container.Visible = true
 		self.ui.styleStates.browse.key:setDisabled(true):update()
 		task.spawn(loadingBar.animate, loadingBar)
-		
+
 		local keyName = self.ui.styleStates.browse.key:getText(function(err: string)
 			self.uiMessages:error(err)
 		end)
-		
+
 		local success, err = self:tryGetKey(keyName)
 
 		loadingBar.container.Visible = false
@@ -242,9 +245,9 @@ function App.new(id: string)
 			return
 		end
 	end)
-	
+
 	-- Key browsing
-	
+
 	self.ui.gui.BrowseKeys.Keys.Table.LoadMore.Activated:Connect(function()
 		if self.session.keyPages then
 			if not self.session.keyPages.isFinished then
@@ -266,7 +269,7 @@ function App.new(id: string)
 			end
 		end
 	end)
-	
+
 	self.ui.gui.BrowseKeys.List.Activated:Connect(function()
 		self:tryListKeys()
 	end)
@@ -276,7 +279,7 @@ function App.new(id: string)
 			self:tryListKeys()
 		end
 	end)
-	
+
 	self.ui.keySelected:Connect(function(key: DataStoreKey)
 		local success, err = self:tryGetKey(key.KeyName)
 		if not success then
@@ -284,36 +287,40 @@ function App.new(id: string)
 			return
 		end
 	end)
-	
+
 	self.ui.idLookedUp:Connect(function(key: number)
 		local id = tonumber(key:match("%d+"))
 		if not id then
 			self.uiMessages:error("Invalid Id.")
 			return
 		end
-		
+
 		self:_tryLookupId(id)
 	end)
-	
+
 	-- Saving
-	
+
 	self.ui.styleStates.edit.save.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then return end
-		
+		if not self:_canEditCurrentKey() then
+			return
+		end
+
 		local value, hasNil = self.viewer:getValue()
 		if hasNil then
-			if not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-				title = "Contains nil value",
-				message = "Nil values will not be saved because of how Lua tables are. Nil gaps within arrays may delete any values after the gap.",
-				yesText = "Ok",
-				noText = "Cancel"
-			}) then
+			if
+				not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+					title = "Contains nil value",
+					message = "Nil values will not be saved because of how Lua tables are. Nil gaps within arrays may delete any values after the gap.",
+					yesText = "Ok",
+					noText = "Cancel",
+				})
+			then
 				return
 			end
 		end
-		
+
 		local userIds, metadata = self.viewer:getKeyInfo()
-		
+
 		self:_wrapEditKeyOperation(function()
 			local success, err = self.session:trySaveCurrentKey(value, userIds, metadata)
 			if not success then
@@ -324,25 +331,28 @@ function App.new(id: string)
 			end
 		end)
 	end)
-	
+
 	self.ui.styleStates.edit.refresh.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then return end
-		
+		if not self:_canEditCurrentKey() then
+			return
+		end
+
 		if self.viewer.isDirty then
-			local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-				title = "Refresh key?",
-				message =
-					if self.session.currentVersion then "This will delete any changes made. It will also reset to the latest version"
-					else "This will delete any changes made."
-			})
+			local confirmed =
+				ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+					title = "Refresh key?",
+					message = if self.session.currentVersion
+						then "This will delete any changes made. It will also reset to the latest version"
+						else "This will delete any changes made.",
+				})
 
 			if not confirmed then
 				return
 			end
 		end
-		
+
 		self:_wrapEditKeyOperation(function()
-			local success, err = self:tryGetKey(self.session.currentKey, { popCurrentCrumb = true} )
+			local success, err = self:tryGetKey(self.session.currentKey, { popCurrentCrumb = true })
 			if not success then
 				self.uiMessages:reportDataStoreError(err)
 			else
@@ -350,27 +360,34 @@ function App.new(id: string)
 			end
 		end)
 	end)
-	
+
 	-- TODO: deleting does not remove the key if it is in the ListKeysAsync list which may be unexpected
 	self.ui.styleStates.edit.delete.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then return end
-		
+		if not self:_canEditCurrentKey() then
+			return
+		end
+
 		local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
 			title = "Delete key?",
-			message = "Are you sure you want to do this?"
+			message = "Are you sure you want to do this?",
 		})
-		
+
 		if confirmed then
-			if not self:_canEditCurrentKey() then return end
-			
-			local confirmedAgain = ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-				title = "Confirm again",
-				message = `You are going to delete the key <b>{self.session.currentKey}</b>.`
-			})
-			
+			if not self:_canEditCurrentKey() then
+				return
+			end
+
+			local confirmedAgain =
+				ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+					title = "Confirm again",
+					message = `You are going to delete the key <b>{self.session.currentKey}</b>.`,
+				})
+
 			if confirmedAgain then
-				if not self:_canEditCurrentKey() then return end
-				
+				if not self:_canEditCurrentKey() then
+					return
+				end
+
 				self:_wrapEditKeyOperation(function()
 					local success, err = self.session:tryDeleteCurrentKey()
 
@@ -384,58 +401,60 @@ function App.new(id: string)
 			end
 		end
 	end)
-	
+
 	self.ui.styleStates.edit.more.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then return end
-		
+		if not self:_canEditCurrentKey() then
+			return
+		end
+
 		-- Prompt
-		local position =
-			self.ui.styleStates.edit.more.button.AbsolutePosition
+		local position = self.ui.styleStates.edit.more.button.AbsolutePosition
 			+ self.ui.styleStates.edit.more.button.AbsoluteSize
 			+ Vector2.new(0, 6)
-		
+
 		local contextMenuStyleState, contextMenuModal = ContextMenuStyleState.createMenu(Theme, self.widget, position, {
 			options = {
-				{ icon=Theme.icons.export, text="Export to JSON" },
-				{ icon=Theme.icons.import, text="Import from JSON" },
+				{ icon = Theme.icons.export, text = "Export to JSON" },
+				{ icon = Theme.icons.import, text = "Import from JSON" },
 				ContextMenuStyleState.SEPARATOR,
-				{ icon=Theme.icons.rename, text="Transfer/Rename Key" },
-				{ icon=Theme.icons.storage, text="View Data Usage" },
-			}
+				{ icon = Theme.icons.rename, text = "Transfer/Rename Key" },
+				{ icon = Theme.icons.storage, text = "View Data Usage" },
+			},
 		})
-		
+
 		contextMenuStyleState.frame.Position = UDim2.fromOffset(position.X, position.Y)
 		contextMenuStyleState.frame.AnchorPoint = Vector2.new(1, 0)
-		
+
 		self.ui.styleStates.edit.more:setSelecting(true):update()
 		local result = contextMenuStyleState.selected:Wait()
-		
+
 		contextMenuModal:destroy()
 		contextMenuStyleState:destroy(true)
-		
+
 		-- Respond
 		if self:_canEditCurrentKey() then
 			if result == "Export to JSON" then
-				local confirmDialogStyleState, confirmDialogModal = ConfirmDialogStyleState.createDialog(Theme, self.widget, position, {
-					title = "Usage notice",
-					message =
-						`The file will be saved with the file extension {rfmt.code(".lua")}. You must change it to {rfmt.code(".json")} after exporting it. This is a limitation of Roblox. Script injection permissions are also required to create a script for export.`,
-					yesText = "Understood",
-					noText = "Cancel"
-				})
-				
+				local confirmDialogStyleState, confirmDialogModal =
+					ConfirmDialogStyleState.createDialog(Theme, self.widget, position, {
+						title = "Usage notice",
+						message = `The file will be saved with the file extension {rfmt.code(".lua")}. You must change it to {rfmt.code(
+							".json"
+						)} after exporting it. This is a limitation of Roblox. Script injection permissions are also required to create a script for export.`,
+						yesText = "Understood",
+						noText = "Cancel",
+					})
+
 				local confirmed = confirmDialogStyleState.interacted:Wait()
 				confirmDialogModal:destroy()
 				confirmDialogStyleState:destroy(true)
-				
+
 				if confirmed then
 					local value = self.viewer:getValue()
-					local name =
-						if self.session.connection.scope
+					local name = if self.session.connection.scope
 						then `{self.session.connection.scope}_{self.session.connection.name}_{self.session.currentKey}`
 						else `{self.session.connection.name}_{self.session.currentKey}`
 					local exported, err = ExportImportHelper.export(name, value)
-					
+
 					if exported then
 						uiMessages:success("Exported to JSON.")
 					else
@@ -447,14 +466,14 @@ function App.new(id: string)
 				if self.viewer.isDirty then
 					local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, position, {
 						title = "Import from JSON?",
-						message = "This will override any changes made."
+						message = "This will override any changes made.",
 					})
 
 					if not confirmed then
 						passed = false
 					end
 				end
-				
+
 				if passed then
 					local success, result = ExportImportHelper.import()
 					if not success then
@@ -471,18 +490,19 @@ function App.new(id: string)
 					end
 				end
 			elseif result == "Transfer/Rename Key" then
-				if ConfirmDialogStyleState.confirm(Theme, self.widget, position, {
-					title = "Usage Notice",
-					message =
-						`This will first call {rfmt.code("SetAsync")} to transfer the contents of this key to another. `
-						..  `You may then delete the current key to effectively rename it. Note that version history is not transferred.`,
-					yesText = "Understood",
-					noText = "Cancel",
-				}) then
+				if
+					ConfirmDialogStyleState.confirm(Theme, self.widget, position, {
+						title = "Usage Notice",
+						message = `This will first call {rfmt.code("SetAsync")} to transfer the contents of this key to another. `
+							.. `You may then delete the current key to effectively rename it. Note that version history is not transferred.`,
+						yesText = "Understood",
+						noText = "Cancel",
+					})
+				then
 					local confirmDialogFrame = ConfirmDialogStyleState.template:Clone()
-					
+
 					confirmDialogFrame.Position = UDim2.fromOffset(position.X, position.Y)
-					
+
 					local confirmDialogStyleState = ConfirmDialogStyleState.from(Theme, confirmDialogFrame, {
 						title = "Do you want to delete this key?",
 						message = `The key is <b>{self.session.currentKey}</b>.`,
@@ -490,41 +510,37 @@ function App.new(id: string)
 						noText = "No",
 					})
 					local modal = PopupHelper.modal(confirmDialogFrame, self.widget, {
-						zIndex = 20
+						zIndex = 20,
 					})
-					
+
 					PopupHelper.clamp(confirmDialogFrame, self.widget)
-					
+
 					local cancelled = false
 					modal.cancelled:Connect(function()
 						confirmDialogStyleState:interact(false)
 						cancelled = true
 					end)
-					
+
 					local shouldDelete = confirmDialogStyleState.interacted:Wait()
-					
+
 					modal:destroy()
 					confirmDialogStyleState:destroy(true)
-					
+
 					if not cancelled then
 						if self.session:hasBudgetFor(if shouldDelete then "rename" else "transfer") then
 							local result = promptKeyValueForm(Theme, self.widget, {
 								position = position,
 								anchorPoint = Vector2.new(1, 0),
-								title =
-									if shouldDelete then "Rename to"
-									else "Transfer to",
-								
+								title = if shouldDelete then "Rename to" else "Transfer to",
+
 								includeKey = true,
 								includeValue = false,
-								
+
 								yesText = if shouldDelete then "Rename" else "Transfer",
-								
-								constraint =
-									if self.session.connection.allScopes then "renameAllScopes"
-									else "rename",
+
+								constraint = if self.session.connection.allScopes then "renameAllScopes" else "rename",
 							})
-							
+
 							if result then
 								local data = self.viewer:getValue()
 								if data == nil then
@@ -543,13 +559,14 @@ function App.new(id: string)
 										})
 
 										if success then
-											local success, err = self:tryGetKey(result.key, { popCurrentCrumb = true} )
+											local success, err = self:tryGetKey(result.key, { popCurrentCrumb = true })
 
 											if not success then
 												self.uiMessages:reportDataStoreError(err)
 											else
 												self.uiMessages:success(
-													if shouldDelete then `Renamed key to <b>{result.key}</b>.`
+													if shouldDelete
+														then `Renamed key to <b>{result.key}</b>.`
 														else `Transferred key to <b>{result.key}</b>.`
 												)
 											end
@@ -562,7 +579,8 @@ function App.new(id: string)
 						else
 							self.uiMessages:warn(
 								"You are unable to transfer/rename the key at this moment because the requests will be throttled. "
-									.. "Wait and make fewer requests so that there can be budget for this.")
+									.. "Wait and make fewer requests so that there can be budget for this."
+							)
 						end
 					end
 				end
@@ -574,64 +592,70 @@ function App.new(id: string)
 					local _, metadata = self.viewer:getKeyInfo()
 					metadataUsage = #(HttpService:JSONEncode(metadata))
 				end)
-				
+
 				self.ui:createDataUsageCard(keyUsage, metadataUsage)
 			end
 		end
-		
+
 		self.ui.styleStates.edit.more:setSelecting(false):update()
 	end)
-	
+
 	-- Versions
-	
+
 	local versionSuccessfullyLoaded = Instance.new("BindableEvent")
 	self.ui.styleStates.edit.versions.button.Activated:Connect(function()
 		self.ui.versionsView:reset()
-		
 
 		if self.session.currentKeyInfo then
 			self.ui.versionsView:setCurrentVersion(self.session.currentKeyInfo.Version)
 		end
-		
+
 		local modal = PopupHelper.modal(self.ui.versionsView.frame, self.widget, {
-			scrimTransparency = 0.5
+			scrimTransparency = 0.5,
 		})
 		self.ui.versionsView.frame.Visible = true
-		
+
 		local loadedConnection: RBXScriptSignal
 		local closeConnection: RBXScriptSignalXscr
 		local function cleanup()
-			if self.ui.versionsView.locked then return end
+			if self.ui.versionsView.locked then
+				return
+			end
 			loadedConnection:Disconnect()
 			closeConnection:Disconnect()
-			
+
 			modal:destroy()
 			self.ui.versionsView.frame.Visible = false
 		end
-		
+
 		modal.cancelled:Connect(cleanup)
 		loadedConnection = versionSuccessfullyLoaded.Event:Connect(cleanup)
 		closeConnection = self.ui.versionsView.styleStates.close.button.Activated:Connect(cleanup)
-		
+
 		-- try load
-		
+
 		self:_tryListVersions()
 	end)
-	
+
 	self.ui.versionsView.reloaded:Connect(function()
-		if not self.ui.versionsView.styleStates.list.button.Active then return end
+		if not self.ui.versionsView.styleStates.list.button.Active then
+			return
+		end
 		self:_tryListVersions()
 	end)
-	
+
 	-- Same code as refresh, but pass version as param
 	self.ui.versionsView.versionLoaded:Connect(function(version: string)
-		if not self:_canEditCurrentKey() then return end
+		if not self:_canEditCurrentKey() then
+			return
+		end
 
 		if self.viewer.isDirty then
-			local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-				title = "Load version?",
-				message = "This will delete any changes made."
-			})
+			local confirmed =
+				ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+					title = "Load version?",
+					message = "This will delete any changes made.",
+				})
 
 			if not confirmed then
 				return
@@ -639,35 +663,37 @@ function App.new(id: string)
 		end
 
 		self:_wrapVersionsOperation(function()
-			local success, err = self:tryGetKey(self.session.currentKey, { version=version, popCurrentCrumb = true} )
+			local success, err = self:tryGetKey(self.session.currentKey, { version = version, popCurrentCrumb = true })
 			if not success then
 				self.uiMessages:reportDataStoreError(err)
 			else
 				self.uiMessages:success(`Loaded version {version}.`)
-				
+
 				self.ui.versionsView:setLocked(false) -- So that the cleanup function goes through
 				versionSuccessfullyLoaded:Fire()
 			end
 		end)
 	end)
-	
+
 	self.ui.versionsView.versionDeleted:Connect(function(version: string)
-		if not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+		if
+			not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
 				title = "Delete version?",
-				message = "This is PERMANENT. You cannot undo this."
+				message = "This is PERMANENT. You cannot undo this.",
 			})
 		then
 			return
 		end
-		
-		if not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+
+		if
+			not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
 				title = "Are you sure?",
-				message = "Deleting this version is <font color=\"#ff0000\"><b>PERMANENT</b></font>. You cannot undo this!"
+				message = 'Deleting this version is <font color="#ff0000"><b>PERMANENT</b></font>. You cannot undo this!',
 			})
 		then
 			return
 		end
-		
+
 		self:_wrapVersionsOperation(function()
 			local success, err = self.session:tryDeleteCurrentKeyVersion(version)
 			if not success then
@@ -677,7 +703,7 @@ function App.new(id: string)
 			end
 		end)
 	end)
-	
+
 	self.ui.versionsView.styleStates.loadMore.buttonStyleState.button.Activated:Connect(function()
 		if self.session.versionPages then
 			if not self.session.versionPages.isFinished then
@@ -690,17 +716,17 @@ function App.new(id: string)
 			end
 		end
 	end)
-	
+
 	-- Ordered data store
-	
+
 	self.ui.orderedDataStoreView.listed:Connect(function()
 		self:_tryListOrderedKeys()
 	end)
-	
+
 	self.ui.orderedDataStoreView.orderChanged:Connect(function()
 		self:_tryListOrderedKeys()
 	end)
-	
+
 	self.ui.orderedDataStoreView.keyEdited:Connect(function(key, value)
 		self:_wrapOrderedDataStoreOperation(function()
 			local success, err = self.session:trySetOrderedKey(key, value)
@@ -713,7 +739,7 @@ function App.new(id: string)
 			end
 		end)
 	end)
-	
+
 	self.ui.orderedDataStoreView.keyAdded:Connect(function(key, value)
 		self:_wrapOrderedDataStoreOperation(function()
 			local success, err = self.session:trySetOrderedKey(key, value)
@@ -727,7 +753,7 @@ function App.new(id: string)
 			end
 		end)
 	end)
-	
+
 	self.ui.orderedDataStoreView.keyDeleted:Connect(function(key)
 		self:_wrapOrderedDataStoreOperation(function()
 			local success, err = self.session:tryRemoveOrderedKey(key)
@@ -740,7 +766,7 @@ function App.new(id: string)
 			end
 		end)
 	end)
-	
+
 	self.ui.orderedDataStoreView.keyQueried:Connect(function(key)
 		self:_wrapOrderedDataStoreOperation(function()
 			local value, err = self.session:tryGetOrderedKey(key)
@@ -752,7 +778,7 @@ function App.new(id: string)
 			end
 		end)
 	end)
-	
+
 	self.ui.orderedDataStoreView.styleStates.loadMore.buttonStyleState.button.Activated:Connect(function()
 		if self.session.keyPages then
 			if not self.session.keyPages.isFinished then
@@ -765,7 +791,7 @@ function App.new(id: string)
 			end
 		end
 	end)
-	
+
 	-- Settings
 	self.ui.styleStates.settingsButton.button.Activated:Connect(function()
 		if self.ui.styleStates.settingsButton.selecting then
@@ -779,14 +805,17 @@ function App.new(id: string)
 		end
 		self.ui:updateSettingsButtonPosition()
 	end)
-	
-	table.insert(self.connections, Settings.changed:Connect(function(name: string, value: any)
-		if name == "allScopes" then
-			self:_updateAllScopes()
-		elseif name == "hideGameName" then
-			self.ui.styleStates.breadcrumbs:setCrumbNameVisibleSafe(1, not value)
-		end
-	end))
+
+	table.insert(
+		self.connections,
+		Settings.changed:Connect(function(name: string, value: any)
+			if name == "allScopes" then
+				self:_updateAllScopes()
+			elseif name == "hideGameName" then
+				self.ui.styleStates.breadcrumbs:setCrumbNameVisibleSafe(1, not value)
+			end
+		end)
+	)
 	self.ui.styleStates.connect.orderedDataStoreCheckbox.toggled:Connect(function()
 		self:_updateAllScopes()
 	end)
@@ -794,7 +823,7 @@ function App.new(id: string)
 		self.ui:switchConnectTab(tab:lower())
 		self.ui:autoFocus()
 		self:_updateAllScopes()
-		
+
 		if Settings.get("automaticallyList") then
 			if tab:lower() == "list" then
 				if not self.session.dataStorePages then
@@ -804,30 +833,33 @@ function App.new(id: string)
 		end
 	end)
 	self:_updateAllScopes()
-	
-	table.insert(self.connections, gameNameDiscovered.Event:Connect(function()
-		self.ui.styleStates.breadcrumbs:renameCrumbSafe(1, gameName)
-	end))
-	
+
+	table.insert(
+		self.connections,
+		gameNameDiscovered.Event:Connect(function()
+			self.ui.styleStates.breadcrumbs:renameCrumbSafe(1, gameName)
+		end)
+	)
+
 	-- Enabled
 	self._enabledChanged = Instance.new("BindableEvent")
 	self.enabledChanged = self._enabledChanged.Event
 	self.widget:GetPropertyChangedSignal("Enabled"):Connect(function()
 		self._enabledChanged:Fire(self.widget.Enabled)
 	end)
-	
+
 	-- Init
 	self.ui.styleStates.breadcrumbs:addCrumb(GAME_ICON, "game", gameName)
 	self.ui.styleStates.breadcrumbs:setCrumbNameVisibleSafe(1, not Settings.get("hideGameName")) -- Hide the crumb name for the game if the setting says to
 	task.defer(self.ui.updateSettingsButtonPosition, self.ui)
-	
+
 	return self
 end
 
 function App._updateConnectButton(self: App)
-	self.ui.styleStates.connect.connectButton:setDisabled(
-		not isDataStoreNameValid(self.ui.gui.ConnectDataStore.Content.Form.DataStoreName.TextBox.Text)
-	):update()
+	self.ui.styleStates.connect.connectButton
+		:setDisabled(not isDataStoreNameValid(self.ui.gui.ConnectDataStore.Content.Form.DataStoreName.TextBox.Text))
+		:update()
 end
 
 function App.tryConnect(self: App, connection: Types.DataStoreConnection)
@@ -835,7 +867,7 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 		connection.allScopes = true
 		connection.scope = "" -- Has to be to work
 	end
-	
+
 	local success, err = self.session:tryConnect(connection)
 	if not success then
 		self.uiMessages:reportDataStoreError(err)
@@ -848,7 +880,7 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 	if connection.scope and connection.scope ~= "" then
 		crumbName = `{connection.scope}/{connection.name}`
 	end
-	
+
 	-- Reset ui
 	if connection.isOrdered then
 		self.ui.orderedDataStoreView:reset()
@@ -859,15 +891,16 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 		self.ui.styleStates.browse.key.textBox.Text = ""
 		self.ui.styleStates.browse.prefix.textBox.Text = ""
 	end
-	
+
 	self.ui.styleStates.breadcrumbs:addCrumb(
-		if connection.allScopes then ALL_SCOPES_DATASTORE_ICON
+		if connection.allScopes
+			then ALL_SCOPES_DATASTORE_ICON
 			elseif connection.isOrdered then ORDERED_DATASTORE_ICON
 			else DATASTORE_ICON,
 		if connection.isOrdered then "orderedDatastore" else "datastore",
 		crumbName
 	)
-	
+
 	if Settings.get("automaticallyList") then
 		if connection.isOrdered then
 			if (not self.session.keyPages) and (self.session:hasBudgetFor("listOrdered")) then
@@ -905,19 +938,20 @@ function App._submitConnectForm(self: App)
 	self:tryConnect({
 		name = dataStoreName,
 		scope = dataStoreScope,
-		isOrdered = isOrdered
+		isOrdered = isOrdered,
 	})
 end
 
 function App.listDataStores(self: App, prefix: string?)
-	local loadingBar = LoadingBarStyleState.from(Theme, self.ui.gui.ConnectDataStore.Content.Form.Prefix.TextBox.LoadingBar)
+	local loadingBar =
+		LoadingBarStyleState.from(Theme, self.ui.gui.ConnectDataStore.Content.Form.Prefix.TextBox.LoadingBar)
 	loadingBar.container.Visible = true
 	task.spawn(loadingBar.animate, loadingBar)
 	self.ui.styleStates.connect.prefix:setDisabled(true):update()
 	self.ui.styleStates.connect.listButton:setDisabled(true):update()
 
 	local success, err = self.session:tryCreateDataStorePages(prefix)
-	
+
 	loadingBar.container.Visible = false
 	loadingBar:destroy()
 	self.ui.styleStates.connect.prefix:setDisabled(false):update()
@@ -963,15 +997,15 @@ function App._setViewer(self: App, data: any, dirty: boolean)
 			UpdatedTime = self.session.currentKeyInfo.UpdatedTime,
 			Version = self.session.currentKeyInfo.Version,
 			UserIds = self.session.currentKeyInfo:GetUserIds(),
-			Metadata = self.session.currentKeyInfo:GetMetadata()
+			Metadata = self.session.currentKeyInfo:GetMetadata(),
 		},
 
 		dirty = dirty,
 		readOnly = false,
 	})
-	
+
 	self.ui.styleStates.edit.save:setDisabled((not self.viewer.isDirty) or self._isUpdatingKey):update("instant")
-	
+
 	self.viewer.dirtyChanged:Connect(function(dirty)
 		self.ui.styleStates.edit.save:setDisabled(self._isUpdatingKey or not dirty):update()
 	end)
@@ -981,47 +1015,51 @@ function App._setViewer(self: App, data: any, dirty: boolean)
 	end)
 end
 
-function App.tryGetKey(self: App, keyName: string, options: { version: string, popCurrentCrumb: boolean }): (boolean, string?)
+function App.tryGetKey(
+	self: App,
+	keyName: string,
+	options: { version: string, popCurrentCrumb: boolean }
+): (boolean, string?)
 	if self._isGettingKey then
 		return false, "Already getting another key."
 	end
-	
+
 	self._isGettingKey = true
 	self.ui.styleStates.breadcrumbs:setDisabled(true):update()
-	
+
 	options = options or {}
-	
+
 	local success: boolean, err: string?
 	if options.version then
 		success, err = self.session:tryLoadVersion(keyName, options.version)
 	else
 		success, err = self.session:tryLoadKey(keyName)
 	end
-	
+
 	task.wait()
-	
+
 	self._isGettingKey = false
 	self.ui.styleStates.breadcrumbs:setDisabled(false):update()
-	
+
 	if not success then
 		return false, err
 	end
-	
+
 	self:_setViewer(self.session.currentValue, not not options.version) -- Version always dirty so it can override
-	
+
 	if options.popCurrentCrumb then
-		self.ui.styleStates.breadcrumbs:popCrumb({ silently=true })
+		self.ui.styleStates.breadcrumbs:popCrumb({ silently = true })
 	end
 	self.ui.styleStates.breadcrumbs:addCrumb(KEY_ICON, "key", keyName)
-	
+
 	self:_setEditActionsDisabled(false)
-	
+
 	return true
 end
 
 function App.listKeys(self: App, prefix: string?)
 	-- TODO: user may be able to switch to a different datastore which will mess things up
-	
+
 	local loadingBar = LoadingBarStyleState.from(Theme, self.ui.gui.BrowseKeys.Prefix.LoadingBar)
 	loadingBar.container.Visible = true
 	task.spawn(loadingBar.animate, loadingBar)
@@ -1032,7 +1070,7 @@ function App.listKeys(self: App, prefix: string?)
 
 	loadingBar.container.Visible = false
 	loadingBar:destroy()
-	
+
 	self.ui.styleStates.browse.prefix:setDisabled(false):update()
 	self.ui.styleStates.browse.listButton:setDisabled(false):update()
 
@@ -1099,20 +1137,25 @@ function App._wrapEditKeyOperation(self: App, func: () -> ())
 	self:_setUpdatingKey(true)
 
 	local endLoadingBar = LoadingBarStyleState.show(Theme, self.ui.gui.EditKey.LoadingBar)
-	
+
 	-- Main
 	func()
 	--
 
 	endLoadingBar()
-	task.delay(0, function() -- Delay in-case the function fails immediately, does not cause race condition for style states
-		self:_setUpdatingKey(false)
-	end)
+	task.delay(
+		0,
+		function() -- Delay in-case the function fails immediately, does not cause race condition for style states
+			self:_setUpdatingKey(false)
+		end
+	)
 end
 
 function App._wrapOrderedDataStoreOperation(self: App, func: () -> ())
-	if self.ui.orderedDataStoreView.locked then return end
-	
+	if self.ui.orderedDataStoreView.locked then
+		return
+	end
+
 	self.ui.orderedDataStoreView:setLocked(true)
 	self.ui.styleStates.breadcrumbs:setDisabled(true):update()
 
@@ -1126,7 +1169,7 @@ function App._wrapOrderedDataStoreOperation(self: App, func: () -> ())
 		self.ui.orderedDataStoreView:setLocked(false)
 	end)
 	self.ui.styleStates.breadcrumbs:setDisabled(false):update()
-	
+
 	endLoadingBar()
 end
 
@@ -1146,11 +1189,7 @@ function App._tryListOrderedKeys(self: ReplicatedStorage)
 			self.ui.orderedDataStoreView.styleStates.loadMore:clear()
 			self.session.keyPages:syncWithLoadMoreListStyleState(self.ui.orderedDataStoreView.styleStates.loadMore)
 
-			self.ui.orderedDataStoreView:setKeysState(
-				if self.session.keyPages:isEmpty()
-					then "empty"
-					else "notEmpty"
-			)
+			self.ui.orderedDataStoreView:setKeysState(if self.session.keyPages:isEmpty() then "empty" else "notEmpty")
 		end
 	end)
 end
@@ -1170,7 +1209,9 @@ function App._setEditActionsDisabled(self: App, disabled: boolean)
 end
 
 function App._wrapVersionsOperation(self: App, func: () -> ())
-	if self.ui.versionsView.locked then return end
+	if self.ui.versionsView.locked then
+		return
+	end
 
 	self.ui.versionsView:setLocked(true)
 	self:_setUpdatingKey(true)
@@ -1178,11 +1219,11 @@ function App._wrapVersionsOperation(self: App, func: () -> ())
 	local loadingBar = LoadingBarStyleState.from(Theme, self.ui.versionsView.frame["Escape Layout"].LoadingBar)
 	loadingBar.container.Visible = true
 	task.spawn(loadingBar.animate, loadingBar)
-	
+
 	-- Main
 	func()
 	--
-	
+
 	task.delay(0, function()
 		self.ui.versionsView:setLocked(false)
 		self:_setUpdatingKey(false)
@@ -1195,7 +1236,7 @@ end
 function App._tryListVersions(self: App)
 	self.ui.versionsView.styleStates.loadMore:clear()
 	self.ui.versionsView.styleStates.loadMore:setLoadMoreVisible(false)
-	
+
 	self:_wrapVersionsOperation(function()
 		local success, err = self.session:tryCreateVersionPages(
 			self.ui.versionsView.order,
@@ -1210,29 +1251,30 @@ function App._tryListVersions(self: App)
 
 			self.ui.versionsView.frame.List.Table.Visible = not self.session.versionPages:isEmpty()
 			self.ui.versionsView.frame.List.Empty.Visible = self.session.versionPages:isEmpty()
-			
+
 			self.session.versionPages:syncWithLoadMoreListStyleState(self.ui.versionsView.styleStates.loadMore)
 		end
 	end)
 end
 
-function App._tryLookupId(self: App, id: number)	
+function App._tryLookupId(self: App, id: number)
 	local info = nil
 	-- TODO: do something while yielding
 	local success, err = pcall(function()
-		info = UserService:GetUserInfosByUserIdsAsync({id})
+		info = UserService:GetUserInfosByUserIdsAsync({ id })
 	end)
 
 	if not success then
 		self.uiMessages:error(err)
 	elseif info[1] then
 		local card = self.ui:createUserCard()
-		
+
 		local thumbnailUrl = nil
 		local success, err = pcall(function()
-			thumbnailUrl = Players:GetUserThumbnailAsync(id, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+			thumbnailUrl =
+				Players:GetUserThumbnailAsync(id, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
 		end)
-		
+
 		if not success then
 			card:abort()
 			self.uiMessages:error(err)
@@ -1248,11 +1290,10 @@ function App._updateAllScopes(self: App)
 	if Settings.get("allScopes") then
 		self.ui.gui.ConnectDataStore.Content.Form.DataStoreScope.TextBox.Text = ""
 	end
-	
-	self.ui.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible =
-		(self.ui.styleStates.connect.orderedDataStoreCheckbox.value or (not Settings.get("allScopes")))
-		and (self.ui.styleStates.connect.tabs.selecting:lower() == "connect")
 
+	self.ui.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = (
+		self.ui.styleStates.connect.orderedDataStoreCheckbox.value or (not Settings.get("allScopes"))
+	) and (self.ui.styleStates.connect.tabs.selecting:lower() == "connect")
 end
 
 function App:toggleEnabled()

@@ -41,39 +41,51 @@ function UI.new(theme: Theme.Theme, uiMessages)
 		parent = nil,
 		gui = gui,
 		uiMessages = uiMessages,
-		
+
 		connections = {},
-		
+
 		activeView = nil,
 	}, UI)
-	
+
 	self.styleStates = {
 		background = BackgroundStyleState.from(theme, gui.Background),
 		breadcrumbs = BreadcrumbsStyleState.from(theme, gui.Breadcrumbs),
 		breadcrumbsSeparator = SeparatorStyleState.from(theme, gui.BreadcrumbsSeparator),
 		settingsButton = ButtonStyleState.from(theme, gui.SettingsButton, {
-			style = "dormant"
+			style = "dormant",
 		}),
-		
+
 		connect = {
 			tabs = TabsStyleState.from(theme, gui.ConnectDataStore.Content.Form.Tabs),
 
 			prefix = ShortcutsTextBoxStyleState.from(theme, gui.ConnectDataStore.Content.Form.Prefix.TextBox),
 			listButton = ButtonStyleState.from(theme, gui.ConnectDataStore.Content.Form.Prefix.List, {
-				style = "primary"
+				style = "primary",
 			}),
 
 			connectButton = ButtonStyleState.from(theme, gui.ConnectDataStore.Content.Form.Connect.Connect, {
-				style = "primary"
+				style = "primary",
 			}),
 			dataStoreNameTitle = LabelStyleState.from(theme, gui.ConnectDataStore.Content.Form.DataStoreName.Title),
-			dataStoreNameTextBox = ShortcutsTextBoxStyleState.from(theme, gui.ConnectDataStore.Content.Form.DataStoreName.TextBox),
+			dataStoreNameTextBox = ShortcutsTextBoxStyleState.from(
+				theme,
+				gui.ConnectDataStore.Content.Form.DataStoreName.TextBox
+			),
 
 			dataStoreScopeTitle = LabelStyleState.from(theme, gui.ConnectDataStore.Content.Form.DataStoreScope.Title),
-			dataStoreScopeTextBox = ShortcutsTextBoxStyleState.from(theme, gui.ConnectDataStore.Content.Form.DataStoreScope.TextBox),
+			dataStoreScopeTextBox = ShortcutsTextBoxStyleState.from(
+				theme,
+				gui.ConnectDataStore.Content.Form.DataStoreScope.TextBox
+			),
 
-			orderedDataStoreTitle = LabelStyleState.from(theme, gui.ConnectDataStore.Content.Form.IsOrderedDataStore.Title),
-			orderedDataStoreCheckbox = CheckboxStyleState.from(theme, gui.ConnectDataStore.Content.Form.IsOrderedDataStore.Check),
+			orderedDataStoreTitle = LabelStyleState.from(
+				theme,
+				gui.ConnectDataStore.Content.Form.IsOrderedDataStore.Title
+			),
+			orderedDataStoreCheckbox = CheckboxStyleState.from(
+				theme,
+				gui.ConnectDataStore.Content.Form.IsOrderedDataStore.Check
+			),
 
 			separators = SeparatorStyleState.fromDescendants(theme, gui.ConnectDataStore),
 
@@ -81,38 +93,40 @@ function UI.new(theme: Theme.Theme, uiMessages)
 				createItemStyleState = function(loadMoreListStyleState, info: DataStoreInfo)
 					local button = Assets.DataStoreRow:Clone()
 					button.DataStore.Text = info.DataStoreName
-					button.Created.Text = DateTime.fromUnixTimestampMillis(info.CreatedTime):FormatLocalTime("ll LT", "en-us")
-					button.Updated.Text = DateTime.fromUnixTimestampMillis(info.UpdatedTime):FormatLocalTime("ll LT", "en-us")
-					
+					button.Created.Text = DateTime.fromUnixTimestampMillis(info.CreatedTime)
+						:FormatLocalTime("ll LT", "en-us")
+					button.Updated.Text = DateTime.fromUnixTimestampMillis(info.UpdatedTime)
+						:FormatLocalTime("ll LT", "en-us")
+
 					button.Parent = loadMoreListStyleState.frame
-					
+
 					button.Activated:Connect(function()
 						self._dataStoreInfoSelected:Fire(info)
 					end)
-					
+
 					return ButtonStyleState.from(theme, button, {
-						style = "transparent"
+						style = "transparent",
 					})
 				end,
 			}),
-			
+
 			datastoreTableLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.DataStoreList),
-			historyTableLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.History)
+			historyTableLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.History),
 		},
 		browse = {
 			key = ShortcutsTextBoxStyleState.from(theme, gui.BrowseKeys.Key),
-			
+
 			separators = SeparatorStyleState.fromDescendants(theme, gui.BrowseKeys),
-			
+
 			prefix = ShortcutsTextBoxStyleState.from(theme, gui.BrowseKeys.Prefix),
 			listButton = ButtonStyleState.from(theme, gui.BrowseKeys.List, {
-				style = "primary"
+				style = "primary",
 			}),
 			loadMore = LoadMoreListStyleState.from(theme, gui.BrowseKeys.Keys.Table, {
 				createItemStyleState = function(loadMoreListStyleState, info: DataStoreKey)
 					local button = Assets.KeyRow:Clone()
 					local styleState = ButtonStyleState.from(theme, button, {
-						style = "transparent"
+						style = "transparent",
 					})
 					button.Key.Text = info.KeyName
 
@@ -121,15 +135,20 @@ function UI.new(theme: Theme.Theme, uiMessages)
 					button.Activated:Connect(function()
 						self._keySelected:Fire(info)
 					end)
-					
+
 					button.MouseButton2Click:Connect(function()
 						loadMoreListStyleState:setSelectingStyleState(styleState)
-						local option = ContextMenuStyleState.prompt(self.theme, self.parent, self.parent:GetRelativeMousePosition(), {
-							options = {
-								{ icon=self.theme.icons.import, text="Load" },
-								{ icon=self.theme.icons.lookup, text="Lookup Id" },
+						local option = ContextMenuStyleState.prompt(
+							self.theme,
+							self.parent,
+							self.parent:GetRelativeMousePosition(),
+							{
+								options = {
+									{ icon = self.theme.icons.import, text = "Load" },
+									{ icon = self.theme.icons.lookup, text = "Lookup Id" },
+								},
 							}
-						})
+						)
 						loadMoreListStyleState:setSelectingStyleState(nil)
 
 						if option == "Load" then
@@ -143,10 +162,10 @@ function UI.new(theme: Theme.Theme, uiMessages)
 					return styleState
 				end,
 			}),
-			
+
 			separator = SeparatorStyleState.from(theme, gui.BrowseKeys.Separator),
-			
-			datastoreTableLabels = LabelStyleState.fromDescendants(theme, gui.BrowseKeys.Keys)
+
+			datastoreTableLabels = LabelStyleState.fromDescendants(theme, gui.BrowseKeys.Keys),
 		},
 		edit = {
 			delete = ButtonStyleState.from(theme, gui.EditKey.Delete, {
@@ -159,33 +178,33 @@ function UI.new(theme: Theme.Theme, uiMessages)
 				style = "secondary",
 			}),
 			more = ButtonStyleState.from(theme, gui.EditKey.More, {
-				style = "transparent"
+				style = "transparent",
 			}),
-			
+
 			versions = ButtonStyleState.from(theme, gui.EditKey.Versions, {
-				style = "secondary"
-			})
+				style = "secondary",
+			}),
 		},
 	}
-	
+
 	self.orderedDataStoreView = OrderedDataStoreView.from(theme, uiMessages, gui.EditOrderedDataStore)
 	self.settingsView = SettingsView.from(theme, uiMessages, gui.Settings)
 	self.versionsView = VersionsView.from(theme, uiMessages, gui.Versions)
-	
+
 	self.styleStates.edit.save:setDisabled(true):update()
-	
+
 	self.styleStates.connect.tabs:select("Connect")
 	self:switchConnectTab("connect")
-	
+
 	self._dataStoreInfoSelected = Instance.new("BindableEvent")
 	self.dataStoreInfoSelected = self._dataStoreInfoSelected.Event
-	 
+
 	self._keySelected = Instance.new("BindableEvent")
 	self.keySelected = self._keySelected.Event
-	
+
 	self._idLookedUp = Instance.new("BindableEvent")
 	self.idLookedUp = self._idLookedUp.Event
-	
+
 	self._connectionRecordSelected = Instance.new("BindableEvent")
 	self._connectionRecordDeleted = Instance.new("BindableEvent")
 	self._connectionRecordPinChanged = Instance.new("BindableEvent")
@@ -194,28 +213,35 @@ function UI.new(theme: Theme.Theme, uiMessages)
 	self.connectionRecordDeleted = self._connectionRecordDeleted.Event
 	self.connectionRecordPinChanged = self._connectionRecordPinChanged.Event
 	self.connnectionRecordLoaded = self._connectionRecordLoaded.Event
-		
+
 	self._connectionRecordStyleStates = {}
-	
-	table.insert(self.connections, theme.colorsChanged:Connect(function()
-		task.wait()
-		StyleStateHelper.update(self.styleStates)
-		
-		for _, connectionRecordStyleStates in self._connectionRecordStyleStates do
-			connectionRecordStyleStates:update("slow")
-		end
-	end))
-	
+
+	table.insert(
+		self.connections,
+		theme.colorsChanged:Connect(function()
+			task.wait()
+			StyleStateHelper.update(self.styleStates)
+
+			for _, connectionRecordStyleStates in self._connectionRecordStyleStates do
+				connectionRecordStyleStates:update("slow")
+			end
+		end)
+	)
+
 	-- Add tooltips to everything
-	
+
 	Tooltip.bind(self.theme, self.gui.SettingsButton, "Settings", {
 		on = self.gui.SettingsButton.ImageLabel,
 		offsetAnchor = Vector2.new(1, 1),
 		tooltipAnchor = Vector2.new(1, 0),
 	})
-	
-	Tooltip.bindButtonGeneric(self.theme, self.gui.ConnectDataStore.Content.Form.Connect.Connect, `This is equivalent to a call to {rfmt.code("GetDataStore")}`)
-	
+
+	Tooltip.bindButtonGeneric(
+		self.theme,
+		self.gui.ConnectDataStore.Content.Form.Connect.Connect,
+		`This is equivalent to a call to {rfmt.code("GetDataStore")}`
+	)
+
 	-- MouseButton1 event doesn't trigger on textboxes
 	--[[Tooltip.bind(self.gui, self.gui.ConnectDataStore.Content.Form.Prefix.TextBox,
 		"Prefix",
@@ -223,19 +249,24 @@ function UI.new(theme: Theme.Theme, uiMessages)
 	Tooltip.bindButtonGeneric(
 		self.theme,
 		self.gui.ConnectDataStore.Content.Form.Prefix.List,
-		`List all DataStores in this game. Does not include OrderedDataStores. This is equivalent to a call to {rfmt.code("ListDataStoresAsync")}.`
+		`List all DataStores in this game. Does not include OrderedDataStores. This is equivalent to a call to {rfmt.code(
+			"ListDataStoresAsync"
+		)}.`
 	)
-	
+
 	-- MouseButton1 event doesn't trigger on textboxes
 	--Tooltip.bind(self.gui, self.gui.BrowseKeys.Key, "Get Key", "Equivalent to a call to GetAsync.")
-	Tooltip.bindButtonGeneric(self.theme, self.gui.BrowseKeys.List, `List all keys in the DataStore. Equivalent to a call to {rfmt.code("ListKeysAsync")}.`)
-	
+	Tooltip.bindButtonGeneric(
+		self.theme,
+		self.gui.BrowseKeys.List,
+		`List all keys in the DataStore. Equivalent to a call to {rfmt.code("ListKeysAsync")}.`
+	)
+
 	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Versions, `Equivalent to {rfmt.code("ListVersionsAsync")}.`)
 	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Save, `Save\nEquivalent to {rfmt.code("UpdateAsync")}.`)
 	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Refresh, `Refresh\nEquivalent to {rfmt.code("GetAsync")}.`)
 	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Delete, `Delete\nEquivalent to {rfmt.code("RemoveAsync")}.`)
-	
-	
+
 	return self
 end
 
@@ -250,19 +281,19 @@ function UI:setActiveView(view: "game" | "datastore" | "key" | "orderedDatastore
 	elseif self.activeView ~= "settings" and view == "settings" then
 		self.settingsView:beforeOpen()
 	end
-	
+
 	self.activeView = view
 	local frames = {
 		game = self.gui.ConnectDataStore,
 		orderedDatastore = self.gui.EditOrderedDataStore,
 		settings = self.gui.Settings,
 		datastore = self.gui.BrowseKeys,
-		key = self.gui.EditKey
+		key = self.gui.EditKey,
 	}
 	for name, frame in frames do
 		frame.Visible = (name == view)
 	end
-	
+
 	self:autoFocus()
 end
 
@@ -297,28 +328,32 @@ function UI:updateSettingsButtonPosition()
 end
 
 function UI:showBreadcrumbs()
-	if self.gui.Breadcrumbs.Visible then return end
-	
+	if self.gui.Breadcrumbs.Visible then
+		return
+	end
+
 	self.gui.Breadcrumbs.Visible = true
 	self.gui.BreadcrumbsSeparator.Visible = true
-	
+
 	self:updateSettingsButtonPosition()
-	
-	for _, frame in {"BrowseKeys", "ConnectDataStore", "EditKey", "EditOrderedDataStore"} do
+
+	for _, frame in { "BrowseKeys", "ConnectDataStore", "EditKey", "EditOrderedDataStore" } do
 		self.gui[frame].Size = UDim2.new(1, 0, 1, -34)
 		self.gui[frame].Position = UDim2.fromOffset(0, 34)
 	end
 end
 
 function UI:hideBreadcrumbs()
-	if not self.gui.Breadcrumbs.Visible then return end
+	if not self.gui.Breadcrumbs.Visible then
+		return
+	end
 
 	self.gui.Breadcrumbs.Visible = false
 	self.gui.BreadcrumbsSeparator.Visible = false
-	
+
 	self:updateSettingsButtonPosition()
-	
-	for _, frame in {"BrowseKeys", "ConnectDataStore", "EditKey"} do
+
+	for _, frame in { "BrowseKeys", "ConnectDataStore", "EditKey" } do
 		self.gui[frame].Size = UDim2.new(1, 0, 1, 0)
 		self.gui[frame].Position = UDim2.fromOffset(0, 0)
 	end
@@ -353,12 +388,12 @@ end
 
 function UI:switchConnectTab(tab: "connect" | "list")
 	local connectVisible = (tab == "connect")
-	
+
 	self.gui.ConnectDataStore.Content.Form.Connect.Visible = connectVisible
 	self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = connectVisible
 	self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = connectVisible
 	self.gui.ConnectDataStore.Content.Form.IsOrderedDataStore.Visible = connectVisible
-	
+
 	self.gui.ConnectDataStore.Content.Form.Prefix.Visible = not connectVisible
 	self.gui.ConnectDataStore.Content.DataStoreList.Visible = not connectVisible
 	self:_updateConnectCentering()
@@ -383,18 +418,18 @@ local function updateConnectionRowPinVisual(row, theme, pinned: boolean)
 	end
 end
 
-function UI:updateConnectionsHistory(records: {Types.DataStoreConnectionRecord})
+function UI:updateConnectionsHistory(records: { Types.DataStoreConnectionRecord })
 	local isVisible = (#records > 0)
 	self.gui.ConnectDataStore.Content.Separator.Visible = isVisible
 	self.gui.ConnectDataStore.Content.History.Visible = isVisible
-	
+
 	self:_updateConnectCentering()
-	
+
 	for _, v in self._connectionRecordStyleStates do
 		v:destroy(true)
 	end
 	self._connectionRecordStyleStates = {}
-	
+
 	for _, record in records do
 		local row = Assets.ConnectionRow:Clone()
 		if record.connection.scope and record.connection.scope ~= "" then
@@ -402,38 +437,38 @@ function UI:updateConnectionsHistory(records: {Types.DataStoreConnectionRecord})
 		else
 			row.DataStore.Text = record.connection.name
 		end
-		row.ConnectionType.Text =
-			if record.connection.allScopes then "AllScopes"
+		row.ConnectionType.Text = if record.connection.allScopes
+			then "AllScopes"
 			elseif record.connection.isOrdered then "Ordered"
 			else "Normal"
 		row.LastAccess.Text = DateTime.fromUnixTimestamp(record.lastAccess):FormatUniversalTime("ll LT", "en-us")
-		row.LayoutOrder =
-			if record.pinned then 0
-			else 1
+		row.LayoutOrder = if record.pinned then 0 else 1
 		updateConnectionRowPinVisual(row, self.theme, record.pinned)
 		row.Parent = self.gui.ConnectDataStore.Content.History.Table
-		
+
 		local styleState = ButtonStyleState.from(self.theme, row, {
-			style = "transparent"
+			style = "transparent",
 		})
-		
+
 		table.insert(self._connectionRecordStyleStates, styleState)
-		
+
 		row.Activated:Connect(function()
 			self._connectionRecordSelected:Fire(record)
 		end)
 		row.MouseButton2Click:Connect(function()
 			styleState:setSelecting(true):update()
-			local option = ContextMenuStyleState.prompt(self.theme, self.parent, self.parent:GetRelativeMousePosition(), {
-				options = {
-					if record.pinned then { icon=self.theme.icons.unpin, text="Unpin" }
-						else { icon=self.theme.icons.pin, text="Pin" },
-					{ icon=self.theme.icons.import, text="Load" },
-					{ icon=self.theme.icons.delete, text="Delete" },
-				}
-			})
+			local option =
+				ContextMenuStyleState.prompt(self.theme, self.parent, self.parent:GetRelativeMousePosition(), {
+					options = {
+						if record.pinned
+							then { icon = self.theme.icons.unpin, text = "Unpin" }
+							else { icon = self.theme.icons.pin, text = "Pin" },
+						{ icon = self.theme.icons.import, text = "Load" },
+						{ icon = self.theme.icons.delete, text = "Delete" },
+					},
+				})
 			styleState:setSelecting(false):update()
-			
+
 			if option == "Delete" then
 				self._connectionRecordDeleted:Fire(record)
 			elseif option == "Load" then
@@ -456,10 +491,10 @@ function UI:createUserCard()
 	local skeletonStyleState = SkeletonStyleState.from(self.theme, card)
 	local styleState = StyleStateWrapper.new(self.theme, {
 		background = BackgroundStyleState.from(self.theme, card, {
-			style = "popup"
+			style = "popup",
 		}),
 		imageBackground = BackgroundStyleState.from(self.theme, card.ImageLabel, {
-			style = "image"
+			style = "image",
 		}),
 		username = LabelStyleState.from(self.theme, card.Frame.Username),
 		id = LabelStyleState.from(self.theme, card.Frame.Id),
@@ -471,9 +506,9 @@ function UI:createUserCard()
 		skeletonStyleState:update("instant")
 		skeletonStyleState:animate()
 	end)
-	
+
 	local modal = PopupHelper.modal(card, self.gui)
-	
+
 	local function cleanup()
 		if card.Parent then
 			modal:destroy()
@@ -482,19 +517,22 @@ function UI:createUserCard()
 			card:Destroy()
 		end
 	end
-	
+
 	modal.cancelled:Once(cleanup)
-	
+
 	function styleState:abort()
 		cleanup()
 	end
-	
-	function styleState:populate(thumbnailUrl: string, info: {
-		Id: number,
-		Username: string,
-		DisplayName: string,
-		HasVerifiedBadge: boolean,
-	})
+
+	function styleState:populate(
+		thumbnailUrl: string,
+		info: {
+			Id: number,
+			Username: string,
+			DisplayName: string,
+			HasVerifiedBadge: boolean,
+		}
+	)
 		if card.Parent then
 			skeletonStyleState:destroy()
 			styleState.styleStates.imageBackground:update("instant")
@@ -505,7 +543,7 @@ function UI:createUserCard()
 			card.Frame.VerifiedBadge.Text = `Has Verified Badge: {info.HasVerifiedBadge}`
 		end
 	end
-	
+
 	return styleState
 end
 
@@ -513,7 +551,7 @@ local KEY_MAX_SIZE = 4_194_304
 local METADATA_MAX_SIZE = 299
 function UI:createDataUsageCard(keyUsage: number, metadataUsage: number)
 	local card = Assets.DataUsageCard:Clone()
-	
+
 	local function updateBarColor(speed: StyleStateHelper.TransitionSpeed)
 		StyleStateHelper.tween(card.KeyBar, StyleStateHelper.getTweenInfoForSpeed(speed), {
 			BackgroundColor3 = self.theme.colors.button.secondary.body.default,
@@ -524,7 +562,7 @@ function UI:createDataUsageCard(keyUsage: number, metadataUsage: number)
 		StyleStateHelper.tween(card.KeyBar.Clipper.Fill, StyleStateHelper.getTweenInfoForSpeed(speed), {
 			BackgroundColor3 = self.theme.colors.mainAccent,
 		})
-		
+
 		StyleStateHelper.tween(card.MetadataBar, StyleStateHelper.getTweenInfoForSpeed(speed), {
 			BackgroundColor3 = self.theme.colors.button.secondary.body.default,
 		})
@@ -535,21 +573,29 @@ function UI:createDataUsageCard(keyUsage: number, metadataUsage: number)
 			BackgroundColor3 = self.theme.colors.mainAccent,
 		})
 	end
-	
+
 	updateBarColor("instant")
-	
+
 	local wrapper = StyleStateWrapper.new(self.theme, {
-		background = BackgroundStyleState.from(self.theme, card, { style="popup" }),
+		background = BackgroundStyleState.from(self.theme, card, { style = "popup" }),
 		mainTitle = LabelStyleState.from(self.theme, card.MainTitle),
-		dataLabel = LabelStyleState.from(self.theme, card.KeyLabel, { style=if keyUsage > KEY_MAX_SIZE then "error" else "text" }),
+		dataLabel = LabelStyleState.from(
+			self.theme,
+			card.KeyLabel,
+			{ style = if keyUsage > KEY_MAX_SIZE then "error" else "text" }
+		),
 		metadataTitle = LabelStyleState.from(self.theme, card.MetadataTitle),
-		metadataLabel = LabelStyleState.from(self.theme, card.MetadataLabel, { style=if metadataUsage > METADATA_MAX_SIZE then "error" else "text" }),
+		metadataLabel = LabelStyleState.from(
+			self.theme,
+			card.MetadataLabel,
+			{ style = if metadataUsage > METADATA_MAX_SIZE then "error" else "text" }
+		),
 	}, {
 		onThemeChange = function()
 			updateBarColor("slow")
 		end,
 	})
-	
+
 	local function updateBar(usage: number, max: number, label, bar)
 		if usage == 0 then
 			bar.Clipper.Size = UDim2.fromScale(0, 1)
@@ -559,30 +605,33 @@ function UI:createDataUsageCard(keyUsage: number, metadataUsage: number)
 			bar.Clipper.Size = UDim2.fromScale(0, 1)
 			bar.Clipper.Fill.Size = UDim2.fromScale(0, 1)
 			StyleStateHelper.tween(bar.Clipper, tweenInfo, {
-				Size = UDim2.fromScale(percentage, 1)
+				Size = UDim2.fromScale(percentage, 1),
 			})
 			StyleStateHelper.tween(bar.Clipper.Fill, tweenInfo, {
-				Size = UDim2.fromScale(1 / percentage, 1)
+				Size = UDim2.fromScale(1 / percentage, 1),
 			})
 		end
-		
-		label.Text =
-			`{tostring(usage):reverse():gsub("(%d%d%d)", "%1,"):gsub(",$", ""):reverse()}/{tostring(max):reverse():gsub("(%d%d%d)", "%1,"):gsub(",$", ""):reverse()} bytes`
+
+		label.Text = `{tostring(usage):reverse():gsub("(%d%d%d)", "%1,"):gsub(",$", ""):reverse()}/{tostring(max)
+			:reverse()
+			:gsub("(%d%d%d)", "%1,")
+			:gsub(",$", "")
+			:reverse()} bytes`
 	end
-	
+
 	updateBar(keyUsage, KEY_MAX_SIZE, wrapper.styleStates.dataLabel.label, card.KeyBar)
 	updateBar(metadataUsage, METADATA_MAX_SIZE, wrapper.styleStates.metadataLabel.label, card.MetadataBar)
-	
+
 	local modal = PopupHelper.modal(card, self.gui)
-	
+
 	local function cleanup()
 		modal:destroy()
 		wrapper:destroy()
 		card:Destroy()
 	end
-	
+
 	modal.cancelled:Once(cleanup)
-	
+
 	return card
 end
 
@@ -594,7 +643,7 @@ function UI:destroy()
 		styleStates:destroy(true)
 	end
 	self._connectionRecordStyleStates = nil
-	
+
 	self.settingsView:destroy()
 	self.orderedDataStoreView:destroy()
 end

@@ -17,7 +17,7 @@ LoadingBarStyleState.__index = LoadingBarStyleState
 -- For convenience
 -- Returns a function to delete the loading bar
 function LoadingBarStyleState.show(theme, container: Frame): () -> ()
- 	local loadingBar = LoadingBarStyleState.from(theme, container)
+	local loadingBar = LoadingBarStyleState.from(theme, container)
 	loadingBar.container.Visible = true
 	task.spawn(loadingBar.animate, loadingBar)
 
@@ -31,11 +31,11 @@ function LoadingBarStyleState.from(theme, container: Frame)
 	local self = setmetatable({
 		theme = theme,
 		container = container,
-		fill = script.Fill:Clone()
+		fill = script.Fill:Clone(),
 	}, LoadingBarStyleState)
-	
+
 	self.fill.Parent = container
-	
+
 	self:update("instant")
 	return self
 end
@@ -59,19 +59,19 @@ function LoadingBarStyleState:animate()
 	if Theme.getLuminance(self.theme.colors.background) > 0.5 then
 		start += 0.5
 	end
-	
+
 	while self.fill.Parent do
 		local delta = os.clock() - start
-		local a = 1.5*delta
+		local a = 1.5 * delta
 		local b = a % 1
-		self.fill.Position = UDim2.fromScale(-0.5 + 2*b, 0)
+		self.fill.Position = UDim2.fromScale(-0.5 + 2 * b, 0)
 		task.wait()
 	end
 end
 
 function LoadingBarStyleState:destroy(completely)
 	assert(not completely, "Loading bar should not own the frame that contains the fill.")
-	
+
 	self.fill:Destroy()
 	if completely then
 		self.frame:Destroy()

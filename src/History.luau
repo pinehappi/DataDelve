@@ -9,15 +9,15 @@ History.__index = History
 
 function History.new(gameId: number)
 	local self = setmetatable({
-		gameId = tostring(gameId)
+		gameId = tostring(gameId),
 	}, History)
-	
+
 	-- Sorted by most recent
 	self.connectionRecords = {}
-	
+
 	self._connectionsChanged = Instance.new("BindableEvent")
 	self.connectionsChanged = self._connectionsChanged.Event
-	
+
 	return self
 end
 
@@ -41,26 +41,26 @@ function History:addConnection(connection: Types.DataStoreConnection)
 			v.lastAccess = DateTime.now().UnixTimestamp
 			table.remove(self.connectionRecords, i)
 			table.insert(self.connectionRecords, 1, v)
-			
+
 			if #self.connectionRecords > 32 then
 				table.remove(self.connectionRecords)
 			end
-			
+
 			self._connectionsChanged:Fire()
 			return
 		end
 	end
-	
+
 	-- If it did not find a match
 	table.insert(self.connectionRecords, 1, {
 		connection = table.freeze(connection),
 		lastAccess = DateTime.now().UnixTimestamp,
 	})
-	
+
 	if #self.connectionRecords > 32 then
 		table.remove(self.connectionRecords)
 	end
-	
+
 	self._connectionsChanged:Fire()
 end
 
@@ -98,7 +98,7 @@ function History:load(plugin: Plugin)
 	local loadedData = plugin:GetSetting(MAIN_HISTORY_KEY) or {
 		games = {},
 	}
-	
+
 	local gameLoadedData = loadedData.games[self.gameId]
 	if not gameLoadedData then
 		gameLoadedData = {
@@ -106,8 +106,7 @@ function History:load(plugin: Plugin)
 		}
 		loadedData.games[self.gameId] = gameLoadedData
 	end
-	
-	
+
 	self.connectionRecords = gameLoadedData.connectionRecords
 end
 
@@ -115,9 +114,9 @@ function History:save(plugin: Plugin)
 	local loadedData = plugin:GetSetting(MAIN_HISTORY_KEY) or {
 		games = {},
 	}
-	
+
 	loadedData.games[self.gameId] = {
-		connectionRecords = self.connectionRecords
+		connectionRecords = self.connectionRecords,
 	}
 
 	plugin:SetSetting(MAIN_HISTORY_KEY, loadedData)

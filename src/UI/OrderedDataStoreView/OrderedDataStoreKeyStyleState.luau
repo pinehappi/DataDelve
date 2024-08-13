@@ -9,29 +9,35 @@ function OrderedDataStoreKeyStyleState.from(theme, highlightColors, frame)
 	local self = setmetatable({
 		theme = theme,
 		frame = frame,
-		
+
 		_highlightColors = highlightColors,
-		
+
 		selecting = false,
 		_disabled = false,
 		_hovering = false,
-		
+
 		_connections = {},
 	}, OrderedDataStoreKeyStyleState)
-	
-	table.insert(self._connections, frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			self._hovering = true
-			self:update()
-		end
-	end))
-	table.insert(self._connections, frame.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			self._hovering = false
-			self:update()
-		end
-	end))
-	
+
+	table.insert(
+		self._connections,
+		frame.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				self._hovering = true
+				self:update()
+			end
+		end)
+	)
+	table.insert(
+		self._connections,
+		frame.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				self._hovering = false
+				self:update()
+			end
+		end)
+	)
+
 	self:update("instant")
 	return self
 end
@@ -55,14 +61,14 @@ end
 
 function OrderedDataStoreKeyStyleState:update(_)
 	-- Since there can be 100s at at time, no tween
-	
+
 	if self._disabled then
 		self.frame.BackgroundColor3 = self._highlightColors.background
 		self.frame.Key.TextColor3 = self.theme.colors.disabledText
 		self.frame.Value.TextColor3 = self.theme.colors.disabledText
 	else
-		self.frame.BackgroundColor3 =
-			if self.selecting then self._highlightColors.selectBackground
+		self.frame.BackgroundColor3 = if self.selecting
+			then self._highlightColors.selectBackground
 			elseif self._hovering then self._highlightColors.hoverBackground
 			else self._highlightColors.background
 		self.frame.Key.TextColor3 = self._highlightColors.key

@@ -5,10 +5,7 @@ local Validators = {}
 local function isValidInteger(str: unknown): boolean
 	local number = tonumber(str)
 	if number then
-		local isValidInteger =
-			(number == math.floor(number))
-			and number == number
-			and (math.abs(number) ~= math.huge)
+		local isValidInteger = (number == math.floor(number)) and number == number and (math.abs(number) ~= math.huge)
 		return isValidInteger
 	end
 	return false

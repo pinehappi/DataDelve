@@ -7,9 +7,9 @@ SeparatorStyleState.__index = SeparatorStyleState
 function SeparatorStyleState.from(theme, separator: Frame)
 	local self = setmetatable({
 		separator = separator,
-		theme = theme
+		theme = theme,
 	}, SeparatorStyleState)
-	
+
 	self:update("instant")
 	return self
 end
@@ -28,7 +28,7 @@ end
 
 function SeparatorStyleState:update(speed: StyleStateHelper.TransitionSpeed)
 	TweenService:Create(self.separator, StyleStateHelper.getTweenInfoForSpeed(speed), {
-		BackgroundColor3 = self.theme.colors.separator
+		BackgroundColor3 = self.theme.colors.separator,
 	}):Play()
 end
 

@@ -16,7 +16,7 @@
 local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
 local TextBoxStyleState = require(script.Parent.TextBoxStyleState)
 
-local DatePickerStyleState = setmetatable({}, {__index = TextBoxStyleState})
+local DatePickerStyleState = setmetatable({}, { __index = TextBoxStyleState })
 DatePickerStyleState.__index = DatePickerStyleState
 
 -- Date stuff
@@ -25,24 +25,42 @@ type Date = Timestamp | DateTime
 
 -- NOTE: Is it ethical to support mispelling for better user experience?
 local monthNames = {
-	jan=1, january=1,  janury=1,
-	feb=2, february=2, febuary=2, feburary=2,
-	mar=3, march=3,
-	apr=4, april=4,
-	may=5,
-	jun=6, june=6,
-	jul=7, july=7,
-	aug=8, august=8,
-	sep=9, september=9, sept=9,
-	oct=10, october=10, octo=10, octob=10,
-	nov=11, november=11, novem = 11, nove = 11,
-	dec=12, december=12, christmas = 12
+	jan = 1,
+	january = 1,
+	janury = 1,
+	feb = 2,
+	february = 2,
+	febuary = 2,
+	feburary = 2,
+	mar = 3,
+	march = 3,
+	apr = 4,
+	april = 4,
+	may = 5,
+	jun = 6,
+	june = 6,
+	jul = 7,
+	july = 7,
+	aug = 8,
+	august = 8,
+	sep = 9,
+	september = 9,
+	sept = 9,
+	oct = 10,
+	october = 10,
+	octo = 10,
+	octob = 10,
+	nov = 11,
+	november = 11,
+	novem = 11,
+	nove = 11,
+	dec = 12,
+	december = 12,
+	christmas = 12,
 }
 
 local function isValidMonth(month: number?): boolean
-	return
-		(typeof(month) == "number") and
-		(math.floor(month) == month) and (1 <= month) and (month <= 12)
+	return (typeof(month) == "number") and (math.floor(month) == month) and (1 <= month) and (month <= 12)
 end
 
 local function isValidYear(year: number?): boolean
@@ -50,7 +68,7 @@ local function isValidYear(year: number?): boolean
 end
 
 local function isLeapYear(year: number): boolean
-	return ((year % 4 == 0) and (year % 100 ~= 0)) or (year % 400 == 0);
+	return ((year % 4 == 0) and (year % 100 ~= 0)) or (year % 400 == 0)
 end
 
 local function getDaysInMonth(month: number, year: number): number
@@ -80,7 +98,7 @@ local function tryGetDate(text: string, upToEndOfDay: boolean): (DateTime?, stri
 			end
 		end
 	end
-	
+
 	-- Format: MM/DD/YYYY
 	local parts = text:split("/")
 	if #parts ~= 3 then
@@ -96,7 +114,7 @@ local function tryGetDate(text: string, upToEndOfDay: boolean): (DateTime?, stri
 				else
 					parts[1] = month
 				end
-				
+
 				if #parts == 2 then
 					-- Auto-fill the year
 					parts[3] = tostring(DateTime.now():ToUniversalTime().Year)
@@ -106,22 +124,22 @@ local function tryGetDate(text: string, upToEndOfDay: boolean): (DateTime?, stri
 			end
 		end
 	end
-	
+
 	local month = tonumber(parts[1])
 	if not isValidMonth(month) then
 		return nil, "Invalid month. Format: month day, year or MM/DD/YYYY."
 	end
-	
+
 	local year = tonumber(parts[3])
 	if not isValidYear(year) then
 		return nil, "Invalid year. Format: month day, year or MM/DD/YYYY."
 	end
-	
+
 	local day = tonumber(parts[2])
 	if not isValidDay(day, month :: number, year :: number) then
 		return nil, "Invalid day. Format: month day, year or MM/DD/YYYY."
 	end
-	
+
 	if upToEndOfDay then
 		return DateTime.fromUniversalTime(year :: number, month :: number, day :: number, 23, 59, 59, 999)
 	else
@@ -134,7 +152,7 @@ local function tryGetTimestamp(text: string): (Timestamp?, string?)
 	if not timestamp then
 		return nil, "Invalid date. Format: month day, year or MM/DD/YYYY."
 	end
-	
+
 	return timestamp
 end
 
@@ -145,12 +163,12 @@ local function tryGetTime(text: string, upToEndOfDay: boolean): (Date?, string?)
 		if iso then
 			return iso
 		end
-		
+
 		local timestamp, err = tryGetTimestamp(text)
 		if err then
 			return nil, err
 		else
-			return timestamp 
+			return timestamp
 		end
 	elseif err then
 		return nil, err
@@ -162,15 +180,15 @@ end
 -- Main style stuff
 
 type DatePickerOptions = {
-	upToEndOfDay: boolean? -- If use types in May 31, 2024, if this is true, the timestmap returned will be May 31 2024 23:59pm instead of 00:00
+	upToEndOfDay: boolean?, -- If use types in May 31, 2024, if this is true, the timestmap returned will be May 31 2024 23:59pm instead of 00:00
 }
 function DatePickerStyleState.from(theme, textBox: TextBox & { UIStroke: UIStroke }, options: DatePickerOptions?)
 	local options: DatePickerOptions = options or {}
-	
+
 	local self = setmetatable(TextBoxStyleState.from(theme, textBox), DatePickerStyleState)
-	
+
 	self._time = nil :: Date?
-	
+
 	self._datePickerConnections = {
 		textBox:GetPropertyChangedSignal("Text"):Connect(function()
 			local trimmed = textBox.Text:gsub("^%s+", ""):gsub("%s$", "")
@@ -179,7 +197,7 @@ function DatePickerStyleState.from(theme, textBox: TextBox & { UIStroke: UIStrok
 				self:setError(nil):update("veryFast")
 				return
 			end
-			
+
 			local time, err = tryGetTime(trimmed, options.upToEndOfDay or false)
 			if err then
 				self._time = nil
@@ -188,9 +206,9 @@ function DatePickerStyleState.from(theme, textBox: TextBox & { UIStroke: UIStrok
 				self._time = time
 				self:setError(nil):update("veryFast")
 			end
-		end)
+		end),
 	}
-	
+
 	return self
 end
 

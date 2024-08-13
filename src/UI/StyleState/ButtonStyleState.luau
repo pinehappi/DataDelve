@@ -10,34 +10,40 @@ export type ButtonStyleStateFromOptions = {
 }
 function ButtonStyleState.from(theme, button: TextButton, options: ButtonStyleStateFromOptions?)
 	options = options or {}
-	
+
 	local self = setmetatable({
 		theme = theme,
 		button = button,
 		style = options.style or "secondary",
-		
+
 		disabled = false,
 		selecting = false,
 		_pressing = false,
 		_hovering = false,
-		
+
 		disabledMessage = nil,
 	}, ButtonStyleState)
-	
+
 	-- These will have their colors updated based on the state
 	self._textLabels = {}
 	self._imageLabels = {}
 	self._strokes = {}
 	self:_findStyleableChildren()
-	
+
 	self._beganConnection = button.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
 			self._pressing = true
 			self:update("veryFast")
-			
+
 			local connection = nil
 			connection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
-				if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
+				if
+					input.UserInputState == Enum.UserInputState.End
+					or input.UserInputState == Enum.UserInputState.Cancel
+				then
 					self._pressing = false
 					connection:Disconnect()
 					self:update("veryFast")
@@ -48,36 +54,34 @@ function ButtonStyleState.from(theme, button: TextButton, options: ButtonStyleSt
 			self:update()
 		end
 	end)
-	
+
 	self._endedConnection = button.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			self._hovering = false
 			self:update()
 		end
 	end)
-	
+
 	self:update("instant")
 	return self
 end
 
 function ButtonStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
-	local state =
-		if self.disabled then "disable"
+	local state = if self.disabled
+		then "disable"
 		elseif self.selecting then "select"
 		elseif self._pressing then "press"
 		elseif self._hovering then "hover"
 		else "default"
-	
+
 	if self.style == "transparent" then
 		StyleStateHelper.tween(self.button, tweenInfo, {
 			BackgroundColor3 = self.theme.colors.button.transparent.baseColor,
 			BackgroundTransparency = self.theme.colors.button.transparent[state],
 		})
-		
-		local color =
-			if self.disabled then self.theme.colors.disabledText
-			else self.theme.colors.text
+
+		local color = if self.disabled then self.theme.colors.disabledText else self.theme.colors.text
 		self:_updateChildren(tweenInfo, {
 			textLabels = color,
 			imageLabels = color,
@@ -106,14 +110,14 @@ function ButtonStyleState:setDisabled(disabled: boolean, disabledMessage: string
 	self.disabled = disabled
 	self.disabledMessage = disabledMessage
 	self.button.Active = not disabled
-	
+
 	return self
 end
 
 function ButtonStyleState:destroy(completely: boolean)
 	self._beganConnection:Disconnect()
 	self._endedConnection:Disconnect()
-	
+
 	if completely then
 		self.button:Destroy()
 	end
@@ -138,18 +142,21 @@ function ButtonStyleState:_findStyleableChildren()
 	end
 end
 
-function ButtonStyleState:_updateChildren(tweenInfo: TweenInfo, colors: {
-	body: Color3?,
-	textLabels: Color3?,
-	imageLabels: Color3?,
-	strokes: Color3?,
-})
+function ButtonStyleState:_updateChildren(
+	tweenInfo: TweenInfo,
+	colors: {
+		body: Color3?,
+		textLabels: Color3?,
+		imageLabels: Color3?,
+		strokes: Color3?,
+	}
+)
 	if colors.body then
 		if self.button.BackgroundColor3 ~= colors.body then
 			StyleStateHelper.tween(self.button, tweenInfo, { BackgroundColor3 = colors.body })
 		end
 	end
-	
+
 	if colors.textLabels then
 		if self.button.TextTransparency < 1 then
 			StyleStateHelper.tween(self.button, tweenInfo, { TextColor3 = colors.textLabels })
@@ -160,7 +167,7 @@ function ButtonStyleState:_updateChildren(tweenInfo: TweenInfo, colors: {
 			end
 		end
 	end
-	
+
 	if colors.imageLabels then
 		for _, label in self._imageLabels do
 			if label.ImageColor3 ~= colors.imageLabels then
@@ -168,7 +175,7 @@ function ButtonStyleState:_updateChildren(tweenInfo: TweenInfo, colors: {
 			end
 		end
 	end
-	
+
 	if colors.strokes then
 		for _, stroke in self._strokes do
 			if stroke.Color ~= colors.strokes then

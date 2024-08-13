@@ -10,7 +10,9 @@ export type StyleStateWrapperOptions = {
 	autoFollowTheme: boolean?,
 	onThemeChange: (() -> ())?, -- Will only be called if autoFollowTheme is true
 }
-function StyleStateWrapper.new<T--[[: {[string]: StyleState}]]>(theme, styleStates: T, options: StyleStateWrapperOptions?)
+function StyleStateWrapper.new<
+	T --[[: {[string]: StyleState}]]
+>(theme, styleStates: T, options: StyleStateWrapperOptions?)
 	options = options or {}
 
 	local self = setmetatable({
@@ -19,12 +21,15 @@ function StyleStateWrapper.new<T--[[: {[string]: StyleState}]]>(theme, styleStat
 	}, StyleStateWrapper)
 
 	if (options.autoFollowTheme == nil) or options.autoFollowTheme then
-		table.insert(self.connections, theme.colorsChanged:Connect(function()
-			self:update("slow")
-			if options.onThemeChange then
-				options.onThemeChange()
-			end
-		end))
+		table.insert(
+			self.connections,
+			theme.colorsChanged:Connect(function()
+				self:update("slow")
+				if options.onThemeChange then
+					options.onThemeChange()
+				end
+			end)
+		)
 	end
 
 	return self

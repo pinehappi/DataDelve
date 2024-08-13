@@ -21,42 +21,52 @@ type ContextMenuOptions = {
 }
 
 -- For convenience
-function ConfirmDialogStyleState.confirm(theme, container: GuiObject, position: Vector2, options: ContextMenuOptions): boolean
+function ConfirmDialogStyleState.confirm(
+	theme,
+	container: GuiObject,
+	position: Vector2,
+	options: ContextMenuOptions
+): boolean
 	local dialog, modal = ConfirmDialogStyleState.createDialog(theme, container, position, options)
 
 	local confirmed = dialog.interacted:Wait()
 
 	modal:destroy()
 	dialog:destroy(true)
-	
+
 	return confirmed
 end
 
-function ConfirmDialogStyleState.createDialog(theme, container: GuiObject, position: Vector2, options: ContextMenuOptions)
+function ConfirmDialogStyleState.createDialog(
+	theme,
+	container: GuiObject,
+	position: Vector2,
+	options: ContextMenuOptions
+)
 	local frame = script.ConfirmDialog:Clone()
 	frame.Parent = container
 	frame.Position = UDim2.fromOffset(position.X, position.Y)
-	
+
 	local styleState = ConfirmDialogStyleState.from(theme, frame, options)
-	
+
 	local modal = PopupHelper.modal(frame, container, {
-		zIndex = 20
+		zIndex = 20,
 	})
 	modal.cancelled:Connect(function()
 		styleState._interacted:Fire(false)
 	end)
-	
+
 	if options.yesText then
 		frame.Buttons.Yes.TextLabel.Text = options.yesText
 	end
 	if options.noText then
 		frame.Buttons.No.TextLabel.Text = options.noText
 	end
-	
+
 	PopupHelper.clamp(frame, container, {
 		tryPivot = true,
 	})
-	
+
 	return styleState, modal
 end
 
@@ -65,35 +75,35 @@ function ConfirmDialogStyleState.from(theme, dialog: typeof(script.ConfirmDialog
 		theme = theme,
 		frame = dialog,
 		options = options.options,
-		
+
 		_styleStates = {
 			background = BackgroundStyleState.from(theme, dialog, {
-				style = "popup"
+				style = "popup",
 			}),
 			title = LabelStyleState.from(theme, dialog.Title),
 			message = LabelStyleState.from(theme, dialog.Message),
 			yes = ButtonStyleState.from(theme, dialog.Buttons.Yes, {
-				style = "primary"
+				style = "primary",
 			}),
 			no = ButtonStyleState.from(theme, dialog.Buttons.No, {
-				style = "secondary"
+				style = "secondary",
 			}),
-		}
+		},
 	}, ConfirmDialogStyleState)
-	
+
 	dialog.Title.Text = options.title
 	dialog.Message.Text = options.message
-	
+
 	self._interacted = Instance.new("BindableEvent")
 	self.interacted = self._interacted.Event
-	
+
 	dialog.Buttons.Yes.Activated:Connect(function()
 		self._interacted:Fire(true)
 	end)
 	dialog.Buttons.No.Activated:Connect(function()
 		self._interacted:Fire(false)
 	end)
-	
+
 	self:update("instant")
 	return self
 end

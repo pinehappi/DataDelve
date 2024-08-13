@@ -35,22 +35,25 @@ end
 function Tooltip.bind(theme: any, interactObject: GuiObject, message: string, showOptions: ShowOptions)
 	local tooltip = Tooltip.new(theme, message)
 	local hover = nil
-	
+
 	interactObject.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			local myHover = newproxy()
 			hover = myHover
 			task.wait(0.5)
-			
+
 			if (not tooltip.object) and (hover == myHover) then
 				tooltip:show(showOptions)
 			end
-		elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		elseif
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+		then
 			hover = nil
 			tooltip:clear()
 		end
 	end)
-	
+
 	interactObject.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			hover = nil
@@ -63,10 +66,10 @@ function Tooltip.new(theme: any, message: string)
 	local self = setmetatable({
 		theme = theme,
 		message = message,
-		
+
 		object = nil :: (Frame | CanvasGroup)?,
 	}, Tooltip)
-	
+
 	return self
 end
 
@@ -74,49 +77,49 @@ export type ShowOptions = {
 	on: GuiObject,
 	offsetAnchor: Vector2,
 	tooltipAnchor: Vector2,
-	
-	offsetOnX: boolean?
+
+	offsetOnX: boolean?,
 }
 function Tooltip:show(options: ShowOptions)
 	if self.object then
 		self:clear()
 	end
-	
+
 	local params = Instance.new("GetTextBoundsParams")
 	params.Text = self.message
 	params.Font = TextLabelTemplate.FontFace
 	params.Size = TextLabelTemplate.TextSize
 	params.Width = TOOLTIP_MAX_X
 	params.RichText = true
-	
+
 	local textBounds = TextService:GetTextBoundsAsync(params)
-	local frameBounds = textBounds + Vector2.new(2*TOOLTIP_PADDING_X, 2*TOOLTIP_PADDING_Y)
+	local frameBounds = textBounds + Vector2.new(2 * TOOLTIP_PADDING_X, 2 * TOOLTIP_PADDING_Y)
 	local objectBounds = frameBounds + Vector2.new(SHADOW_EXTRA_SIZE_X, SHADOW_EXTRA_SIZE_Y)
-	
+
 	local object: any = Instance.new("CanvasGroup")
 	object.BackgroundTransparency = 1
 	object.Size = UDim2.fromOffset(objectBounds.X, objectBounds.Y)
 	object.GroupTransparency = 1
 	object.ZIndex = 50
-	
+
 	local shadow = DropShadowTemplate:Clone()
 	shadow.Size = UDim2.fromOffset(objectBounds.X, objectBounds.Y)
 	shadow.Parent = object
-	
+
 	local frame = FrameTemplate:Clone()
 	frame.BackgroundColor3 = self.theme.colors.message.background
 	frame.UIStroke.Color = self.theme.colors.message.outline
 	frame.Position = UDim2.fromOffset(-SHADOW_OFFSET_X, -SHADOW_OFFSET_Y)
 	frame.Size = UDim2.fromOffset(frameBounds.X, frameBounds.Y)
 	frame.Parent = object
-	
+
 	local textLabel = TextLabelTemplate:Clone()
 	textLabel.TextColor3 = self.theme.colors.message.text
 	textLabel.Position = UDim2.fromOffset(TOOLTIP_PADDING_X, TOOLTIP_PADDING_Y)
 	textLabel.Size = UDim2.fromOffset(textBounds.X + 1, textBounds.Y + 1)
 	textLabel.Text = self.message
 	textLabel.Parent = frame
-	
+
 	local container = options.on:FindFirstAncestorWhichIsA("LayerCollector") :: LayerCollector
 	local function updatePosition(alpha: number)
 		local offsetX = 0
@@ -126,48 +129,54 @@ function Tooltip:show(options: ShowOptions)
 		else
 			offsetY = TOOLTIP_DISTANCE * options.offsetAnchor.Y
 		end
-		
+
 		object.Position = UDim2.fromOffset(
-			options.on.AbsolutePosition.X + SHADOW_OFFSET_X + options.offsetAnchor.X*options.on.AbsoluteSize.X + alpha*offsetX
-				- options.tooltipAnchor.X*frameBounds.X,
-			options.on.AbsolutePosition.Y + SHADOW_OFFSET_Y + options.offsetAnchor.Y*options.on.AbsoluteSize.Y + alpha*offsetY
-				- options.tooltipAnchor.Y*frameBounds.Y
+			options.on.AbsolutePosition.X
+				+ SHADOW_OFFSET_X
+				+ options.offsetAnchor.X * options.on.AbsoluteSize.X
+				+ alpha * offsetX
+				- options.tooltipAnchor.X * frameBounds.X,
+			options.on.AbsolutePosition.Y
+				+ SHADOW_OFFSET_Y
+				+ options.offsetAnchor.Y * options.on.AbsoluteSize.Y
+				+ alpha * offsetY
+				- options.tooltipAnchor.Y * frameBounds.Y
 		)
-		
+
 		PopupHelper.clamp(object, container, {
 			boundaryDistance = 5 + SHADOW_OFFSET_X,
 		})
 	end
-	
+
 	updatePosition(0)
-	
+
 	object.Parent = container
 	self.object = object
-	
+
 	task.spawn(function()
 		local start = os.clock()
 		while object.Parent and self.object == object do
 			local delta = math.min(os.clock() - start, APPEAR_DURATION)
-			local a = TweenService:GetValue(delta/APPEAR_DURATION, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
-			
+			local a = TweenService:GetValue(delta / APPEAR_DURATION, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+
 			updatePosition(a)
 			object.GroupTransparency = 1 - a
-			
+
 			if delta >= APPEAR_DURATION then
 				break
 			end
 			task.wait()
 		end
-		
+
 		if object.Parent and self.object == object then
 			local newObject = Instance.new("Frame")
 			newObject.Size = object.Size
 			newObject.BackgroundTransparency = 1
 			newObject.ZIndex = 50
-			
+
 			shadow.Parent = newObject
 			frame.Parent = newObject
-			
+
 			object:Destroy()
 			object = newObject
 			object.Parent = container
