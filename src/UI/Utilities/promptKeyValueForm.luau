@@ -12,6 +12,8 @@ local Validators = require(script.Parent.Parent.Parent.Validators)
 local JSONHelper = require(script.Parent.Parent.Parent.JSONHelper)
 local PopupHelper = require(script.Parent.Parent.PopupHelper)
 
+local createTabSwitchGroup = require(script.Parent.createTabSwitchGroup)
+
 export type Options = {
 	position: Vector2?,
 	anchorPoint: Vector2?,
@@ -125,6 +127,13 @@ return function(theme, gui, options: Options): { key: string, value: JSONHelper.
 	frame.AnchorPoint = options.anchorPoint or frame.AnchorPoint
 	frame.Parent = gui
 
+	if options.includeKey and options.includeValue then
+		createTabSwitchGroup({
+			keyTextBoxStyleState.textBox,
+			valueTextBoxStyleState.textBox,
+		})
+	end
+
 	if options.includeKey then
 		keyTextBoxStyleState.textBox:CaptureFocus()
 	else
@@ -142,7 +151,11 @@ return function(theme, gui, options: Options): { key: string, value: JSONHelper.
 	wrapper.styleStates.cancel.button.Activated:Connect(function()
 		status = "cancel"
 	end)
-	local function onFocusLost(entered: boolean)
+	local function onFocusLost(entered: boolean, input: InputObject?)
+		if input == nil then -- was from CaptureFocus, not user pressing enter (entered will still be true, however)
+			return
+		end
+
 		if entered then
 			if wrapper.styleStates.insert.button.Active then
 				status = "insert"

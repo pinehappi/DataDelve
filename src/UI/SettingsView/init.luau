@@ -156,6 +156,36 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 
 	self:loadFrom(Settings.data)
 
+	-- Tooltips
+
+	bindSettingTooltip(self.theme, self.frame.Content.HighlightColors, "Colors used for highlighting in the editor.")
+
+	bindSettingTooltip(
+		self.theme,
+		self.frame.Content.HideGameName,
+		"Whether to show the game name in the breadcrumbs. This is useful if you have a long game name."
+	)
+
+	bindSettingTooltip(
+		self.theme,
+		self.frame.Content.AllScopes,
+		`When this is turned on, keys will be accessed as {rfmt.code("scope/key")}. The default scope is {rfmt.code(
+			"global"
+		)}.`
+	)
+
+	bindSettingTooltip(
+		self.theme,
+		self.frame.Content.ListDeletedKeys,
+		`Whether deleted keys should appear when you are listing keys for a DataStore. Note that there is no way to tell if a key is deleted without first loading it.`
+	)
+
+	bindSettingTooltip(
+		self.theme,
+		self.frame.Content.AutomaticallyList,
+		`When this is enabled, items will be listed automatically without you having to press the {rfmt.code("List")} button, if possible.`
+	)
+
 	-- Events
 
 	table.insert(
@@ -221,36 +251,6 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 	self.styleStates.automaticallyListSwitch.toggled:Connect(function(value)
 		Settings.set("automaticallyList", value)
 	end)
-
-	-- Tooltips
-
-	bindSettingTooltip(self.theme, self.frame.Content.HighlightColors, "Colors used for highlighting in the editor.")
-
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.HideGameName,
-		"Whether to show the game name in the breadcrumbs. This is useful if you have a long game name."
-	)
-
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.AllScopes,
-		`When this is turned on, keys will be accessed as {rfmt.code("scope/key")}. The default scope is {rfmt.code(
-			"global"
-		)}.`
-	)
-
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.ListDeletedKeys,
-		`Whether deleted keys should appear when you are listing keys for a DataStore. Note that there is no way to tell if a key is deleted without first loading it.`
-	)
-
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.AutomaticallyList,
-		`When this is enabled, items will be listed automatically without you having to press the {rfmt.code("List")} button, if possible.`
-	)
 
 	return self
 end

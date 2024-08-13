@@ -31,6 +31,8 @@ local OrderedDataStoreView = require(script.OrderedDataStoreView)
 local SettingsView = require(script.SettingsView)
 local VersionsView = require(script.VersionsView)
 
+local createTabSwitchGroup = require(script.Utilities.createTabSwitchGroup)
+
 local UI = {}
 UI.__index = UI
 
@@ -187,46 +189,29 @@ function UI.new(theme: Theme.Theme, uiMessages)
 		},
 	}
 
+	-- Views
+
 	self.orderedDataStoreView = OrderedDataStoreView.from(theme, uiMessages, gui.EditOrderedDataStore)
 	self.settingsView = SettingsView.from(theme, uiMessages, gui.Settings)
 	self.versionsView = VersionsView.from(theme, uiMessages, gui.Versions)
 
+	-- Extra setting up
 	self.styleStates.edit.save:setDisabled(true):update()
 
 	self.styleStates.connect.tabs:select("Connect")
 	self:switchConnectTab("connect")
 
-	self._dataStoreInfoSelected = Instance.new("BindableEvent")
-	self.dataStoreInfoSelected = self._dataStoreInfoSelected.Event
+	-- Tab switch groups
 
-	self._keySelected = Instance.new("BindableEvent")
-	self.keySelected = self._keySelected.Event
+	createTabSwitchGroup({
+		self.styleStates.connect.dataStoreNameTextBox.textBox,
+		self.styleStates.connect.dataStoreScopeTextBox.textBox,
+	})
 
-	self._idLookedUp = Instance.new("BindableEvent")
-	self.idLookedUp = self._idLookedUp.Event
-
-	self._connectionRecordSelected = Instance.new("BindableEvent")
-	self._connectionRecordDeleted = Instance.new("BindableEvent")
-	self._connectionRecordPinChanged = Instance.new("BindableEvent")
-	self._connectionRecordLoaded = Instance.new("BindableEvent")
-	self.connectionRecordSelected = self._connectionRecordSelected.Event
-	self.connectionRecordDeleted = self._connectionRecordDeleted.Event
-	self.connectionRecordPinChanged = self._connectionRecordPinChanged.Event
-	self.connnectionRecordLoaded = self._connectionRecordLoaded.Event
-
-	self._connectionRecordStyleStates = {}
-
-	table.insert(
-		self.connections,
-		theme.colorsChanged:Connect(function()
-			task.wait()
-			StyleStateHelper.update(self.styleStates)
-
-			for _, connectionRecordStyleStates in self._connectionRecordStyleStates do
-				connectionRecordStyleStates:update("slow")
-			end
-		end)
-	)
+	createTabSwitchGroup({
+		self.styleStates.browse.key.textBox,
+		self.styleStates.browse.prefix.textBox,
+	})
 
 	-- Add tooltips to everything
 
@@ -266,6 +251,40 @@ function UI.new(theme: Theme.Theme, uiMessages)
 	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Save, `Save\nEquivalent to {rfmt.code("UpdateAsync")}.`)
 	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Refresh, `Refresh\nEquivalent to {rfmt.code("GetAsync")}.`)
 	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Delete, `Delete\nEquivalent to {rfmt.code("RemoveAsync")}.`)
+
+	-- Events
+
+	self._dataStoreInfoSelected = Instance.new("BindableEvent")
+	self.dataStoreInfoSelected = self._dataStoreInfoSelected.Event
+
+	self._keySelected = Instance.new("BindableEvent")
+	self.keySelected = self._keySelected.Event
+
+	self._idLookedUp = Instance.new("BindableEvent")
+	self.idLookedUp = self._idLookedUp.Event
+
+	self._connectionRecordSelected = Instance.new("BindableEvent")
+	self._connectionRecordDeleted = Instance.new("BindableEvent")
+	self._connectionRecordPinChanged = Instance.new("BindableEvent")
+	self._connectionRecordLoaded = Instance.new("BindableEvent")
+	self.connectionRecordSelected = self._connectionRecordSelected.Event
+	self.connectionRecordDeleted = self._connectionRecordDeleted.Event
+	self.connectionRecordPinChanged = self._connectionRecordPinChanged.Event
+	self.connnectionRecordLoaded = self._connectionRecordLoaded.Event
+
+	self._connectionRecordStyleStates = {}
+
+	table.insert(
+		self.connections,
+		theme.colorsChanged:Connect(function()
+			task.wait()
+			StyleStateHelper.update(self.styleStates)
+
+			for _, connectionRecordStyleStates in self._connectionRecordStyleStates do
+				connectionRecordStyleStates:update("slow")
+			end
+		end)
+	)
 
 	return self
 end

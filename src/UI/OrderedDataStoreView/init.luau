@@ -28,8 +28,9 @@ local ConfirmDialogStyleState = require(StyleState.Utility.ConfirmDialogStyleSta
 
 local OrderedDataStoreKeyStyleState = require(script.OrderedDataStoreKeyStyleState)
 
-local promptKeyValueForm = require(script.Parent.Utilities.promptKeyValueForm)
+local createTabSwitchGroup = require(script.Parent.Utilities.createTabSwitchGroup)
 local getHighlightColors = require(script.Parent.Utilities.getHighlightColors)
+local promptKeyValueForm = require(script.Parent.Utilities.promptKeyValueForm)
 
 local OrderedDataStoreView = {}
 OrderedDataStoreView.__index = OrderedDataStoreView
@@ -212,6 +213,28 @@ function OrderedDataStoreView.from(
 		tableLabels = LabelStyleState.fromDescendants(theme, frame.Keys),
 	}
 
+	self.styleStates.loadMore.frame.BackgroundColor3 = self._highlightColors.background
+
+	-- Tooltip
+	Tooltip.bindButtonGeneric(
+		self.theme,
+		self.styleStates.order.button,
+		"Order\nToggle between highest-to-lowest or lowest-to-highest."
+	)
+	Tooltip.bindButtonGeneric(
+		self.theme,
+		self.styleStates.list.button,
+		`List Keys\nList all keys in order. Equivalent to a call to {rfmt.code("GetSortedAsync")}.`
+	)
+
+	-- Tab switch groups
+
+	createTabSwitchGroup({
+		self.styleStates.getKey.textBox,
+		self.styleStates.minValue.textBox,
+		self.styleStates.maxValue.textBox,
+	})
+
 	-- Events
 
 	table.insert(
@@ -243,7 +266,11 @@ function OrderedDataStoreView.from(
 	)
 
 	-- UI Events
-	self.styleStates.minValue.textBox.FocusLost:Connect(function(entered: boolean)
+	self.styleStates.minValue.textBox.FocusLost:Connect(function(entered: boolean, input: InputObject?)
+		if input == nil then
+			return
+		end
+
 		local number = tonumber(self.styleStates.minValue.textBox.Text)
 		if number then
 			self.minValue = number
@@ -260,7 +287,11 @@ function OrderedDataStoreView.from(
 		end
 	end)
 
-	self.styleStates.maxValue.textBox.FocusLost:Connect(function(entered: boolean)
+	self.styleStates.maxValue.textBox.FocusLost:Connect(function(entered: boolean, input: InputObject?)
+		if input == nil then
+			return
+		end
+
 		local number = tonumber(self.styleStates.maxValue.textBox.Text)
 		if number then
 			self.maxValue = number
@@ -293,7 +324,11 @@ function OrderedDataStoreView.from(
 		self._listed:Fire()
 	end)
 
-	self.styleStates.getKey.textBox.FocusLost:Connect(function(entered)
+	self.styleStates.getKey.textBox.FocusLost:Connect(function(entered, input)
+		if input == nil then
+			return
+		end
+
 		if entered then
 			local function errorHandler(err: string)
 				self.uiMessages:error(err)
@@ -301,20 +336,6 @@ function OrderedDataStoreView.from(
 			self._keyQueried:Fire(self.styleStates.getKey:getText(errorHandler))
 		end
 	end)
-
-	self.styleStates.loadMore.frame.BackgroundColor3 = self._highlightColors.background
-
-	-- Tooltip
-	Tooltip.bindButtonGeneric(
-		self.theme,
-		self.styleStates.order.button,
-		"Order\nToggle between highest-to-lowest or lowest-to-highest."
-	)
-	Tooltip.bindButtonGeneric(
-		self.theme,
-		self.styleStates.list.button,
-		`List Keys\nList all keys in order. Equivalent to a call to {rfmt.code("GetSortedAsync")}.`
-	)
 
 	return self
 end

@@ -23,6 +23,8 @@ local DatePickerStyleState = require(StyleState.Input.DatePickerStyleState)
 
 local ContextMenuStyleState = require(StyleState.Utility.ContextMenuStyleState)
 
+local createTabSwitchGroup = require(script.Parent.Utilities.createTabSwitchGroup)
+
 local VersionsView = {}
 VersionsView.__index = VersionsView
 
@@ -132,6 +134,13 @@ function VersionsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 		listSeparators = SeparatorStyleState.fromDescendants(theme, frame.List),
 	}
 
+	-- Extra setup
+
+	createTabSwitchGroup({
+		self.styleStates.minDate.textBox,
+		self.styleStates.maxDate.textBox,
+	})
+
 	-- Event connections
 
 	table.insert(
@@ -156,7 +165,11 @@ function VersionsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 		self._reloaded:Fire()
 	end)
 
-	self.styleStates.minDate.textBox.FocusLost:Connect(function(entered)
+	self.styleStates.minDate.textBox.FocusLost:Connect(function(entered, input)
+		if input == nil then
+			return
+		end
+
 		local date = self.styleStates.minDate:getValue()
 		self.minDate = date
 
@@ -164,7 +177,11 @@ function VersionsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 			self._reloaded:Fire()
 		end
 	end)
-	self.styleStates.maxDate.textBox.FocusLost:Connect(function(entered)
+	self.styleStates.maxDate.textBox.FocusLost:Connect(function(entered, input)
+		if input == nil then
+			return
+		end
+
 		local date = self.styleStates.maxDate:getValue()
 		self.maxDate = date
 

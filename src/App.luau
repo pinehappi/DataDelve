@@ -104,12 +104,20 @@ function App.new(id: string)
 		self:_updateConnectButton()
 	end)
 
-	self.ui.styleStates.connect.dataStoreNameTextBox.textBox.FocusLost:Connect(function(entered)
+	self.ui.styleStates.connect.dataStoreNameTextBox.textBox.FocusLost:Connect(function(entered, input)
+		if input == nil then
+			return
+		end
+
 		if entered then
 			self:_submitConnectForm()
 		end
 	end)
-	self.ui.styleStates.connect.dataStoreScopeTextBox.textBox.FocusLost:Connect(function(entered)
+	self.ui.styleStates.connect.dataStoreScopeTextBox.textBox.FocusLost:Connect(function(entered, input)
+		if input == nil then
+			return
+		end
+
 		if entered then
 			self:_submitConnectForm()
 		end
@@ -192,7 +200,10 @@ function App.new(id: string)
 		self:tryListDataStores()
 	end)
 
-	self.ui.gui.ConnectDataStore.Content.Form.Prefix.TextBox.FocusLost:Connect(function(enterPressed)
+	self.ui.gui.ConnectDataStore.Content.Form.Prefix.TextBox.FocusLost:Connect(function(enterPressed, input)
+		if input == nil then
+			return
+		end
 		if enterPressed then
 			self:tryListDataStores()
 		end
@@ -215,6 +226,9 @@ function App.new(id: string)
 	end)
 
 	self.ui.styleStates.browse.key.textBox.FocusLost:Connect(function(enterPressed, input)
+		if input == nil then
+			return
+		end
 		if not enterPressed then
 			return
 		end
@@ -274,7 +288,11 @@ function App.new(id: string)
 		self:tryListKeys()
 	end)
 
-	self.ui.gui.BrowseKeys.Prefix.FocusLost:Connect(function(enterPressed)
+	self.ui.gui.BrowseKeys.Prefix.FocusLost:Connect(function(enterPressed, input)
+		if input == nil then
+			return
+		end
+
 		if enterPressed then
 			self:tryListKeys()
 		end
