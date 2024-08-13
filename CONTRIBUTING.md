@@ -34,26 +34,6 @@ Make sure all your scripts are `--!strict` unless you have a good reason not to.
 Generally same as the Roblox Lua Style Guide: https://roblox.github.io/lua-style-guide/#naming.
 Only difference is capitalize the whole acronym (JSON instead of Json).
 
-## Writing classes
-I use this style for most of the codebase:
-```luau
---!strict
-local Class = {}
-Class.__index = Class
-
-function Class.new(...)
-    local self = setmetatable({
-        ...
-    }, Class)
-
-    return self
-end
-
-export type Class = typeof(Class.new({} :: any))
-return Class
-```
-This doesn't typecheck well, though. You can use this style since it's less boilerplate, but for more important classes, use this one: https://luau-lang.org/typecheck#adding-types-for-faux-object-oriented-programs (I just found out about this).
-
 # Other Contributing Guide
 Everything in this contributing guide should more or less apply to DataDelve as well (except the commit message part): https://github.com/jessesquires/.github/blob/main/CONTRIBUTING.md
 
