@@ -78,6 +78,21 @@ The codebase is kind of a mess, but here is a brief overview to help you figure 
 
 > Consult this section when necessary.
 
+## Rought diagram of information flow
+```mermaid
+flowchart TD
+    B[App] -->|Requests| C[Session & Pages]
+    C -->|Requests| D[DataStoreService]
+    A[UI & Views] -->|Events| B
+    B -->|State Changes| A
+    D -.->|Errors| C
+    C -.->|Errors| B
+    B -.->|Errors| C2[UIMessages]
+    B -.->|Errors| A
+    B -->|Data| E[Viewer]
+    E -.->|Errors| C2
+```
+
 ## Entry Point/App
 The entry point is the script called `main`. It interfaces with an `App` object by enabling and disabling it. The `App` object does all the main stuff. Each `App` object has its own ID which is used in case in the future multiple instances of the plugin should be started (like if tab tearing is ever added).
 
