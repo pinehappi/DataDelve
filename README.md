@@ -1,4 +1,4 @@
-# DataDelve
+<img src="https://github.com/user-attachments/assets/5bd5b4f6-8ad0-4856-936f-4cd6afb62c4f" width="300">
 
 DataDelve is a graphical interface for Roblox’s DataStore API. When you need to interact with datastores in studio, you can use this plugin for a quick and easy experience. For more info on DataDelve, see this: https://devforum.roblox.com/t/3067950.
 
