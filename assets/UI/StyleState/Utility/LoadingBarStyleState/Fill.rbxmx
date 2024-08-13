@@ -1,0 +1,84 @@
+<roblox version="4">
+  <Item class="Frame" referent="0">
+    <Properties>
+      <string name="Name">Fill</string>
+      <bool name="Active">false</bool>
+      <Vector2 name="AnchorPoint">
+        <X>0.5</X>
+        <Y>0</Y>
+      </Vector2>
+      <BinaryString name="AttributesSerialize"></BinaryString>
+      <bool name="AutoLocalize">true</bool>
+      <token name="AutomaticSize">0</token>
+      <Color3 name="BackgroundColor3">
+        <R>1</R>
+        <G>1</G>
+        <B>1</B>
+      </Color3>
+      <float name="BackgroundTransparency">0</float>
+      <Color3 name="BorderColor3">
+        <R>0</R>
+        <G>0</G>
+        <B>0</B>
+      </Color3>
+      <token name="BorderMode">0</token>
+      <int name="BorderSizePixel">0</int>
+      <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+      <bool name="ClipsDescendants">false</bool>
+      <bool name="DefinesCapabilities">false</bool>
+      <bool name="Draggable">false</bool>
+      <bool name="Interactable">true</bool>
+      <int name="LayoutOrder">0</int>
+      <Ref name="NextSelectionDown">null</Ref>
+      <Ref name="NextSelectionLeft">null</Ref>
+      <Ref name="NextSelectionRight">null</Ref>
+      <Ref name="NextSelectionUp">null</Ref>
+      <UDim2 name="Position">
+        <XS>0</XS>
+        <XO>0</XO>
+        <YS>0</YS>
+        <YO>0</YO>
+      </UDim2>
+      <Ref name="RootLocalizationTable">null</Ref>
+      <float name="Rotation">0</float>
+      <bool name="Selectable">false</bool>
+      <token name="SelectionBehaviorDown">0</token>
+      <token name="SelectionBehaviorLeft">0</token>
+      <token name="SelectionBehaviorRight">0</token>
+      <token name="SelectionBehaviorUp">0</token>
+      <bool name="SelectionGroup">false</bool>
+      <Ref name="SelectionImageObject">null</Ref>
+      <int name="SelectionOrder">0</int>
+      <UDim2 name="Size">
+        <XS>0.5</XS>
+        <XO>0</XO>
+        <YS>1</YS>
+        <YO>0</YO>
+      </UDim2>
+      <token name="SizeConstraint">0</token>
+      <int64 name="SourceAssetId">-1</int64>
+      <token name="Style">0</token>
+      <BinaryString name="Tags"></BinaryString>
+      <bool name="Visible">true</bool>
+      <int name="ZIndex">1</int>
+    </Properties>
+    <Item class="UIGradient" referent="1">
+      <Properties>
+        <string name="Name">UIGradient</string>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <ColorSequence name="Color">0 1 1 1 0 1 1 1 1 0 </ColorSequence>
+        <bool name="DefinesCapabilities">false</bool>
+        <bool name="Enabled">true</bool>
+        <Vector2 name="Offset">
+          <X>0</X>
+          <Y>0</Y>
+        </Vector2>
+        <float name="Rotation">0</float>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+        <NumberSequence name="Transparency">0 1 0 0.5 0 0 1 1 0 </NumberSequence>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>
