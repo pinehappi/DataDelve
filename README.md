@@ -5,7 +5,7 @@
 <div>&nbsp;</div>
 
 <div align="center">
-    <a href="https://github.com/pinehappi/DataDelve/actions"><img src="https://github.com/pinehappi/DataDelve/workflows/Release/badge.svg" alt="Actions status" /></a>
+    <a href="https://github.com/pinehappi/DataDelve/actions"><img src="https://github.com/pinehappi/DataDelve/workflows/CI/badge.svg" alt="Actions status" /></a>
 </div>
 
 <hr>
