@@ -34,7 +34,9 @@ jobs:
       
       # Build
       - name: Build with Script
-        run: lune run build github_action_release -- --fastMode --release
+        run: |
+          mkdir build
+          lune run build github_action_release -- --fastMode --release
 
       # Publish
       - name: Upload binaries to release
