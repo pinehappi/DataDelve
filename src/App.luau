@@ -225,7 +225,7 @@ function App.new(id: string)
 		else
 			local validator = if self.session.connection.allScopes
 				then Validators.allScopesKey
-				else Validators.dataStoreKey()
+				else Validators.dataStoreKey
 			local valid, err = validator(text)
 			if valid then
 				self.ui.styleStates.browse.key:setError(nil):update("veryFast")

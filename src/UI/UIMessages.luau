@@ -271,7 +271,9 @@ function UIMessages:errorAlert(message: string)
 
 	wrapper.styleStates.message.label.Text = message
 
-	local modal = PopupHelper.modal(frame, self.parent)
+	local modal = PopupHelper.modal(frame, self.parent, {
+		zIndex = 100,
+	})
 	local lockEvent = Instance.new("BindableEvent")
 
 	modal.cancelled:Once(function()

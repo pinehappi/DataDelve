@@ -41,9 +41,8 @@ return function(textBoxes: { TextBox })
 				--   does not completely handle the case where a user pastes something that ends in a tab
 				--   and replaces the exact amount of text such that (#lastText + 1 == #textBox.Text) is true
 				if
-					(textBox.Text:sub(#textBox.Text, #textBox.Text) == "\t")
+					(textBox.Text:sub(textBox.CursorPosition - 1, textBox.CursorPosition - 1) == "\t")
 					and (#lastText + 1 == #textBox.Text)
-					and (textBox.CursorPosition == #textBox.Text + 1)
 				then
 					local canSwitch = false
 					for i = 1, #textBoxes - 1 do
