@@ -132,9 +132,14 @@ function TextBoxStyleState:_makeErrorPopup()
 		popupFrame.Text = self.error
 		popupFrame.ZIndex = 100
 		popupFrame.Parent = self.textBox:FindFirstAncestorWhichIsA("LayerCollector")
+
 		self._errorPopup = PopupHelper.attach(popupFrame, self.textBox, {
 			anchor = Vector2.new(0.5, 1),
 			offset = Vector2.new(0, 6),
+
+			afterUpdate = function(_, object, _)
+				PopupHelper.clamp(object)
+			end,
 		})
 	end
 end

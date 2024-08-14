@@ -14,9 +14,13 @@ export type ClampOptions = {
 	boundaryDistance: number?,
 }
 -- Clamps a GuiObject to container
-function PopupHelper.clamp(object: GuiObject, container: GuiBase2d, options: ClampOptions?)
+-- If no container is provided, clamp to the first ancestor LayerCollector
+function PopupHelper.clamp(object: GuiObject, container: GuiBase2d?, options: ClampOptions?)
 	options = options or {}
+	container = container or object:FindFirstAncestorWhichIsA("LayerCollector")
 	options.boundaryDistance = options.boundaryDistance or 10
+
+	assert(container, `{object} is not parented to a LayerCollector.`)
 
 	if options.tryPivot then
 		if object.AbsolutePosition.X + object.AbsoluteSize.X > container.AbsoluteSize.X then
@@ -62,8 +66,8 @@ local Attachment = {}
 Attachment.__index = Attachment
 
 function Attachment:updatePosition()
-	if self.options.onChange then
-		if self.options.onChange(self.options, self.object, self.target) == "manual" then
+	if self.options.beforeUpdate then
+		if self.options.beforeUpdate(self.options, self.object, self.target) == "manual" then
 			return
 		end
 	end
@@ -73,6 +77,11 @@ function Attachment:updatePosition()
 		+ 2 * (self.options.anchor - Vector2.new(0.5, 0.5)) * self.options.offset
 
 	self.object.Position = UDim2.fromOffset(position.X, position.Y)
+
+	print(self.options)
+	if self.options.afterUpdate then
+		self.options.afterUpdate(self.options, self.object, self.target)
+	end
 end
 
 function Attachment:destroy(completely: boolean)
@@ -94,7 +103,9 @@ export type AttachOptions = {
 	-- Callback called every time the attachment has to change positions
 	-- Can be used to dynamically change the attachment (as with SelectStyleState)
 	-- If it returns "manual", then the the attachment will not change the position of the object
-	onChange: ((AttachOptions, object: GuiObject, target: GuiObject) -> "manual"?)?,
+	beforeUpdate: ((AttachOptions, object: GuiObject, target: GuiObject) -> "manual"?)?,
+	-- Callback called after every update.
+	afterUpdate: ((AttachOptions, object: GuiObject, target: GuiObject) -> ())?,
 }
 
 -- Makes an object always move with a target object at a certain offset

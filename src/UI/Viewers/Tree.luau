@@ -2071,13 +2071,10 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				self:_setInModal(true)
 
 				if typeof(branch[2]) == "string" and branch[2]:find("\n") then
-					self:_promptEditKey(
-						index,
-						{
-							captureValueTextBox = true,
-							position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
-						}
-					)
+					self:_promptEditKey(index, {
+						captureValueTextBox = true,
+						position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
+					})
 					return
 				end
 

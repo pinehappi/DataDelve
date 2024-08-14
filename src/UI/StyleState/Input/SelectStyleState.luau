@@ -171,7 +171,7 @@ function SelectStyleState:_makeMenu()
 	self.menuAttachment = PopupHelper.attach(self.menu, self.button, {
 		anchor = Vector2.new(0, 1),
 		offset = Vector2.new(0, 2),
-		onChange = function(options, object, target)
+		beforeUpdate = function(options, object, target)
 			local height = object.AbsoluteSize.Y
 			if target.AbsolutePosition.Y + target.AbsoluteSize.Y + height + 2 > gui.AbsoluteSize.Y then
 				-- Try flipping it
