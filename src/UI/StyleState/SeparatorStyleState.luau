@@ -14,7 +14,7 @@ function SeparatorStyleState.from(theme, separator: Frame)
 	return self
 end
 
--- Convenience function goes through all descendants and returns a table
+-- Convenience function goes through all descendants and returns an array
 -- with all frames with Separator in their name as a SeparatorStyleState
 function SeparatorStyleState.fromDescendants(theme, ancestor: GuiObject)
 	local styleStates = {}

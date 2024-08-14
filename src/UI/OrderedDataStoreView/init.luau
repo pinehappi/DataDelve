@@ -215,7 +215,7 @@ function OrderedDataStoreView.from(
 		tableLabels = LabelStyleState.fromDescendants(theme, frame.Keys),
 	}
 
-	self.styleStates.loadMore.frame.BackgroundColor3 = self._highlightColors.background
+	self:_updateHighlightColors({ tween = false })
 
 	-- Tooltip
 	Tooltip.bindButtonGeneric(
@@ -244,11 +244,7 @@ function OrderedDataStoreView.from(
 		theme.colorsChanged:Connect(function()
 			task.wait()
 
-			self._highlightColors = getHighlightColors(self.theme)
-			self.styleStates.loadMore.frame.BackgroundColor3 = self._highlightColors.background
-			for _, styleState in self.styleStates.loadMore.itemStyleStates do
-				styleState:setHighlightColors(self._highlightColors)
-			end
+			self:_updateHighlightColors({ tween = false })
 
 			StyleStateHelper.update(self.styleStates)
 		end)
@@ -258,16 +254,29 @@ function OrderedDataStoreView.from(
 		self.connections,
 		Settings.changed:Connect(function(settingName)
 			if settingName == "highlightColors" then
-				self._highlightColors = getHighlightColors(theme)
-				self.styleStates.loadMore.frame.BackgroundColor3 = self._highlightColors.background
-				for _, styleState in self.styleStates.loadMore.itemStyleStates do
-					styleState:setHighlightColors(self._highlightColors):update()
-				end
+				self:_updateHighlightColors({ tween = true })
 			end
 		end)
 	)
 
 	-- UI Events
+	-- Click Background
+	self.frame.ClickBackground.MouseButton2Click:Connect(function()
+		self.styleStates.loadMore:setSelectingStyleState(nil)
+
+		local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
+		local option = ContextMenuStyleState.prompt(self.theme, gui, gui:GetRelativeMousePosition(), {
+			options = {
+				{ icon = self.theme.icons.insert, text = "Insert" },
+			},
+		})
+
+		if option == "Insert" then
+			self:_promptInsert()
+		end
+	end)
+
+	-- Listing events
 	self.styleStates.minValue.textBox.FocusLost:Connect(function(entered: boolean, input: InputObject?)
 		if input == nil then
 			return
@@ -348,6 +357,26 @@ function OrderedDataStoreView.from(
 	return self
 end
 
+function OrderedDataStoreView:_updateHighlightColors(options: { tween: boolean })
+	self._highlightColors = getHighlightColors(self.theme)
+	self.frame.ClickBackground.BackgroundColor3 = self._highlightColors.background
+
+	if options.tween then
+		self.styleStates.tableLabels.Empty:overrideColor(self._highlightColors.plain):update()
+		self.styleStates.tableLabels.Instructions:overrideColor(self._highlightColors.plain):update()
+	else
+		self.styleStates.tableLabels.Empty:overrideColor(self._highlightColors.plain)
+		self.styleStates.tableLabels.Instructions:overrideColor(self._highlightColors.plain)
+	end
+
+	for _, styleState in self.styleStates.loadMore.itemStyleStates do
+		styleState:setHighlightColors(self._highlightColors)
+		if options.tween then
+			styleState:update()
+		end
+	end
+end
+
 function OrderedDataStoreView:setLocked(locked: boolean)
 	self.locked = locked
 
@@ -379,6 +408,12 @@ function OrderedDataStoreView:setKeysState(state: "empty" | "notEmpty" | "notFou
 end
 
 function OrderedDataStoreView:addKey(key: string, value: number)
+	self:setKeysState("notEmpty")
+
+	-- When the user inserts when they haven't listed or the list is empty, the load more button will appear. Make sure it doesn't
+	if self.styleStates.loadMore:isEmpty() then
+		self.styleStates.loadMore:setLoadMoreVisible(false)
+	end
 	self.styleStates.loadMore:add({ key = key, value = value })
 end
 
@@ -404,7 +439,8 @@ function OrderedDataStoreView:deleteKey(key: string)
 	end
 end
 
--- When setting activeKey to nil, should also list keys
+-- When setting activeKey to nil, should also list keys.
+-- activeKey is the key that they got using the `Get Key` input
 function OrderedDataStoreView:setActiveKey(key: string?, value: number?)
 	if key then
 		self.styleStates.loadMore:clear()
@@ -433,6 +469,7 @@ end
 function OrderedDataStoreView:reset()
 	self.order = "descending"
 	self.styleStates.order.button.ImageLabel.Image = DESCENDING_ICON
+	self.styleStates.loadMore:clear()
 
 	self.styleStates.getKey.textBox.Text = ""
 	self.styleStates.minValue.textBox.Text = ""

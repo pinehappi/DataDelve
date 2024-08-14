@@ -43,6 +43,10 @@ function LoadMoreListStyleState:add(...)
 	table.insert(self.itemStyleStates, itemStyleState)
 end
 
+function LoadMoreListStyleState:isEmpty(): boolean
+	return not next(self.itemStyleStates)
+end
+
 function LoadMoreListStyleState:clear()
 	for _, styleState in self.itemStyleStates do
 		styleState:destroy(true)

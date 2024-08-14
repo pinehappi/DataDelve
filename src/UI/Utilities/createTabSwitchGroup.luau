@@ -5,7 +5,7 @@
 local function checkTrulyVisible(object: GuiObject): boolean
 	local current: any = object
 	while current do
-		if not current.Visible then
+		if (not current) or not current.Visible then
 			return false
 		end
 
