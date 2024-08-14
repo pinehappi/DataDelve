@@ -36,15 +36,14 @@ jobs:
       - name: Build with Script
         run: |
           mkdir build
-          lune run build github_action_release -- --fastMode --release
+          lune run build github_action_release -- --fastMode
 
       # Publish
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/github_action_release.rbxm
-          asset_name: DataDelve
-          tag: ${{ github.ref }}
+          asset_name: DataDelve Development Release
           overwrite: true
           body: "Hello, World!"
+          prerelease: true
