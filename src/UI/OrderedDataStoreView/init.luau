@@ -5,6 +5,7 @@ local ASCENDING_ICON = "rbxassetid://17650919434"
 
 local rfmt = require(script.Parent.Parent.rfmt)
 
+local Validators = require(script.Parent.Parent.Validators)
 local StyleState = script.Parent.StyleState
 local Assets = script.Parent.Assets
 
@@ -28,6 +29,7 @@ local ConfirmDialogStyleState = require(StyleState.Utility.ConfirmDialogStyleSta
 
 local OrderedDataStoreKeyStyleState = require(script.OrderedDataStoreKeyStyleState)
 
+local constrainTextBoxStyleState = require(script.Parent.Utilities.constrainTextBoxStyleState)
 local createTabSwitchGroup = require(script.Parent.Utilities.createTabSwitchGroup)
 local getHighlightColors = require(script.Parent.Utilities.getHighlightColors)
 local promptKeyValueForm = require(script.Parent.Utilities.promptKeyValueForm)
@@ -287,6 +289,8 @@ function OrderedDataStoreView.from(
 		end
 	end)
 
+	constrainTextBoxStyleState(self.styleStates.minValue, { Validators.integer })
+
 	self.styleStates.maxValue.textBox.FocusLost:Connect(function(entered: boolean, input: InputObject?)
 		if input == nil then
 			return
@@ -307,6 +311,8 @@ function OrderedDataStoreView.from(
 			self._listed:Fire()
 		end
 	end)
+
+	constrainTextBoxStyleState(self.styleStates.maxValue, { Validators.integer })
 
 	self.styleStates.order.button.Activated:Connect(function()
 		if self.order == "ascending" then
@@ -336,6 +342,8 @@ function OrderedDataStoreView.from(
 			self._keyQueried:Fire(self.styleStates.getKey:getText(errorHandler))
 		end
 	end)
+
+	constrainTextBoxStyleState(self.styleStates.getKey, { Validators.dataStoreKey })
 
 	return self
 end

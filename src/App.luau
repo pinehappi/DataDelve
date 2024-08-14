@@ -34,6 +34,7 @@ local BUIMessages = require(script.Parent.UI.UIMessages)
 local ExportImportHelper = require(script.Parent.ExportImportHelper)
 
 local promptKeyValueForm = require(script.Parent.UI.Utilities.promptKeyValueForm)
+local constraintTextBoxStyleState = require(script.Parent.UI.Utilities.constrainTextBoxStyleState)
 
 local WIDGET_INFO = DockWidgetPluginGuiInfo.new(
 	Enum.InitialDockState.Float, -- Widget will be initialized in floating panel
@@ -59,10 +60,6 @@ end)
 
 local App = {}
 App.__index = App
-
-local function isDataStoreNameValid(name: string): boolean
-	return name ~= ""
-end
 
 function App.new(id: string)
 	local uiMessages = BUIMessages.new(Theme)
@@ -121,6 +118,16 @@ function App.new(id: string)
 		if entered then
 			self:_submitConnectForm()
 		end
+	end)
+
+	constraintTextBoxStyleState(self.ui.styleStates.connect.dataStoreNameTextBox, { Validators.dataStoreName })
+	constraintTextBoxStyleState(self.ui.styleStates.connect.dataStoreScopeTextBox, { Validators.dataStoreScope })
+
+	self.ui.styleStates.connect.dataStoreNameTextBox.errorChanged:Connect(function()
+		self:_updateConnectButton()
+	end)
+	self.ui.styleStates.connect.dataStoreScopeTextBox.errorChanged:Connect(function()
+		self:_updateConnectButton()
 	end)
 
 	self.ui.gui.ConnectDataStore.Content.Form.Connect.Connect.Activated:Connect(function()
@@ -213,15 +220,18 @@ function App.new(id: string)
 
 	self.ui.styleStates.browse.key.textBox:GetPropertyChangedSignal("Text"):Connect(function()
 		local text = self.ui.styleStates.browse.key.textBox.Text
-		if (#text > 0) and self.session.connection.allScopes then
-			local valid, err = Validators.allScopesKey(text)
+		if #text == 0 then
+			self.ui.styleStates.browse.key:setError(nil):update("veryFast")
+		else
+			local validator = if self.session.connection.allScopes
+				then Validators.allScopesKey
+				else Validators.dataStoreKey()
+			local valid, err = validator(text)
 			if valid then
 				self.ui.styleStates.browse.key:setError(nil):update("veryFast")
 			else
 				self.ui.styleStates.browse.key:setError(err):update("veryFast")
 			end
-		else
-			self.ui.styleStates.browse.key:setError(nil):update("veryFast")
 		end
 	end)
 
@@ -875,9 +885,11 @@ function App.new(id: string)
 end
 
 function App._updateConnectButton(self: App)
-	self.ui.styleStates.connect.connectButton
-		:setDisabled(not isDataStoreNameValid(self.ui.gui.ConnectDataStore.Content.Form.DataStoreName.TextBox.Text))
-		:update()
+	local disabled = (self.ui.styleStates.connect.dataStoreNameTextBox.textBox.Text == "")
+		or self.ui.styleStates.connect.dataStoreNameTextBox.error
+		or self.ui.styleStates.connect.dataStoreScopeTextBox.error
+
+	self.ui.styleStates.connect.connectButton:setDisabled(disabled):update()
 end
 
 function App.tryConnect(self: App, connection: Types.DataStoreConnection)

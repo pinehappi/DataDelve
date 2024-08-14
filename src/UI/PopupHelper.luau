@@ -78,7 +78,6 @@ function Attachment:updatePosition()
 
 	self.object.Position = UDim2.fromOffset(position.X, position.Y)
 
-	print(self.options)
 	if self.options.afterUpdate then
 		self.options.afterUpdate(self.options, self.object, self.target)
 	end

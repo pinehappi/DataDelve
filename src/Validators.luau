@@ -14,6 +14,7 @@ end
 Validators.empty = function(_): (boolean, string?)
 	return true, nil
 end
+
 Validators.integer = function(a: any): (boolean, string?)
 	if isValidInteger(a) then
 		return true, nil
@@ -21,20 +22,7 @@ Validators.integer = function(a: any): (boolean, string?)
 		return false, "Must be an integer."
 	end
 end
-Validators.dataStoreKey = function(text: string): (boolean, string?)
-	if #text > 50 then
-		return false, "Key name must be under 50 characters."
-	else
-		return true, nil
-	end
-end
-Validators.orderedDataStoreValue = function(text: string): (boolean, string?)
-	if not isValidInteger(text) then
-		return false, "Value must be an integer."
-	else
-		return true, nil
-	end
-end
+
 Validators.userId = function(text: unknown): (boolean, string?)
 	if isValidInteger(text) then
 		local number = tonumber(text)
@@ -47,6 +35,39 @@ Validators.userId = function(text: unknown): (boolean, string?)
 		return false, "UserId must be a positive integer."
 	end
 end
+
+Validators.dataStoreName = function(text: string): (boolean, string?)
+	if #text > 50 then
+		return false, "DataStore name must be 50 characters or less."
+	else
+		return true, nil
+	end
+end
+
+Validators.dataStoreScope = function(text: string): (boolean, string?)
+	if #text > 50 then
+		return false, "DataStore scope must be 50 characters or less."
+	else
+		return true, nil
+	end
+end
+
+Validators.dataStoreKey = function(text: string): (boolean, string?)
+	if #text > 50 then
+		return false, "Key name must be 50 characters or less."
+	else
+		return true, nil
+	end
+end
+
+Validators.orderedDataStoreValue = function(text: string): (boolean, string?)
+	if not isValidInteger(text) then
+		return false, "Value must be an integer."
+	else
+		return true, nil
+	end
+end
+
 Validators.allScopesKey = function(text: string): (boolean, string?)
 	local split = text:split("/")
 	if #split < 2 then
@@ -58,6 +79,10 @@ Validators.allScopesKey = function(text: string): (boolean, string?)
 			return false, "Scope must be provided. Default scope is global."
 		elseif key == "" then
 			return false, "Key cannot be empty."
+		elseif #key > 50 then
+			return false, "Key name must be 50 characters or less."
+		elseif #scope > 50 then
+			return false, "Scope name must be 50 characters or less."
 		else
 			return true, nil
 		end
