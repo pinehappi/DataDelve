@@ -134,6 +134,11 @@ local function build(outputFile: string, buildType: BuildType)
 	local outputFilePath = `build/{outputFile}.rbxm`
 	local start = datetime.now().unixTimestampMillis
 
+	stdio.write(`Making build directory  {pending()}`)
+	fs.writeDir("build")
+	ok()
+	stdio.write("\n")
+
 	print(`Starting {buildType} build...`)
 
 	local root = roblox.Instance.new("Folder")
