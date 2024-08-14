@@ -27,9 +27,10 @@ jobs:
 
       # Meh
       - name: Download Rokit
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/rojo-rbx/rokit/main/scripts/install.sh | bash
-          source ~/.bashrc
+        run: curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/rojo-rbx/rokit/main/scripts/install.sh | bash
+      
+      - name: Update shell
+        run: source ~/.bashrc
       
       # Install
       - name: Install Tools
