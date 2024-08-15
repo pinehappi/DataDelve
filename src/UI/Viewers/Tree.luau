@@ -1606,12 +1606,18 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		if option == "Edit" then
 			self:_promptEditKey(index, { position = position })
 		elseif option == "Delete" then
-			local confirmed = ConfirmDialogStyleState.confirm(self.theme, self.gui, position, {
-				title = `Delete <i>{branch[1]}</i>?`,
-				message = "This will delete any children as well.",
-			})
+			local shouldDelete = true
 
-			if confirmed then
+			if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
+				if self:_doesBranchHaveChildren(index) then
+					shouldDelete = ConfirmDialogStyleState.confirm(self.theme, self.gui, position, {
+						title = `Delete <i>{branch[1]}</i>?`,
+						message = "This will delete any children as well.",
+					})
+				end
+			end
+
+			if shouldDelete then
 				self:_deleteBranch(index)
 				self:_redrawBranches()
 			end
