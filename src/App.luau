@@ -420,8 +420,12 @@ function App.new(id: string)
 					local success, err = self.session:tryDeleteCurrentKey()
 
 					if success then
+						local keyName = self.session.currentKey
 						self.session:resetKey()
 						self.ui.styleStates.breadcrumbs:popCrumb()
+						if not Settings.get("listDeletedKeys") then
+							self.ui.styleStates.browse.loadMore:tryRemove(keyName)
+						end
 					else
 						self.uiMessages:reportDataStoreError(err)
 					end

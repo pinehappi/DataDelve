@@ -14,6 +14,8 @@ Session.__index = Session
 
 local cache
 
+-- Static
+
 function Session.new()
 	local self = setmetatable({
 		datastore = nil,
@@ -32,6 +34,8 @@ function Session.new()
 
 	return self
 end
+
+-- Methods
 
 local actionRequestBudgets = {
 	list = { [Enum.DataStoreRequestType.ListAsync] = 1 },

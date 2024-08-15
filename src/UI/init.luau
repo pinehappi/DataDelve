@@ -161,7 +161,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 						end
 					end)
 
-					return styleState
+					return styleState, info.KeyName
 				end,
 			}),
 

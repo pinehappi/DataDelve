@@ -3,7 +3,12 @@
 -- `Pages` does this when a new page is loaded.
 --
 -- StyleStates produced from `createItemStyleState` can have method `setSelecting(bool)` to make them
--- eligible for the `setSelectingStyleState` method of this object.
+-- eligible for the `setSelectingStyleState` method of this object
+--
+-- `createItemStyleState` can optionally return a second return which is a key.
+-- You can then access the StyleState created using loadMoreListStyleState.itemStyleStates[key]
+-- When multiple items with the same key are added, a warning will be emitted.
+-- If no key is specified, the item will be inserted in the array section of itemStyleStates sequentially.
 
 local TweenService = game:GetService("TweenService")
 local StyleStateHelper = require(script.Parent.StyleStateHelper)
@@ -18,7 +23,7 @@ type LoadMoreList = Frame & {
 }
 
 type LoadMoreListOptions = {
-	createItemStyleState: (parent: LoadMoreListStyleState, ...any) -> StyleStateHelper.StyleState,
+	createItemStyleState: (parent: LoadMoreListStyleState, ...any) -> (StyleStateHelper.StyleState, unknown?),
 }
 
 function LoadMoreListStyleState.from(theme, frame: LoadMoreList, options: LoadMoreListOptions)
@@ -39,8 +44,23 @@ function LoadMoreListStyleState.from(theme, frame: LoadMoreList, options: LoadMo
 end
 
 function LoadMoreListStyleState:add(...)
-	local itemStyleState = self.options.createItemStyleState(self, ...)
-	table.insert(self.itemStyleStates, itemStyleState)
+	local itemStyleState, key = self.options.createItemStyleState(self, ...)
+	if key then
+		if self.itemStyleStates[key] then
+			warn(`Duplicate key ({self.frame:GetFullName()}): {key}`)
+		end
+		self.itemStyleStates[key] = itemStyleState
+	else
+		table.insert(self.itemStyleStates, itemStyleState)
+	end
+end
+
+function LoadMoreListStyleState:tryRemove(key: string?): boolean
+	local styleState = self.itemStyleStates[key]
+	if styleState then
+		styleState:destroy(true)
+		self.itemStyleStates[key] = nil
+	end
 end
 
 function LoadMoreListStyleState:isEmpty(): boolean
