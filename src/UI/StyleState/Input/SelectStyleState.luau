@@ -1,9 +1,7 @@
 --!strict
 
-local DOWN_ARROW_IMAGE = "rbxassetid://17650880752"
-local UP_ARROW_IMAGE = "rbxassetid://18557565597"
-
 local TextService = game:GetService("TextService")
+local TweenService = game:GetService("TweenService")
 
 local Theme = require(script.Parent.Parent.Parent.Theme)
 local PopupHelper = require(script.Parent.Parent.Parent.PopupHelper)
@@ -11,6 +9,10 @@ local PopupHelper = require(script.Parent.Parent.Parent.PopupHelper)
 local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
 local BackgroundStyleState = require(script.Parent.Parent.BackgroundStyleState)
 local ButtonStyleState = require(script.Parent.Parent.ButtonStyleState)
+
+local DOWN_ARROW_IMAGE = "rbxassetid://17650880752"
+local UP_ARROW_IMAGE = "rbxassetid://18557565597"
+local SELECT_MENU_OFFSET = 2
 
 local SelectStyleState = {}
 SelectStyleState.__index = SelectStyleState
@@ -173,9 +175,9 @@ function SelectStyleState:_makeMenu()
 		offset = Vector2.new(0, 2),
 		beforeUpdate = function(options, object, target)
 			local height = object.AbsoluteSize.Y
-			if target.AbsolutePosition.Y + target.AbsoluteSize.Y + height + 2 > gui.AbsoluteSize.Y then
+			if target.AbsolutePosition.Y + target.AbsoluteSize.Y + height + SELECT_MENU_OFFSET > gui.AbsoluteSize.Y then
 				-- Try flipping it
-				if target.AbsolutePosition.Y - height - 2 < 0 then
+				if target.AbsolutePosition.Y - height - SELECT_MENU_OFFSET < 0 then
 					-- Can't be flipped, just clamp
 					local position = target.AbsolutePosition + Vector2.new(0, target.AbsoluteSize.Y)
 					object.Position = UDim2.fromOffset(position.X, position.Y)
@@ -196,6 +198,32 @@ function SelectStyleState:_makeMenu()
 	self.menuModal.cancelled:Connect(function()
 		self:setOpen(false)
 	end)
+
+	self:_animateMenu()
+end
+
+function SelectStyleState:_animateMenu()
+	local menu = self.menu
+	local menuAttachment = self.menuAttachment
+
+	local start = os.clock()
+	local startOffset = -8
+	while (self.menu and self.menu == menu) and (self.menuAttachment and self.menuAttachment == menuAttachment) do
+		local delta = os.clock() - start
+		local a = math.min(delta / 0.1, 1)
+		a = TweenService:GetValue(a, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+
+		self.menu.GroupTransparency = 1 - a
+		self.menu.UIStroke.Transparency = 1 - a
+		self.menuAttachment.options.offset = Vector2.new(0, startOffset + a * (SELECT_MENU_OFFSET - startOffset))
+		self.menuAttachment:updatePosition()
+
+		if a >= 1 then
+			break
+		end
+
+		task.wait()
+	end
 end
 
 -- Makes sure the Selection TextLabel can always fit the biggest option

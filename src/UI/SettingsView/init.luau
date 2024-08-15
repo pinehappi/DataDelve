@@ -158,8 +158,6 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 
 	-- Tooltips
 
-	bindSettingTooltip(self.theme, self.frame.Content.HighlightColors, "Colors used for highlighting in the editor.")
-
 	bindSettingTooltip(
 		self.theme,
 		self.frame.Content.HideGameName,
