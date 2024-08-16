@@ -11,14 +11,14 @@ return function(
 		local x = anchorRelativeToParent.X
 			* (
 				container.AbsoluteSize.X
-				- container.UIPadding.PaddingRight.Offset
-				- container.UIPadding.PaddingLeft.Offset
+				- uiPadding.PaddingRight.Offset
+				- uiPadding.PaddingLeft.Offset
 			)
 		local y = anchorRelativeToParent.Y
 			* (
 				container.AbsoluteSize.Y
-				- container.UIPadding.PaddingTop.Offset
-				- container.UIPadding.PaddingBottom.Offset
+				- uiPadding.PaddingTop.Offset
+				- uiPadding.PaddingBottom.Offset
 			)
 		object.Position = UDim2.fromOffset(x, y) + extraOffset
 	end

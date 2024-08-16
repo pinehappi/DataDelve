@@ -5,7 +5,6 @@ local ASCENDING_ICON = "rbxassetid://17650919434"
 
 local rfmt = require(script.Parent.Parent.rfmt)
 
-local Validators = require(script.Parent.Parent.Validators)
 local StyleState = script.Parent.StyleState
 local Assets = script.Parent.Assets
 
@@ -17,7 +16,6 @@ local Validators = require(script.Parent.Parent.Validators)
 local Tooltip = require(script.Parent.Tooltip)
 
 local StyleStateHelper = require(StyleState.StyleStateHelper)
-local StyleStateWrapper = require(StyleState.StyleStateWrapper)
 local TextBoxStyleState = require(StyleState.Input.TextBoxStyleState)
 local ShortcutsTextBoxStyleState = require(StyleState.Input.ShortcutsTextBoxStyleState)
 local ButtonStyleState = require(StyleState.ButtonStyleState)

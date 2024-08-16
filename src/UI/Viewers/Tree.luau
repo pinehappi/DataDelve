@@ -1596,15 +1596,13 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 		local stop = false
 		local entered = false
-		local connections = {
-			modal.cancelled:Once(function()
-				stop = true
-			end),
-			textBox.FocusLost:Connect(function(e)
-				entered = e
-				stop = true
-			end),
-		}
+		modal.cancelled:Once(function()
+			stop = true
+		end)
+		textBox.FocusLost:Connect(function(e)
+			entered = e
+			stop = true
+		end)
 		if options.updater then
 			table.insert(
 				connections,
@@ -2222,7 +2220,10 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		end),
 
 		frame.Activated:Connect(function(_, count)
-			self:_selectBranch(index)
+			count = count % 2
+			if count == 0 then
+				self:_selectBranch(index)
+			end
 		end),
 		frame.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -2698,7 +2699,6 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 	local lastIndex = self._selectingBranchIndex
 
 	local mousePosition = self.gui:GetRelativeMousePosition()
-	local canvasOffset = mousePosition.Y - self.frame.AbsolutePosition.Y + self.frame.CanvasPosition.Y
 
 	if index ~= lastIndex then
 		self._selectingBranchIndex = index

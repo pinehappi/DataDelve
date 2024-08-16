@@ -208,7 +208,7 @@ function UIMessages:toast(options: ToastOptions?)
 	task.delay(options.duration or 5, disappear)
 end
 
-function UIMessages:success(message: string, options: AlertOptions)
+function UIMessages:success(message: string)
 	self:toast({
 		icon = UIMessages.SUCCESS_ICON,
 		iconColor = self.theme.colors.success,
@@ -216,7 +216,7 @@ function UIMessages:success(message: string, options: AlertOptions)
 	})
 end
 
-function UIMessages:error(message: string, options: AlertOptions)
+function UIMessages:error(message: string)
 	self:toast({
 		icon = UIMessages.ERROR_ICON,
 		iconColor = self.theme.colors.error,
@@ -224,7 +224,7 @@ function UIMessages:error(message: string, options: AlertOptions)
 	})
 end
 
-function UIMessages:warn(message: string, options: AlertOptions)
+function UIMessages:warn(message: string)
 	self:toast({
 		icon = UIMessages.WARNING_ICON,
 		iconColor = self.theme.colors.warn,

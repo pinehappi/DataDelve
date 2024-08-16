@@ -1,7 +1,6 @@
 --!strict
 -- Same as Checkbox, just styled differently
 
-local TweenService = game:GetService("TweenService")
 local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
 local ButtonStyleState = require(script.Parent.Parent.ButtonStyleState)
 

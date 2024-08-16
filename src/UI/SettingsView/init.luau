@@ -3,13 +3,11 @@
 local rfmt = require(script.Parent.Parent.rfmt)
 
 local StyleState = script.Parent.StyleState
-local Assets = script.Parent.Assets
 
 local Settings = require(script.Parent.Parent.Settings)
 
 local Theme = require(script.Parent.Theme)
 local UIMessages = require(script.Parent.UIMessages)
-local PopupHelper = require(script.Parent.PopupHelper)
 local Tooltip = require(script.Parent.Tooltip)
 
 local Tree = require(script.Parent.Viewers.Tree)

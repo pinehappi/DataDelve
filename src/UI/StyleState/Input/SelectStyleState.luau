@@ -7,7 +7,6 @@ local Theme = require(script.Parent.Parent.Parent.Theme)
 local PopupHelper = require(script.Parent.Parent.Parent.PopupHelper)
 
 local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
-local BackgroundStyleState = require(script.Parent.Parent.BackgroundStyleState)
 local ButtonStyleState = require(script.Parent.Parent.ButtonStyleState)
 
 local DOWN_ARROW_IMAGE = "rbxassetid://17650880752"
@@ -291,7 +290,6 @@ function SelectStyleState:setSelection(selection: string, options: SetSelectionO
 	-- Set image if possible
 	local icon = self.button:FindFirstChild("Icon") :: ImageLabel
 	if icon then
-		local imageId = nil
 		local option = self.options[self.selectionIndex or 1]
 
 		if option and typeof(option) == "table" and option.icon then

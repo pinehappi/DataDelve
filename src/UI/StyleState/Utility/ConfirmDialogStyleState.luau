@@ -1,7 +1,5 @@
 -- TODO: should auto-follow theme when using.createDialog
 
-local TweenService = game:GetService("TweenService")
-
 local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
 local PopupHelper = require(script.Parent.Parent.Parent.PopupHelper)
 
@@ -113,7 +111,6 @@ function ConfirmDialogStyleState:interact(confirmed: boolean)
 end
 
 function ConfirmDialogStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
-	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
 	for _, styleState in self._styleStates do
 		styleState:update(speed)
 	end

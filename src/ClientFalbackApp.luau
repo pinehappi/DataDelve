@@ -7,7 +7,6 @@ ClientFallbackApp.__index = ClientFallbackApp
 local Theme = require(script.Parent.UI.Theme).global
 
 local StyleState = script.Parent.UI.StyleState
-local StyleStateHelper = require(StyleState.StyleStateHelper)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
 local LabelStyleState = require(StyleState.LabelStyleState)
 

@@ -8,7 +8,6 @@
 -- styleState:destroy()
 -- ```
 
-local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
 local Theme = require(script.Parent.Parent.Parent.Theme)
 
 local LoadingBarStyleState = {}
@@ -43,7 +42,7 @@ end
 function LoadingBarStyleState:update()
 	if Theme.getLuminance(self.theme.colors.background) > 0.5 then
 		self.container.BackgroundTransparency = 0
-		local hue, saturation, value = Theme.getAccentComponents(self.theme.preset, self.theme.accent)
+		local hue, _, _ = Theme.getAccentComponents(self.theme.preset, self.theme.accent)
 		self.container.BackgroundColor3 = Color3.new(0.6, 0.6, 0.6)
 	else
 		self.container.BackgroundTransparency = 0.75

@@ -12,8 +12,6 @@ type Session = any
 local Session = {}
 Session.__index = Session
 
-local cache
-
 -- Static
 
 function Session.new()
@@ -66,7 +64,6 @@ function Session:tryConnect(connection: Types.DataStoreConnection): (boolean, st
 		self:resetKey()
 		self.datastore = datastore
 	else
-		local scope = connection.scope
 		local params = Instance.new("DataStoreOptions")
 		params.AllScopes = not not connection.allScopes
 		if connection.allScopes then

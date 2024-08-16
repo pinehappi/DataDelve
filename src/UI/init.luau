@@ -21,7 +21,6 @@ local LoadMoreListStyleState = require(StyleState.LoadMoreListStyleState)
 local TabsStyleState = require(StyleState.TabsStyleState)
 
 local CheckboxStyleState = require(StyleState.Input.CheckboxStyleState)
-local TextBoxStyleState = require(StyleState.Input.TextBoxStyleState)
 local ShortcutsTextBoxStyleState = require(StyleState.Input.ShortcutsTextBoxStyleState)
 
 local SkeletonStyleState = require(StyleState.Utility.SkeletonStyleState)

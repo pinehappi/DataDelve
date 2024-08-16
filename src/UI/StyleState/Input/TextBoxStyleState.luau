@@ -1,5 +1,3 @@
-local TweenService = game:GetService("TweenService")
-
 local PopupHelper = require(script.Parent.Parent.Parent.PopupHelper)
 local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
 

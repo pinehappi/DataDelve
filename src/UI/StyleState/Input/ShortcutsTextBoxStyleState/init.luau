@@ -11,7 +11,6 @@
 -- Must pass in a function to handle any errors that occur.
 -- Errors are non-fatal, but should be reported.
 
-local TweenService = game:GetService("TweenService")
 local TextService = game:GetService("TextService")
 local Players = game:GetService("Players")
 

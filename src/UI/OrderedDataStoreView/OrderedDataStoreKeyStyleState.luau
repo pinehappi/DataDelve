@@ -1,7 +1,3 @@
-local TweenService = game:GetService("TweenService")
-
-local StyleStateHelper = require(script.Parent.Parent.StyleState.StyleStateHelper)
-
 local OrderedDataStoreKeyStyleState = {}
 OrderedDataStoreKeyStyleState.__index = OrderedDataStoreKeyStyleState
 

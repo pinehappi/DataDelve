@@ -1,5 +1,4 @@
 local StyleStateHelper = require(script.Parent.StyleStateHelper)
-local TweenService = game:GetService("TweenService")
 
 local ButtonStyleState = {}
 ButtonStyleState.__index = ButtonStyleState

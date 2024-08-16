@@ -13,7 +13,6 @@
 --	Month Day
 --	ISO 8601
 
-local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
 local TextBoxStyleState = require(script.Parent.TextBoxStyleState)
 
 local DatePickerStyleState = setmetatable({}, { __index = TextBoxStyleState })

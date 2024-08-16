@@ -10,7 +10,6 @@
 -- When multiple items with the same key are added, a warning will be emitted.
 -- If no key is specified, the item will be inserted in the array section of itemStyleStates sequentially.
 
-local TweenService = game:GetService("TweenService")
 local StyleStateHelper = require(script.Parent.StyleStateHelper)
 local ButtonStyleState = require(script.Parent.ButtonStyleState)
 
