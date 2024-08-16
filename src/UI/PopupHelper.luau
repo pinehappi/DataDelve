@@ -145,33 +145,50 @@ Modal.__index = Modal
 function Modal:hide()
 	self.object.Visible = false
 	self.blockInputFrame.Visible = false
+	if self.shadow then
+		self.shadow.Visible = false
+	end
 end
 
 function Modal:reveal()
 	self.object.Visible = true
 	self.blockInputFrame.Visible = true
+	if self.shadow then
+		self.shadow.Visible = true
+	end
+end
+
+function Modal:attachDropShadow()
+	self.shadow = PopupHelper.attachDropShadow(self.object)
+	self.shadow.Name = `{self.object}_Shadow`
 end
 
 function Modal:destroy()
 	self.blockInputFrame:Destroy()
 	self._cancelled:Destroy()
+	if self.shadow then
+		self.shadow:Destroy()
+		self.shadow = nil
+	end
 end
 
 export type ModalOptions = {
 	zIndex: number?,
 	scrimTransparency: number?,
 	reparent: boolean?,
+	passThroughInput: boolean?,
 }
 -- Turns an object into a modal and blocks all inputs in container
 function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: ModalOptions?)
 	options = options or {}
 	options.zIndex = options.zIndex or 10
-	options.scrimTransparency = options.scrimTransparency or globalTheme.colors.defaultScrimTransparency
+	options.scrimTransparency = options.scrimTransparency or globalTheme.colors.scrimTransparency
 	options.reparent = if options.reparent == nil then true else options.reparent
 
 	local modal = setmetatable({
 		object = object,
 		blockInputFrame = script.BlockInput:Clone(),
+		shadow = nil,
 		_cancelled = Instance.new("BindableEvent"),
 	}, Modal)
 
@@ -179,12 +196,27 @@ function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: Mod
 	modal.blockInputFrame.ZIndex = options.zIndex
 	modal.blockInputFrame.Parent = container
 
+	if options.passThroughInput then
+		modal.blockInputFrame.ClickCapture.Active = false
+		modal.blockInputFrame.ClickCapture.Interactable = false
+		modal.blockInputFrame.BackgroundTransparency = 1
+
+		modal.blockInputFrame.InputBegan:Connect(function(input)
+			if
+				input.UserInputType == Enum.UserInputType.MouseButton1
+				or input.UserInputType == Enum.UserInputType.MouseButton2
+			then
+				modal._cancelled:Fire()
+			end
+		end)
+	end
+
 	modal.cancelled = modal._cancelled.Event
 
 	if options.reparent then
 		object.Parent = container
 	end
-	object.ZIndex = options.zIndex + 1
+	object.ZIndex = options.zIndex + 2
 
 	modal.blockInputFrame.ClickCapture.Activated:Connect(function()
 		modal._cancelled:Fire()
@@ -193,7 +225,28 @@ function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: Mod
 		modal._cancelled:Fire()
 	end)
 
+	modal:attachDropShadow()
 	return modal
+end
+
+function PopupHelper.attachDropShadow(object: GuiObject)
+	local dropShadow = script.DropShadowTemplate:Clone()
+	dropShadow.ZIndex = object.ZIndex - 1
+
+	local function update()
+		dropShadow.Position = UDim2.fromOffset(object.AbsolutePosition.X - 15, object.AbsolutePosition.Y - 9)
+		dropShadow.Size = UDim2.fromOffset(object.AbsoluteSize.X + 30, object.AbsoluteSize.Y + 26)
+	end
+
+	update()
+	object:GetPropertyChangedSignal("AbsoluteSize"):Connect(update)
+	object:GetPropertyChangedSignal("AbsolutePosition"):Connect(update)
+	object.Destroying:Connect(function()
+		dropShadow:Destroy()
+	end)
+
+	dropShadow.Parent = object.Parent
+	return dropShadow
 end
 
 return PopupHelper

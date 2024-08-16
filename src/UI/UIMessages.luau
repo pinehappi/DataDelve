@@ -15,7 +15,6 @@ local LabelStyleState = require(StyleState.LabelStyleState)
 local FrameTemplate = script.FrameTemplate
 local TextLabelTemplate = script.TextLabelTemplate
 local IconTemplate = script.IconTemplate
-local DropShadowTemplate = script.DropShadowTemplate
 local CloseButtonTemplate = script.CloseButtonTemplate
 
 local UIMessages = {}
@@ -57,25 +56,6 @@ end
 
 function UIMessages:_getMaxToastWidth(): number
 	return math.clamp(math.floor(self.gui.AbsoluteSize.X * 0.4), 200, 500)
-end
-
-local function attachDropShadow(object: GuiObject)
-	local dropShadow = DropShadowTemplate:Clone()
-	dropShadow.ZIndex = object.ZIndex - 1
-
-	local function update()
-		dropShadow.Position = UDim2.fromOffset(object.AbsolutePosition.X - 15, object.AbsolutePosition.Y - 9)
-		dropShadow.Size = UDim2.fromOffset(object.AbsoluteSize.X + 30, object.AbsoluteSize.Y + 26)
-	end
-
-	update()
-	object:GetPropertyChangedSignal("AbsoluteSize"):Connect(update)
-	object:GetPropertyChangedSignal("AbsolutePosition"):Connect(update)
-	object.Destroying:Connect(function()
-		dropShadow:Destroy()
-	end)
-
-	dropShadow.Parent = object.Parent
 end
 
 type ToastQueueElement = {
@@ -187,7 +167,7 @@ function UIMessages:toast(options: ToastOptions?)
 	)
 	frame.Position = UDim2.new(1, -WINDOW_PADDING_X, 1, boundsY + 2 * TOAST_PADDING_Y + 4)
 	frame.Parent = self.gui
-	attachDropShadow(frame)
+	PopupHelper.attachDropShadow(frame)
 
 	-- Animate in
 	self:_pushToastElements(frame.AbsoluteSize.Y + TOAST_PADDING_INBETWEEN, appearTweenInfo)

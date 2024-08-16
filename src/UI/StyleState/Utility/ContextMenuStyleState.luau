@@ -39,6 +39,7 @@ function ContextMenuStyleState.createMenu(theme, container: GuiObject, options: 
 
 	local modal = PopupHelper.modal(frame, container, {
 		zIndex = 20,
+		passThroughInput = true,
 	})
 	modal.cancelled:Connect(function()
 		styleState:selectOption(nil)
@@ -154,10 +155,10 @@ end
 function ContextMenuStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
 	StyleStateHelper.tween(self.frame, tweenInfo, {
-		BackgroundColor3 = self.theme.colors.popupBackground,
+		BackgroundColor3 = self.theme.colors.floatingAction.background,
 	})
 	StyleStateHelper.tween(self.frame.UIStroke, tweenInfo, {
-		Color = self.theme.colors.popupBackgroundOutline,
+		Color = self.theme.colors.floatingAction.outline,
 	})
 	for _, separator in self._separators do
 		StyleStateHelper.tween(separator, tweenInfo, {

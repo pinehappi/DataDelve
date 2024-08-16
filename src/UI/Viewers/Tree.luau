@@ -1640,7 +1640,6 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			return
 		end
 
-		self:_setInModal(true)
 		self:_selectBranch(index, true)
 
 		local options = {}
@@ -1697,11 +1696,6 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			end
 		end
 
-		if #options == 0 then
-			self:_setInModal(false)
-			return
-		end
-
 		local position = self.gui:GetRelativeMousePosition()
 		local option = ContextMenuStyleState.prompt(self.theme, self.gui, position, {
 			options = options,
@@ -1714,10 +1708,12 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 			if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
 				if self:_doesBranchHaveChildren(index) then
+					self:_setInModal(true)
 					shouldDelete = ConfirmDialogStyleState.confirm(self.theme, self.gui, position, {
 						title = `Delete <i>{branch[1]}</i>?`,
 						message = "This will delete any children as well.",
 					})
+					self:_setInModal(false)
 				end
 			end
 
@@ -1743,6 +1739,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					return true, nil
 				end
 			end
+
+			self:_setInModal(true)
+
 			local result = promptKeyValueForm(self.theme, self.gui, {
 				position = position,
 				title = "Insert Into",
@@ -1811,6 +1810,8 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					end
 				end,
 			})
+
+			self:_setInModal(false)
 			if result then
 				if result.type == "array" then
 					result.value = ARRAY_SENTINEL
@@ -1851,6 +1852,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					return true, nil
 				end
 			end
+
+			self:_setInModal(true)
+
 			local result = promptKeyValueForm(self.theme, self.gui, {
 				position = position,
 				title = "Insert After",
@@ -1919,6 +1923,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					end
 				end,
 			})
+
+			self:_setInModal(false)
+
 			if result then
 				if result then
 					if result.type == "array" then

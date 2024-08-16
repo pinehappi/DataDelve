@@ -182,6 +182,11 @@ function Theme.generatePreset(preset: string, accent: string)
 				outline = Color3.fromRGB(50, 50, 50),
 			},
 
+			floatingAction = {
+				background = Color3.fromRGB(40, 40, 40),
+				outline = Color3.fromRGB(62, 62, 62),
+			},
+
 			error = Color3.fromRGB(209, 13, 13),
 			warn = Color3.fromRGB(186, 138, 15),
 			success = Color3.fromRGB(20, 182, 66),
@@ -195,7 +200,7 @@ function Theme.generatePreset(preset: string, accent: string)
 			popupBackground = Color3.fromRGB(40, 40, 40),
 			popupBackgroundOutline = Color3.fromRGB(62, 62, 62),
 
-			defaultScrimTransparency = 0.8,
+			scrimTransparency = 0.75,
 
 			imageBackground = Color3.fromRGB(60, 60, 60),
 			imageBackgroundOutline = Color3.fromRGB(70, 70, 70),
@@ -323,6 +328,11 @@ function Theme.generatePreset(preset: string, accent: string)
 				outline = Color3.fromRGB(205, 205, 205),
 			},
 
+			floatingAction = {
+				background = Color3.fromRGB(238, 238, 238),
+				outline = Color3.fromRGB(170, 170, 170),
+			},
+
 			error = Color3.fromRGB(209, 13, 13),
 			warn = Color3.fromRGB(186, 138, 15),
 			success = Color3.fromRGB(20, 182, 66),
@@ -336,7 +346,7 @@ function Theme.generatePreset(preset: string, accent: string)
 			popupBackground = Color3.fromRGB(238, 238, 238),
 			popupBackgroundOutline = Color3.fromRGB(170, 170, 170),
 
-			defaultScrimTransparency = 0.8,
+			scrimTransparency = 0.75,
 
 			imageBackground = Color3.fromRGB(210, 210, 210),
 			imageBackgroundOutline = Color3.fromRGB(190, 190, 190),
@@ -615,6 +625,16 @@ function Theme.generatePreset(preset: string, accent: string)
 				outline = Color3.fromRGB(24, 24, 24),
 			},
 
+			floatingAction = {
+				background = StudioTheme:GetColor(
+					Enum.StudioStyleGuideColor.Button,
+					Enum.StudioStyleGuideModifier.Default
+				),
+				outline = StudioTheme
+					:GetColor(Enum.StudioStyleGuideColor.MainBackground, Enum.StudioStyleGuideModifier.Default)
+					:Lerp(Color3.new(0, 0, 0), if isDark then 0 else 0.15),
+			},
+
 			error = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ErrorText, Enum.StudioStyleGuideModifier.Default),
 			warn = StudioTheme:GetColor(Enum.StudioStyleGuideColor.WarningText, Enum.StudioStyleGuideModifier.Default),
 			success = accentColor,
@@ -641,9 +661,9 @@ function Theme.generatePreset(preset: string, accent: string)
 			popupBackgroundOutline = StudioTheme:GetColor(
 				Enum.StudioStyleGuideColor.MainBackground,
 				Enum.StudioStyleGuideModifier.Default
-			),
+			):Lerp(Color3.new(0, 0, 0), if isDark then 0.3 else 0.12),
 
-			defaultScrimTransparency = 0.5,
+			scrimTransparency = 0.6,
 
 			imageBackground = StudioTheme:GetColor(
 				Enum.StudioStyleGuideColor.ViewPortBackground,

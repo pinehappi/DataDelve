@@ -109,8 +109,8 @@ function SelectStyleState:_makeMenu()
 	end
 
 	self.menu = script.SelectMenu:Clone()
-	self.menu.BackgroundColor3 = self.theme.colors.button.secondary.body.default
-	self.menu.UIStroke.Color = self.theme.colors.button.secondary.outline.default
+	self.menu.BackgroundColor3 = self.theme.colors.floatingAction.background
+	self.menu.UIStroke.Color = self.theme.colors.floatingAction.outline
 	if self.fitButton then
 		self.menu.Size = UDim2.fromOffset(self.button.AbsoluteSize.X, 0)
 	else
@@ -169,7 +169,10 @@ function SelectStyleState:_makeMenu()
 	end
 
 	local gui = (self.button:FindFirstAncestorWhichIsA("LayerCollector") :: any) :: LayerCollector
-	self.menuModal = PopupHelper.modal(self.menu, gui, { zIndex = 20 })
+	self.menuModal = PopupHelper.modal(self.menu, gui, {
+		zIndex = 20,
+		passThroughInput = true,
+	})
 	self.menuAttachment = PopupHelper.attach(self.menu, self.button, {
 		anchor = Vector2.new(0, 1),
 		offset = Vector2.new(0, 2),
@@ -310,10 +313,10 @@ function SelectStyleState:update(...)
 	if self.menu then
 		local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(...)
 		StyleStateHelper.tween(self.menu, tweenInfo, {
-			BackgroundColor3 = self.theme.colors.button.secondary.body.default,
+			BackgroundColor3 = self.theme.colors.floatingAction.background,
 		})
 		StyleStateHelper.tween(self.menu.UIStroke, tweenInfo, {
-			Color = self.theme.colors.button.secondary.outline.default,
+			Color = self.theme.colors.floatingAction.outline,
 		})
 		for _, styleStates in self.menuStyleStates do
 			styleStates:update(...)

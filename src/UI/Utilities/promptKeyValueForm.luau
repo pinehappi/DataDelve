@@ -42,7 +42,7 @@ export type Options = {
 	noText: string?,
 
 	constraint: FormConstraint?,
-	extraKeyValidator: Validators.Validator,
+	extraKeyValidator: Validators.Validator?,
 
 	-- Expand functionality
 	-- Expanding should create a completely different form when the button is pressed.
@@ -213,7 +213,7 @@ return function(theme, gui, options: Options): FormResult?
 					overrideResult = onExpandResult.result
 					status = "insert"
 				end
-			elseif onExpandResult == "cancel" then
+			elseif onExpandResult.operation == "cancel" then
 				status = "cancel"
 			end
 		end)

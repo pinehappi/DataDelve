@@ -43,7 +43,7 @@
         <X>0</X>
         <Y>0</Y>
       </Vector2>
-      <float name="ImageTransparency">0</float>
+      <float name="ImageTransparency">0.35</float>
       <bool name="Interactable">true</bool>
       <int name="LayoutOrder">0</int>
       <Ref name="NextSelectionDown">null</Ref>
