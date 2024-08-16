@@ -9,17 +9,9 @@ return function(
 	local uiPadding = container:FindFirstChildOfClass("UIPadding")
 	local function updatePosition()
 		local x = anchorRelativeToParent.X
-			* (
-				container.AbsoluteSize.X
-				- uiPadding.PaddingRight.Offset
-				- uiPadding.PaddingLeft.Offset
-			)
+			* (container.AbsoluteSize.X - uiPadding.PaddingRight.Offset - uiPadding.PaddingLeft.Offset)
 		local y = anchorRelativeToParent.Y
-			* (
-				container.AbsoluteSize.Y
-				- uiPadding.PaddingTop.Offset
-				- uiPadding.PaddingBottom.Offset
-			)
+			* (container.AbsoluteSize.Y - uiPadding.PaddingTop.Offset - uiPadding.PaddingBottom.Offset)
 		object.Position = UDim2.fromOffset(x, y) + extraOffset
 	end
 

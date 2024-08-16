@@ -201,7 +201,7 @@ function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: Mod
 		modal.blockInputFrame.ClickCapture.Interactable = false
 		modal.blockInputFrame.BackgroundTransparency = 1
 
-		modal.blockInputFrame.InputBegan:Connect(function(input)
+		modal.blockInputFrame.InputEnded:Connect(function(input)
 			if
 				input.UserInputType == Enum.UserInputType.MouseButton1
 				or input.UserInputType == Enum.UserInputType.MouseButton2

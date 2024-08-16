@@ -1604,12 +1604,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			stop = true
 		end)
 		if options.updater then
-			table.insert(
-				connections,
-				textBox:GetPropertyChangedSignal("Text"):Connect(function()
-					options.updater(textBox, styleState)
-				end)
-			)
+			textBox:GetPropertyChangedSignal("Text"):Connect(function()
+				options.updater(textBox, styleState)
+			end)
 			options.updater(textBox, styleState)
 		end
 
@@ -1664,6 +1661,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		end
 
 		if branch.ISUSERID then
+			table.insert(options, ContextMenuStyleState.SEPARATOR)
 			table.insert(options, { icon = self.theme.icons.lookup, text = "Lookup Id" })
 		end
 
@@ -1692,6 +1690,10 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					table.insert(options, "Display as Time")
 				end
 			end
+		end
+
+		if #options == 0 then
+			return
 		end
 
 		local position = self.gui:GetRelativeMousePosition()
