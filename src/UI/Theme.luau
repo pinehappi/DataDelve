@@ -44,6 +44,8 @@ function Theme.new()
 		pin = "rbxassetid://18886260860",
 		unpin = "rbxassetid://18886277155",
 		rename = "rbxassetid://18901732408",
+		maximize = "rbxassetid://18962414864",
+		minimize = "rbxassetid://18962422050",
 	}
 
 	self._colorsChanged = Instance.new("BindableEvent")

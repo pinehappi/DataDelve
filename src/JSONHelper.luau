@@ -57,4 +57,25 @@ function JSONHelper.parseInputString(text: string): (JSONType, JSONValue)
 	end
 end
 
+function JSONHelper.toInputString(value: JSONValue, type: JSONType): string
+	if type == "number" or type == "boolean" then
+		return tostring(value)
+	elseif type == "null" then
+		return value
+	elseif type == "array" then
+		-- Constructing non-empty arrays from input string not supported
+		return "[]"
+	elseif type == "object" then
+		-- Constructing non-empty objects from input string not support
+		return "{}"
+	elseif type == "string" then
+		local _, parsedType = JSONHelper.parseInputString(value)
+		if parsedType ~= type then
+			return `"{value}"`
+		else
+			return tostring(value)
+		end
+	end
+end
+
 return JSONHelper

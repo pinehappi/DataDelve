@@ -57,6 +57,7 @@ local SwitchStyleState = require(StyleState.Input.SwitchStyleState)
 
 local promptKeyValueForm = require(script.Parent.Parent.Utilities.promptKeyValueForm)
 local getHighlightColors = require(script.Parent.Parent.Utilities.getHighlightColors)
+local lockObjectWithoutResize = require(script.Parent.Parent.Utilities.lockObjectWithoutResize)
 
 local SIZE_PER_BRANCH = script.Branch.AbsoluteSize.Y
 local DRAG_AND_DROP_REGION_SIZE = 10
@@ -1142,37 +1143,42 @@ function Tree:_editValue(index: number, value: any): boolean
 	return true
 end
 
+type ExtraSecretTypes = "UserId" | "array" | "object"
+type PrecisionMenuOptions = {
+	position: Vector2,
+	captureValueTextBox: boolean?,
+
+	title: string,
+	yesText: string,
+	noText: string,
+
+	showKey: boolean,
+	lockKey: boolean,
+	key: string | number,
+	value: JSONHelper.JSONValue,
+	type: JSONHelper.JSONType | ExtraSecretTypes,
+
+	showUnexpand: boolean,
+	keyValidator: Validators.Validator,
+	onSubmit: (promptKeyValueForm.FormResult?) -> boolean, -- If boolean false, cancel the submit
+	onUnexpand: (promptKeyValueForm.FormResult) -> boolean, -- If boolean false, cancel the unexpand
+}
+
+-- You must manually setInModal when using this.
 -- captureValueTextBox parameter is to tell it to CaptureFocus on the value instead of the key
 -- Special secret type for arrays and objects that have values. This is only available when editing a value with that in case you only want to edit the key.
 -- Another secret type for UserId which is just number with special cases
-function Tree:_promptEditKey(index: number, options: { captureValueTextBox: boolean?, position: Vector2 }?)
-	options = options or {}
-
-	self:_setInModal(true)
-
-	local branch = self._flatBranches[index]
-	local lockKey = (typeof(branch[1]) == "number") or branch.LOCKKEY
-	local lockType = branch.ISUSERID
+function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValueForm.FormResult?
+	local lockKey = options.lockKey or (typeof(options.key) == "number")
+	local lockType = (options.type == "UserId")
 	if lockKey then
 		options.captureValueTextBox = true
 	end
 
-	local defaultType = if branch.ISUSERID
-		then "UserId"
-		elseif branch[2] == ARRAY_SENTINEL then "array"
-		elseif branch[2] == OBJECT_SENTINEL then "object"
-		else type(branch[2])
-	if defaultType == "nil" then
-		defaultType = "null"
-	elseif defaultType == "array" or defaultType == "object" then
-		if not self:_doesBranchHaveChildren(index) then
-			defaultType = "empty " .. defaultType
-		end
-	end
-
+	local defaultType = options.type
 	-- When switching between types, consult this to see what the default value should be
 	local defaultValues = {
-		[defaultType] = branch[2],
+		[defaultType] = options.value,
 	}
 
 	local position = options.position or self.gui:GetRelativeMousePosition()
@@ -1204,7 +1210,24 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 
 		confirm = ButtonStyleState.from(self.theme, editFrame.Form.Buttons.Confirm, { style = "primary" }),
 		cancel = ButtonStyleState.from(self.theme, editFrame.Form.Buttons.Cancel, { style = "secondary" }),
+
+		unexpand = ButtonStyleState.from(self.theme, editFrame["Escape Layout"].Expand, { style = "dormant" }),
 	})
+
+	wrapper.styleStates.titleLabel.label.Text = options.title
+	wrapper.styleStates.confirm.button.TextLabel.Text = options.yesText
+	wrapper.styleStates.cancel.button.TextLabel.Text = options.noText
+
+	editFrame.Form.Key.Visible = options.showKey
+	if options.showUnexpand then
+		wrapper.styleStates.unexpand.button.Visible = true
+		lockObjectWithoutResize(
+			wrapper.styleStates.unexpand.button,
+			editFrame,
+			Vector2.new(1, 0),
+			UDim2.fromOffset(-3, 0)
+		)
+	end
 
 	local doneEvent = Instance.new("BindableEvent")
 
@@ -1219,13 +1242,11 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 	end
 
 	wrapper.styleStates.keyTextBox.textBox:GetPropertyChangedSignal("Text"):Connect(function()
-		if
-			(wrapper.styleStates.keyTextBox.textBox.Text ~= branch[1])
-			and self:_doesSiblingOrSelfHaveKey(index, wrapper.styleStates.keyTextBox.textBox.Text)
-		then
-			wrapper.styleStates.keyTextBox:setError("Sibling already has this key."):update("veryFast")
-		else
+		local valid, err = options.keyValidator(wrapper.styleStates.keyTextBox.textBox.Text)
+		if valid then
 			wrapper.styleStates.keyTextBox:setError(nil):update("veryFast")
+		else
+			wrapper.styleStates.keyTextBox:setError(err):update("veryFast")
 		end
 	end)
 
@@ -1246,13 +1267,13 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 
 			local textArea = script.EditMenuInputTemplates.TextArea:Clone()
 			wrapper.styleStates.value = TextBoxStyleState.from(self.theme, textArea)
-			textArea.Text = defaultValues["string"]
 			textArea.Parent = editFrame.Form.Value
 
 			textArea:GetPropertyChangedSignal("Text"):Connect(function()
 				defaultValues["string"] = textArea.Text
 			end)
 
+			textArea.Text = defaultValues["string"]
 			editFrame.Form.Value.Visible = true
 		elseif valueType == "number" or valueType == "UserId" then
 			defaultValues[valueType] = defaultValues[valueType] or 0
@@ -1260,7 +1281,6 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 			local textBox = script.EditMenuInputTemplates.TextBox:Clone()
 			local styleState = TextBoxStyleState.from(self.theme, textBox)
 			wrapper.styleStates.value = styleState
-			textBox.Text = defaultValues[valueType]
 			textBox.Parent = editFrame.Form.Value
 
 			styleState.errorChanged:Connect(updateConfirmButtonDisabled)
@@ -1289,6 +1309,7 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 				end
 			end)
 
+			textBox.Text = defaultValues[valueType]
 			editFrame.Form.Value.Visible = true
 		elseif valueType == "boolean" then
 			defaultValues["boolean"] = defaultValues["boolean"] or false
@@ -1305,6 +1326,9 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 
 			editFrame.Form.Value.Visible = true
 		else
+			if valueType == "empty array" or valueType == "empty object" then
+				defaultValues[valueType] = {}
+			end
 			editFrame.Form.Value.Visible = false
 		end
 
@@ -1316,63 +1340,46 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 		editFrame:Destroy()
 		wrapper:destroy()
 
-		self:_setInModal(false)
-
 		doneEvent:Fire()
 	end
 
 	-- Events
-	modal.cancelled:Connect(cleanup)
+	local result: promptKeyValueForm.FormResult? = nil
+
 	function submit()
 		if wrapper.styleStates.confirm.disabled then
 			return
 		end
 
-		local newKey = wrapper.styleStates.keyTextBox.textBox.Text
-		if lockKey then
-			-- When it's an array, the number will be converted to a string which we don't want to happen. lockKey is always on for array elements.
-			newKey = branch[1]
-		end
+		result = {
+			key = wrapper.styleStates.keyTextBox.textBox.Text,
+			value = defaultValues[wrapper.styleStates.typeSelect.selection],
+			type = wrapper.styleStates.typeSelect.selection,
+		}
 
-		local newType = wrapper.styleStates.typeSelect.selection
-
-		if defaultType == wrapper.styleStates.typeSelect.selection and defaultValues[defaultType] == branch[2] then
-			-- No change to value
-
-			if branch[1] == newKey then
-				-- Don't do anything becaues no change
-				cleanup()
-				return
-			elseif self:_editKey(index, newKey, { skipSiblingCheck = true }) then
-				cleanup()
-				return
-			else
-				return
-			end
-		end
-
-		local newValue = defaultValues[newType]
-		if newType == "empty array" then
-			newValue = ARRAY_SENTINEL
-		elseif newType == "empty object" then
-			newValue = OBJECT_SENTINEL
-		elseif newType == "null" then
-			newValue = nil
-		end
-
-		if self:_editValue(index, newValue) then
-			self:_editKey(index, newKey, { skipSiblingCheck = true })
-
+		if options.onSubmit(result) then
 			cleanup()
-		else
-			self:_setInModal(true) -- the _editValue would have set this to false
 		end
 	end
+
+	modal.cancelled:Connect(cleanup)
 	wrapper.styleStates.confirm.button.Activated:Connect(submit)
 	wrapper.styleStates.cancel.button.Activated:Connect(cleanup)
 	wrapper.styleStates.keyTextBox.textBox.FocusLost:Connect(function(entered)
 		if entered then
 			submit()
+		end
+	end)
+
+	wrapper.styleStates.unexpand.button.Activated:Connect(function()
+		result = {
+			key = wrapper.styleStates.keyTextBox.textBox.Text,
+			value = defaultValues[wrapper.styleStates.typeSelect.selection],
+			type = wrapper.styleStates.typeSelect.selection,
+		}
+
+		if options.onUnexpand(result) then
+			cleanup()
 		end
 	end)
 
@@ -1386,7 +1393,7 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 		wrapper.styleStates.typeSelect.buttonStyleState:setDisabled(true):update("instant")
 	end
 	updateValueInput()
-	wrapper.styleStates.keyTextBox.textBox.Text = branch[1]
+	wrapper.styleStates.keyTextBox.textBox.Text = options.key
 	if options.captureValueTextBox then
 		if wrapper.styleStates.value and wrapper.styleStates.value.textBox then
 			wrapper.styleStates.value.textBox:CaptureFocus()
@@ -1396,6 +1403,97 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 	end
 
 	doneEvent.Event:Wait()
+
+	return result
+end
+
+function Tree:_promptEditKey(index: number, options: { captureValueTextBox: boolean?, position: Vector2 })
+	self:_setInModal(true)
+
+	local branch = self._flatBranches[index]
+	local lockKey = (typeof(branch[1]) == "number") or branch.LOCKKEY
+	local type = if branch.ISUSERID
+		then "UserId"
+		elseif branch[2] == ARRAY_SENTINEL then "array"
+		elseif branch[2] == OBJECT_SENTINEL then "object"
+		else type(branch[2])
+	if type == "nil" then
+		type = "null"
+	elseif type == "array" or type == "object" then
+		if not self:_doesBranchHaveChildren(index) then
+			type = "empty " .. type
+		end
+	end
+
+	local start = {
+		key = branch[1],
+		value = branch[2],
+		type = type,
+	}
+
+	self:_promptPrecisionMenu({
+		position = options.position,
+		captureValueTextBox = options.captureValueTextBox,
+
+		title = "Edit",
+		yesText = "Confirm",
+		noText = "Cancel",
+
+		showKey = true,
+		lockKey = lockKey,
+		key = start.key,
+		value = start.value,
+		type = start.type,
+
+		keyValidator = function(text)
+			local invalid = (text ~= start.key) and self:_doesSiblingOrSelfHaveKey(index, text)
+			if invalid then
+				return false, "Sibling already has this key."
+			else
+				return true, nil
+			end
+		end,
+		onSubmit = function(result)
+			if result then
+				local newKey = result.key
+				if lockKey then
+					-- When it's an array, the number will be converted to a string which we don't want to happen. lockKey is always on for array elements.
+					newKey = start.key
+				end
+
+				if result.type == start.type and result.value == start.value then
+					-- No change to value
+
+					if start.key == newKey then
+						-- Don't do anything becaues no change
+						return true
+					elseif self:_editKey(index, newKey, { skipSiblingCheck = true }) then
+						return true
+					else
+						return false
+					end
+				end
+
+				local newValue = result.value
+				if result.type == "empty array" then
+					newValue = ARRAY_SENTINEL
+				elseif result.type == "empty object" then
+					newValue = OBJECT_SENTINEL
+				elseif result.type == "null" then
+					newValue = nil
+				end
+
+				if self:_editValue(index, newValue) then
+					self:_editKey(index, newKey, { skipSiblingCheck = true })
+					return true
+				else
+					return false
+				end
+			end
+		end,
+	})
+
+	self:_setInModal(false)
 end
 
 function Tree:_expandAll(index: number)
@@ -1632,6 +1730,13 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				end
 			end
 
+			local keyValidator = function(key)
+				if self:_doesChildHaveKey(index, key) then
+					return false, "Already contains key."
+				else
+					return true, nil
+				end
+			end
 			local result = promptKeyValueForm(self.theme, self.gui, {
 				position = position,
 				title = "Insert Into",
@@ -1640,6 +1745,65 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				includeValue = true,
 
 				constraint = if branch.ISUSERIDS then "userId" else nil,
+				extraKeyValidator = keyValidator,
+				onExpand = function(current)
+					if branch.ISUSERIDS then
+						current.type = "UserId"
+					end
+
+					local result: promptKeyValueForm.OnExpandResult? = nil
+					self:_promptPrecisionMenu({
+						position = position,
+
+						title = "Insert Into",
+						yesText = "Insert",
+						noText = "Cancel",
+
+						showKey = not isArray,
+						lockKey = isArray,
+						key = current.key,
+						value = current.value,
+						type = current.type,
+
+						showUnexpand = true,
+						keyValidator = keyValidator,
+						onSubmit = function(res)
+							if res then
+								result = {
+									operation = "submit",
+									result = res,
+								}
+							end
+
+							return true
+						end,
+						onUnexpand = function(res)
+							-- strip secret types
+							if res.type == "UserId" then
+								res.type = "number"
+							elseif res.type == "empty object" then
+								res.type = "object"
+							elseif res.type == "empty array" then
+								res.type = "array"
+							end
+
+							result = {
+								operation = "unexpand",
+								current = res,
+							}
+
+							return true
+						end,
+					})
+
+					if not result then
+						return {
+							operation = "cancel",
+						}
+					else
+						return result
+					end
+				end,
 			})
 			if result then
 				if result.type == "array" then
@@ -1674,6 +1838,13 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				end
 			end
 
+			local keyValidator: Validators.Validator = function(key)
+				if self:_doesSiblingOrSelfHaveKey(index, key) then
+					return false, "Sibling already has key"
+				else
+					return true, nil
+				end
+			end
 			local result = promptKeyValueForm(self.theme, self.gui, {
 				position = position,
 				title = "Insert After",
@@ -1681,7 +1852,66 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				includeKey = not isArray,
 				includeValue = true,
 
+				extraKeyValidator = keyValidator,
 				constraint = if branch.ISUSERID then "userId" else nil,
+				onExpand = function(current)
+					if branch.ISUSERID then
+						current.type = "UserId"
+					end
+
+					local result: promptKeyValueForm.OnExpandResult? = nil
+					self:_promptPrecisionMenu({
+						position = position,
+
+						title = "Insert After",
+						yesText = "Insert",
+						noText = "Cancel",
+
+						showKey = not isArray,
+						lockKey = isArray,
+						key = current.key,
+						value = current.value,
+						type = current.type,
+
+						showUnexpand = true,
+						keyValidator = keyValidator,
+						onSubmit = function(res)
+							if res then
+								result = {
+									operation = "submit",
+									result = res,
+								}
+							end
+
+							return true
+						end,
+						onUnexpand = function(res)
+							-- strip secret types
+							if res.type == "UserId" then
+								res.type = "number"
+							elseif res.type == "empty object" then
+								res.type = "object"
+							elseif res.type == "empty array" then
+								res.type = "array"
+							end
+
+							result = {
+								operation = "unexpand",
+								current = res,
+							}
+
+							return true
+						end,
+					})
+
+					if not result then
+						return {
+							operation = "cancel",
+						}
+					else
+						return result
+					end
+				end,
 			})
 			if result then
 				if result then

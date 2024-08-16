@@ -142,6 +142,16 @@ end
 local Modal = {}
 Modal.__index = Modal
 
+function Modal:hide()
+	self.object.Visible = false
+	self.blockInputFrame.Visible = false
+end
+
+function Modal:reveal()
+	self.object.Visible = true
+	self.blockInputFrame.Visible = true
+end
+
 function Modal:destroy()
 	self.blockInputFrame:Destroy()
 	self._cancelled:Destroy()

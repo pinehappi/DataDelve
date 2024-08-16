@@ -158,9 +158,12 @@ function ButtonStyleState:_updateChildren(
 	end
 
 	if colors.textLabels then
-		if self.button.TextTransparency < 1 then
+		if self.button:IsA("TextButton") and self.button.TextTransparency < 1 then
 			StyleStateHelper.tween(self.button, tweenInfo, { TextColor3 = colors.textLabels })
+		elseif self.button:IsA("ImageButton") and self.button.ImageTransparency < 1 then
+			StyleStateHelper.tween(self.button, tweenInfo, { ImageColor3 = colors.textLabels })
 		end
+
 		for _, label in self._textLabels do
 			if label.TextColor3 ~= colors.textLabels then
 				StyleStateHelper.tween(label, tweenInfo, { TextColor3 = colors.textLabels })
