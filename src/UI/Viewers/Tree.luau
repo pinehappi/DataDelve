@@ -449,7 +449,7 @@ function Tree:_bumpVisibleIndexesAfter(index: number, bumpAmount: number, precom
 		end
 	end
 
-	if self._selectingBranchVisibleIndex and self._selectingBranchVisibleIndex > visibleIndex then
+	if self._selectingBranchVisibleIndex and visibleIndex and self._selectingBranchVisibleIndex > visibleIndex then
 		self._selectingBranchVisibleIndex += bumpAmount
 	end
 end
@@ -567,6 +567,12 @@ function Tree:_tryInsertAfter(index: number, key: string, value: unknown): (bool
 	if visibleIndex then
 		self:_bumpVisibleIndexesAfter(insertAt - 1, 1, visibleIndex)
 		table.insert(self._visibleIndexes, visibleIndex + 1, insertAt)
+	else -- If no visible index, probably was a container behind that was closed
+		local indexVisibleIndex = table.find(self._visibleIndexes, index)
+		if indexVisibleIndex then
+			self:_bumpVisibleIndexesAfter(index, 1, indexVisibleIndex)
+		end
+		table.insert(self._visibleIndexes, (indexVisibleIndex or #self._visibleIndexes) + 1, insertAt)
 	end
 
 	-- Special case for array
