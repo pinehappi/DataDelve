@@ -24,6 +24,8 @@ local Tree = require(script.Parent.UI.Viewers.Tree)
 
 local Validators = require(script.Parent.Validators)
 local PopupHelper = require(script.Parent.UI.PopupHelper)
+
+local StyleStateHelper = require(script.Parent.UI.StyleState.StyleStateHelper)
 local LoadingBarStyleState = require(script.Parent.UI.StyleState.Utility.LoadingBarStyleState)
 local ConfirmDialogStyleState = require(script.Parent.UI.StyleState.Utility.ConfirmDialogStyleState)
 local ContextMenuStyleState = require(script.Parent.UI.StyleState.Utility.ContextMenuStyleState)
@@ -36,6 +38,7 @@ local ExportImportHelper = require(script.Parent.ExportImportHelper)
 local promptKeyValueForm = require(script.Parent.UI.Utilities.promptKeyValueForm)
 local constraintTextBoxStyleState = require(script.Parent.UI.Utilities.constrainTextBoxStyleState)
 
+local SETTINGS_TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Cubic)
 local WIDGET_INFO = DockWidgetPluginGuiInfo.new(
 	Enum.InitialDockState.Float, -- Widget will be initialized in floating panel
 	false, -- Widget will be initially enabled
@@ -829,10 +832,18 @@ function App.new(id: string)
 	self.ui.styleStates.settingsButton.button.Activated:Connect(function()
 		if self.ui.styleStates.settingsButton.selecting then
 			self.ui.styleStates.settingsButton:setSelecting(false):update()
+			StyleStateHelper.tween(self.ui.styleStates.settingsButton.button, SETTINGS_TWEEN_INFO, {
+				Rotation = 0,
+			})
+
 			self.ui:updateBreadcrumbsVisibility()
 			self.ui:setActiveView(self.ui.styleStates.breadcrumbs:getCurrentCrumb().category)
 		else
 			self.ui.styleStates.settingsButton:setSelecting(true):update()
+			StyleStateHelper.tween(self.ui.styleStates.settingsButton.button, SETTINGS_TWEEN_INFO, {
+				Rotation = 30,
+			})
+
 			self.ui.styleStates.breadcrumbs.frame.Visible = false
 			self.ui:setActiveView("settings")
 		end
