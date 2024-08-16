@@ -540,8 +540,8 @@ function App.new(id: string)
 					confirmDialogFrame.Position = UDim2.fromOffset(position.X, position.Y)
 
 					local confirmDialogStyleState = ConfirmDialogStyleState.from(Theme, confirmDialogFrame, {
-						title = "Do you want to delete this key?",
-						message = `The key is <b>{self.session.currentKey}</b>.`,
+						title = "Do you want to delete this key after transferring it?",
+						message = `The key is <b>{self.session.currentKey}</b>. This will effectively rename the key.`,
 						yesText = "Yes",
 						noText = "No",
 					})
