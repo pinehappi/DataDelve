@@ -444,7 +444,7 @@ function App.new(id: string)
 			+ self.ui.styleStates.edit.more.button.AbsoluteSize
 			+ Vector2.new(0, 6)
 
-		local contextMenuStyleState, contextMenuModal = ContextMenuStyleState.createMenu(Theme, self.widget, position, {
+		local contextMenuStyleState, contextMenuModal = ContextMenuStyleState.createMenu(Theme, self.widget, {
 			options = {
 				{ icon = Theme.icons.export, text = "Export to JSON" },
 				{ icon = Theme.icons.import, text = "Import from JSON" },
@@ -456,6 +456,7 @@ function App.new(id: string)
 
 		contextMenuStyleState.frame.Position = UDim2.fromOffset(position.X, position.Y)
 		contextMenuStyleState.frame.AnchorPoint = Vector2.new(1, 0)
+		task.spawn(contextMenuStyleState.animate, contextMenuStyleState)
 
 		self.ui.styleStates.edit.more:setSelecting(true):update()
 		local result = contextMenuStyleState.selected:Wait()

@@ -191,7 +191,7 @@ function Theme.generatePreset(preset: string, accent: string)
 			backgroundOutline = Color3.fromRGB(62, 62, 62),
 
 			popupBackground = Color3.fromRGB(40, 40, 40),
-			popupBackgroundOutline = Color3.fromRGB(72, 72, 72),
+			popupBackgroundOutline = Color3.fromRGB(62, 62, 62),
 
 			defaultScrimTransparency = 0.8,
 
@@ -332,7 +332,7 @@ function Theme.generatePreset(preset: string, accent: string)
 			backgroundOutline = Color3.fromRGB(170, 170, 170),
 
 			popupBackground = Color3.fromRGB(238, 238, 238),
-			popupBackgroundOutline = Color3.fromRGB(160, 160, 160),
+			popupBackgroundOutline = Color3.fromRGB(170, 170, 170),
 
 			defaultScrimTransparency = 0.8,
 

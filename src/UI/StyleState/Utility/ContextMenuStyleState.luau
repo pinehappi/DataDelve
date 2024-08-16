@@ -17,7 +17,11 @@ export type ContextMenuOptions = {
 
 -- For convenience
 function ContextMenuStyleState.prompt(theme, container: GuiObject, position: Vector2, options: ContextMenuOptions)
-	local contextMenu, modal = ContextMenuStyleState.createMenu(theme, container, position, options)
+	local contextMenu, modal = ContextMenuStyleState.createMenu(theme, container, options)
+	contextMenu.frame.Position = UDim2.fromOffset(position.X, position.Y)
+	PopupHelper.clamp(contextMenu.frame, container, {
+		tryPivot = true,
+	})
 
 	local option = contextMenu.selected:Wait()
 
@@ -27,10 +31,9 @@ function ContextMenuStyleState.prompt(theme, container: GuiObject, position: Vec
 	return option
 end
 
-function ContextMenuStyleState.createMenu(theme, container: GuiObject, position: Vector2, options: ContextMenuOptions)
+function ContextMenuStyleState.createMenu(theme, container: GuiObject, options: ContextMenuOptions)
 	local frame = script.ContextMenu:Clone()
 	frame.Parent = container
-	frame.Position = UDim2.fromOffset(position.X, position.Y)
 
 	local styleState = ContextMenuStyleState.from(theme, frame, options)
 
@@ -40,11 +43,6 @@ function ContextMenuStyleState.createMenu(theme, container: GuiObject, position:
 	modal.cancelled:Connect(function()
 		styleState:selectOption(nil)
 	end)
-
-	PopupHelper.clamp(frame, container, {
-		boundaryDistance = 5,
-		tryPivot = true,
-	})
 
 	return styleState, modal
 end
@@ -155,21 +153,21 @@ end
 
 function ContextMenuStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
-	TweenService:Create(self.frame, tweenInfo, {
-		BackgroundColor3 = self.theme.colors.button.secondary.body.default,
-	}):Play()
-	TweenService:Create(self.frame.UIStroke, tweenInfo, {
-		Color = self.theme.colors.button.secondary.outline.default,
-	}):Play()
+	StyleStateHelper.tween(self.frame, tweenInfo, {
+		BackgroundColor3 = self.theme.colors.popupBackground,
+	})
+	StyleStateHelper.tween(self.frame.UIStroke, tweenInfo, {
+		Color = self.theme.colors.popupBackgroundOutline,
+	})
 	for _, separator in self._separators do
 		StyleStateHelper.tween(separator, tweenInfo, {
-			BackgroundColor3 = self.theme.colors.button.secondary.outline.default,
+			BackgroundColor3 = self.theme.colors.separator,
 		})
 	end
 	for _, button in self._buttons do
 		local hovering = (self._hoveringOption == button.Name)
 		StyleStateHelper.tween(button, tweenInfo, {
-			BackgroundTransparency = if hovering then 0.5 else 1,
+			BackgroundTransparency = if hovering then self.theme.colors.button.transparent.press else 1,
 			BackgroundColor3 = self.theme.colors.mainAccent,
 		})
 		StyleStateHelper.tween(button.TextLabel, tweenInfo, {
@@ -183,13 +181,64 @@ function ContextMenuStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 	end
 end
 
+-- Assumes ContextMenu is parented directly to the GUI
+function ContextMenuStyleState:animate()
+	local originalPosition = self.frame.Position
+	local originalAnchor = self.frame.AnchorPoint
+	local originalParent = self.frame.Parent
+
+	local targetX = self.frame.AbsolutePosition.X - 2
+	local targetY = self.frame.AbsolutePosition.Y - 2
+	local startY = targetY - 8
+
+	local canvasGroup = Instance.new("CanvasGroup")
+	canvasGroup.BackgroundTransparency = 1
+	canvasGroup.Size = UDim2.fromOffset(4 + self.frame.AbsoluteSize.X, 4 + self.frame.AbsoluteSize.Y)
+	canvasGroup.Position = UDim2.fromOffset(targetX, startY)
+
+	self.frame.Position = UDim2.fromOffset(2, 2)
+	self.frame.AnchorPoint = Vector2.new(0, 0)
+	self.frame.Parent = canvasGroup
+	canvasGroup.ZIndex = self.frame.ZIndex
+	canvasGroup.Parent = originalParent
+
+	local start = os.clock()
+	while self.frame and self._selected do
+		local delta = os.clock() - start
+		local a = math.min(delta / 0.1, 1)
+		a = TweenService:GetValue(a, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+
+		canvasGroup.Position = UDim2.fromOffset(targetX, startY + a * (targetY - startY))
+		canvasGroup.GroupTransparency = 1 - a
+
+		if a >= 1 then
+			break
+		end
+
+		task.wait()
+	end
+
+	if self.frame then
+		self.frame.Position = originalPosition
+		self.frame.AnchorPoint = originalAnchor
+		self.frame.Parent = originalParent
+	end
+
+	canvasGroup:Destroy()
+end
+
 function ContextMenuStyleState:destroy(completely: boolean)
 	self._selected:Destroy()
+	self._selected = nil
+
 	for _, button in self._buttons do
 		button:Destroy()
 	end
+	self._buttons = nil
+
 	if completely then
 		self.frame:Destroy()
+		self.frame = nil
 	end
 end
 
