@@ -1288,6 +1288,14 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 	wrapper.styleStates.keyTextBox.errorChanged:Connect(updateConfirmButtonDisabled)
 
 	local submit: () -> () -- pre-declare
+	-- This variable is used when the user first switches to a type and the plugin has to find out the best default value (based on the last value).
+	-- For the object, array, and null when converting to string, calling tostring on them will not yield a useful value, so just default to "" in that case
+	local lastValue = if defaultType:find("object")
+			or defaultType:find("array")
+			or defaultType == "null"
+		then ""
+		else defaultValues[defaultType]
+
 	local function updateValueInput()
 		if wrapper.styleStates.value then
 			wrapper.styleStates.value:destroy(true)
@@ -1298,20 +1306,21 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 		local valueType = wrapper.styleStates.typeSelect.selection
 
 		if valueType == "string" then
-			defaultValues["string"] = defaultValues["string"] or ""
+			defaultValues["string"] = defaultValues["string"] or tostring(lastValue) or ""
 
 			local textArea = script.EditMenuInputTemplates.TextArea:Clone()
 			wrapper.styleStates.value = TextBoxStyleState.from(self.theme, textArea)
 			textArea.Parent = editFrame.Form.Value
 
 			textArea:GetPropertyChangedSignal("Text"):Connect(function()
-				defaultValues["string"] = textArea.Text
+				lastValue = textArea.Text
+				defaultValues["string"] = lastValue
 			end)
 
 			textArea.Text = defaultValues["string"]
 			editFrame.Form.Value.Visible = true
 		elseif valueType == "number" or valueType == "UserId" then
-			defaultValues[valueType] = defaultValues[valueType] or 0
+			defaultValues[valueType] = defaultValues[valueType] or tonumber(lastValue) or 0
 
 			local textBox = script.EditMenuInputTemplates.TextBox:Clone()
 			local styleState = TextBoxStyleState.from(self.theme, textBox)
@@ -1334,7 +1343,8 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 					end
 
 					styleState:setError(nil):update("veryFast")
-					defaultValues[valueType] = number
+					lastValue = number
+					defaultValues[valueType] = lastValue
 				end
 			end)
 
@@ -1347,7 +1357,8 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 			textBox.Text = defaultValues[valueType]
 			editFrame.Form.Value.Visible = true
 		elseif valueType == "boolean" then
-			defaultValues["boolean"] = defaultValues["boolean"] or false
+			defaultValues["boolean"] = defaultValues["boolean"]
+				or (lastValue == "true" or lastValue == "t" or lastValue == "#t")
 
 			local switch = script.EditMenuInputTemplates.Switch:Clone()
 			local styleState = SwitchStyleState.from(self.theme, switch, {
@@ -1356,7 +1367,8 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 			wrapper.styleStates.value = styleState
 			switch.Parent = editFrame.Form.Value
 			styleState.toggled:Connect(function()
-				defaultValues["boolean"] = styleState.value
+				lastValue = styleState.value
+				defaultValues["boolean"] = lastValue
 			end)
 
 			editFrame.Form.Value.Visible = true
@@ -1529,6 +1541,94 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 	})
 
 	self:_setInModal(false)
+end
+
+function Tree:_promptInsertForm(options: {
+	title: string,
+	keyValidator: Validators.Validator,
+	isArray: boolean,
+	useUserIdConstraint: boolean,
+	position: Vector2,
+})
+	local result = promptKeyValueForm(self.theme, self.gui, {
+		position = options.position,
+		title = options.title,
+
+		includeKey = not options.isArray,
+		includeValue = true,
+
+		constraint = if options.useUserIdConstraint then "userId" else nil,
+		extraKeyValidator = options.keyValidator,
+		onExpand = function(current)
+			if options.useUserIdConstraint then
+				current.type = "UserId"
+			end
+
+			local result: promptKeyValueForm.OnExpandResult? = nil
+			self:_promptPrecisionMenu({
+				position = options.position,
+
+				title = options.title,
+				yesText = "Insert",
+				noText = "Cancel",
+
+				showKey = not options.isArray,
+				lockKey = options.isArray,
+				key = current.key,
+				value = current.value,
+				type = current.type,
+
+				showUnexpand = true,
+				keyValidator = options.keyValidator,
+				onSubmit = function(res)
+					if res then
+						-- strip secret types
+						if res.type == "UserId" then
+							res.type = "number"
+						elseif res.type == "empty object" then
+							res.type = "object"
+						elseif res.type == "empty array" then
+							res.type = "array"
+						end
+
+						result = {
+							operation = "submit",
+							result = res,
+						}
+					end
+
+					return true
+				end,
+				onUnexpand = function(res)
+					-- strip secret types
+					if res.type == "UserId" then
+						res.type = "number"
+					elseif res.type == "empty object" then
+						res.type = "object"
+					elseif res.type == "empty array" then
+						res.type = "array"
+					end
+
+					result = {
+						operation = "unexpand",
+						current = res,
+					}
+
+					return true
+				end,
+			})
+
+			if not result then
+				return {
+					operation = "cancel",
+				}
+			else
+				return result
+			end
+		end,
+	})
+
+	return result
 end
 
 -- Creates a modal text box then returns its result
@@ -1747,83 +1847,20 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				end
 			end
 
-			local keyValidator = function(key)
-				if self:_doesChildHaveKey(index, key) then
-					return false, "Already contains key."
-				else
-					return true, nil
-				end
-			end
-
 			self:_setInModal(true)
 
-			local result = promptKeyValueForm(self.theme, self.gui, {
-				position = position,
+			local result = self:_promptInsertForm({
 				title = "Insert Into",
-
-				includeKey = not isArray,
-				includeValue = true,
-
-				constraint = if branch.ISUSERIDS then "userId" else nil,
-				extraKeyValidator = keyValidator,
-				onExpand = function(current)
-					if branch.ISUSERIDS then
-						current.type = "UserId"
-					end
-
-					local result: promptKeyValueForm.OnExpandResult? = nil
-					self:_promptPrecisionMenu({
-						position = position,
-
-						title = "Insert Into",
-						yesText = "Insert",
-						noText = "Cancel",
-
-						showKey = not isArray,
-						lockKey = isArray,
-						key = current.key,
-						value = current.value,
-						type = current.type,
-
-						showUnexpand = true,
-						keyValidator = keyValidator,
-						onSubmit = function(res)
-							if res then
-								result = {
-									operation = "submit",
-									result = res,
-								}
-							end
-
-							return true
-						end,
-						onUnexpand = function(res)
-							-- strip secret types
-							if res.type == "UserId" then
-								res.type = "number"
-							elseif res.type == "empty object" then
-								res.type = "object"
-							elseif res.type == "empty array" then
-								res.type = "array"
-							end
-
-							result = {
-								operation = "unexpand",
-								current = res,
-							}
-
-							return true
-						end,
-					})
-
-					if not result then
-						return {
-							operation = "cancel",
-						}
+				keyValidator = function(key)
+					if self:_doesChildHaveKey(index, key) then
+						return false, "Already contains key."
 					else
-						return result
+						return true, nil
 					end
 				end,
+				isArray = (branch[2] == ARRAY_SENTINEL),
+				useUserIdConstraint = branch.ISUSERIDS,
+				position = position,
 			})
 
 			self:_setInModal(false)
@@ -1860,83 +1897,20 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				end
 			end
 
-			local keyValidator: Validators.Validator = function(key)
-				if self:_doesSiblingOrSelfHaveKey(index, key) then
-					return false, "Sibling already has key"
-				else
-					return true, nil
-				end
-			end
-
 			self:_setInModal(true)
 
-			local result = promptKeyValueForm(self.theme, self.gui, {
-				position = position,
+			local result = self:_promptInsertForm({
 				title = "Insert After",
-
-				includeKey = not isArray,
-				includeValue = true,
-
-				extraKeyValidator = keyValidator,
-				constraint = if branch.ISUSERID then "userId" else nil,
-				onExpand = function(current)
-					if branch.ISUSERID then
-						current.type = "UserId"
-					end
-
-					local result: promptKeyValueForm.OnExpandResult? = nil
-					self:_promptPrecisionMenu({
-						position = position,
-
-						title = "Insert After",
-						yesText = "Insert",
-						noText = "Cancel",
-
-						showKey = not isArray,
-						lockKey = isArray,
-						key = current.key,
-						value = current.value,
-						type = current.type,
-
-						showUnexpand = true,
-						keyValidator = keyValidator,
-						onSubmit = function(res)
-							if res then
-								result = {
-									operation = "submit",
-									result = res,
-								}
-							end
-
-							return true
-						end,
-						onUnexpand = function(res)
-							-- strip secret types
-							if res.type == "UserId" then
-								res.type = "number"
-							elseif res.type == "empty object" then
-								res.type = "object"
-							elseif res.type == "empty array" then
-								res.type = "array"
-							end
-
-							result = {
-								operation = "unexpand",
-								current = res,
-							}
-
-							return true
-						end,
-					})
-
-					if not result then
-						return {
-							operation = "cancel",
-						}
+				keyValidator = function(key)
+					if self:_doesSiblingOrSelfHaveKey(index, key) then
+						return false, "Sibling already has key"
 					else
-						return result
+						return true, nil
 					end
 				end,
+				isArray = (typeof(branch[1]) == "number"),
+				useUserIdConstraint = branch.ISUSERID,
+				position = position,
 			})
 
 			self:_setInModal(false)

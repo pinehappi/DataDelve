@@ -61,7 +61,7 @@ function JSONHelper.toInputString(value: JSONValue, type: JSONType): string
 	if type == "number" or type == "boolean" then
 		return tostring(value)
 	elseif type == "null" then
-		return value
+		return "null"
 	elseif type == "array" then
 		-- Constructing non-empty arrays from input string not supported
 		return "[]"
