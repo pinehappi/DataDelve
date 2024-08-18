@@ -2320,10 +2320,14 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				end
 
 				local newValue = self:_promptModalTextBox(frame, "Value", frame.Value, {
-					defaultText = if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL
-						then ""
-						elseif typeof(branch) == "string" then `"{branch[2]}"`
-						else tostring(branch[2]),
+					defaultText = JSONHelper.toInputString(
+						branch[2],
+						if branch[2] == ARRAY_SENTINEL
+							then "array"
+							elseif branch[2] == OBJECT_SENTINEL then "object"
+							elseif typeof(branch[2]) == "nil" then "null"
+							else typeof(branch[2])
+					),
 					ignoreIndent = false,
 					updater = function(textBox, styleState)
 						local valueType = JSONHelper.parseInputString(textBox.Text, "")

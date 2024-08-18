@@ -1134,7 +1134,6 @@ function App.listKeys(self: App, prefix: string?)
 	self.ui.styleStates.browse.listButton:setDisabled(true):update()
 
 	local success, err = self.session:tryCreateKeyPages(prefix)
-	task.wait(5)
 
 	loadingBar.container.Visible = false
 	loadingBar:destroy()

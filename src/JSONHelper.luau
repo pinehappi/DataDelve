@@ -69,7 +69,7 @@ function JSONHelper.toInputString(value: JSONValue, type: JSONType): string
 		-- Constructing non-empty objects from input string not support
 		return "{}"
 	elseif type == "string" then
-		local _, parsedType = JSONHelper.parseInputString(value)
+		local parsedType, _ = JSONHelper.parseInputString(value)
 		if parsedType ~= type then
 			return `"{value}"`
 		else
