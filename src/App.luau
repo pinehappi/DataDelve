@@ -441,6 +441,9 @@ function App.new(id: string)
 		if not self:_canEditCurrentKey() then
 			return
 		end
+		if self.widget:FindFirstChild("More Menu") then
+			return
+		end
 
 		-- Prompt
 		local position = self.ui.styleStates.edit.more.button.AbsolutePosition
@@ -457,6 +460,7 @@ function App.new(id: string)
 			},
 		})
 
+		contextMenuStyleState.frame.Name = "More Menu"
 		contextMenuStyleState.frame.Position = UDim2.fromOffset(position.X, position.Y)
 		contextMenuStyleState.frame.AnchorPoint = Vector2.new(1, 0)
 		task.spawn(contextMenuStyleState.animate, contextMenuStyleState)
