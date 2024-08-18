@@ -76,8 +76,9 @@ function App.new(id: string)
 
 		connections = {},
 
-		_isUpdatingKey = false,
+		_isListingKey = false,
 		_isGettingKey = false,
+		_isUpdatingKey = false,
 	}, App)
 
 	self.widget = plugin:CreateDockWidgetPluginGui(id, WIDGET_INFO)
@@ -918,6 +919,13 @@ function App._updateConnectButton(self: App)
 end
 
 function App.tryConnect(self: App, connection: Types.DataStoreConnection)
+	if self._isListingKey then
+		self.uiMessages:error(
+			`Cannot connect to another DataStore while a {rfmt.code("ListKeysAsync")} request is being made.`
+		)
+		return
+	end
+
 	if Settings.get("allScopes") and not connection.isOrdered then
 		connection.allScopes = true
 		connection.scope = "" -- Has to be to work
@@ -1113,7 +1121,11 @@ function App.tryGetKey(
 end
 
 function App.listKeys(self: App, prefix: string?)
-	-- TODO: user may be able to switch to a different datastore which will mess things up
+	if self._isListingKey then
+		return
+	end
+
+	self._isListingKey = true
 
 	local loadingBar = LoadingBarStyleState.from(Theme, self.ui.gui.BrowseKeys.Prefix.LoadingBar)
 	loadingBar.container.Visible = true
@@ -1122,12 +1134,15 @@ function App.listKeys(self: App, prefix: string?)
 	self.ui.styleStates.browse.listButton:setDisabled(true):update()
 
 	local success, err = self.session:tryCreateKeyPages(prefix)
+	task.wait(5)
 
 	loadingBar.container.Visible = false
 	loadingBar:destroy()
 
 	self.ui.styleStates.browse.prefix:setDisabled(false):update()
 	self.ui.styleStates.browse.listButton:setDisabled(false):update()
+
+	self._isListingKey = false
 
 	if not success then
 		self.uiMessages:reportDataStoreError(err)
