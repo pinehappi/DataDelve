@@ -157,7 +157,7 @@ function OrderedDataStoreView.from(
 						toggleSelect()
 					elseif count == 1 then
 						local gui = frame:FindFirstAncestorWhichIsA("LayerCollector")
-						local textBox = Assets.RenameTextBox:Clone()
+						local textBox = Assets.ModalTextBox:Clone()
 						local styleState = TextBoxStyleState.from(theme, textBox)
 
 						styleState

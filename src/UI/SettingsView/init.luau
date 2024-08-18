@@ -3,6 +3,7 @@
 local rfmt = require(script.Parent.Parent.rfmt)
 
 local StyleState = script.Parent.StyleState
+local Assets = script.Parent.Assets
 
 local Settings = require(script.Parent.Parent.Settings)
 

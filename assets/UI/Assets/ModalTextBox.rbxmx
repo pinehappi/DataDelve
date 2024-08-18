@@ -1,7 +1,7 @@
 <roblox version="4">
   <Item class="TextBox" referent="0">
     <Properties>
-      <string name="Name">RenameTextBox</string>
+      <string name="Name">ModalTextBox</string>
       <bool name="Active">true</bool>
       <Vector2 name="AnchorPoint">
         <X>0</X>

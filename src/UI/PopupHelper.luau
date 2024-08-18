@@ -177,6 +177,7 @@ export type ModalOptions = {
 	scrimTransparency: number?,
 	reparent: boolean?,
 	passThroughInput: boolean?,
+	includeDropShadow: boolean?,
 }
 -- Turns an object into a modal and blocks all inputs in container
 function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: ModalOptions?)
@@ -225,7 +226,9 @@ function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: Mod
 		modal._cancelled:Fire()
 	end)
 
-	modal:attachDropShadow()
+	if (options.includeDropShadow == nil) or options.includeDropShadow then
+		modal:attachDropShadow()
+	end
 	return modal
 end
 

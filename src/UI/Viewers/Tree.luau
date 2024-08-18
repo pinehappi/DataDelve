@@ -32,9 +32,7 @@
 -- NOTE: right now `Display as Time` for objects is disabled because it requires the children to update the parent when they change
 -- NOTE: right now hierarchy bars are disabled because they're ugly
 
-local FRAME_POOL_SIZE_LIMIT = 256
-local CHEVRON_DOWN_IMAGE_ID = "rbxassetid://17650880752"
-local CHEVRON_RIGHT_IMAGE_ID = "rbxassetid://17650877462"
+local TextService = game:GetService("TextService")
 
 local Settings = require(script.Parent.Parent.Parent.Settings)
 
@@ -61,6 +59,10 @@ local lockObjectWithoutResize = require(script.Parent.Parent.Utilities.lockObjec
 
 local SIZE_PER_BRANCH = script.Branch.AbsoluteSize.Y
 local DRAG_AND_DROP_REGION_SIZE = 10
+
+local FRAME_POOL_SIZE_LIMIT = 256
+local CHEVRON_DOWN_IMAGE_ID = "rbxassetid://17650880752"
+local CHEVRON_RIGHT_IMAGE_ID = "rbxassetid://17650877462"
 
 -- For inconsolata
 local CHAR_WIDTH = 7.2
@@ -917,6 +919,55 @@ function Tree:_moveArrayElement(
 	self:_makeDirty()
 end
 
+function Tree:_expandAll(index: number)
+	local selfDepth = self._flatDepths[index]
+	self._flatBranches[index][3] = true
+	self._frames[index].Arrow.Image = CHEVRON_DOWN_IMAGE_ID
+	for i = index + 1, #self._flatDepths do
+		local depth = self._flatDepths[i]
+		if depth <= selfDepth then
+			break
+		else
+			local branch = self._flatBranches[i]
+			if branch[3] ~= nil then
+				branch[3] = true
+				local frame = self._frames[i]
+				if frame then
+					frame.Arrow.Image = CHEVRON_DOWN_IMAGE_ID
+				end
+			end
+		end
+	end
+
+	self:_updateBranchVisible(index)
+	self:_redrawBranches()
+end
+
+function Tree:_collapseAll(index: number)
+	local selfDepth = self._flatDepths[index]
+	self._flatBranches[index][3] = false
+	self._frames[index].Arrow.Image = CHEVRON_RIGHT_IMAGE_ID
+	for i = index + 1, #self._flatDepths do
+		local depth = self._flatDepths[i]
+		if depth <= selfDepth then
+			break
+		else
+			local branch = self._flatBranches[i]
+			if branch[3] ~= nil then
+				branch[3] = false
+				local frame = self._frames[i]
+				if frame then
+					frame.Arrow.Image = CHEVRON_RIGHT_IMAGE_ID
+				end
+			end
+		end
+	end
+
+	self:_updateBranchVisible(index)
+	self:_redrawBranches()
+	self:_clearNonVisibleBranches()
+end
+
 function Tree:_updateCanvasSize()
 	self.frame.CanvasSize =
 		UDim2.fromOffset(0, SIZE_PER_BRANCH * #self._visibleIndexes + (self._selectingBranchOffset or 0))
@@ -1062,28 +1113,6 @@ function Tree:_updateBranchFrame(frame, branch, index)
 	end
 
 	self:_updateBranchFrameSize(frame, branch)
-end
-
-local function setBranchWraps(frame, wraps: boolean)
-	if wraps then
-		frame.Key.AutomaticSize = Enum.AutomaticSize.Y
-		frame.Value.AutomaticSize = Enum.AutomaticSize.Y
-		frame.Key.RichText = true
-		frame.Value.RichText = true
-		frame.Key.TextTruncate = Enum.TextTruncate.None
-		frame.Value.TextTruncate = Enum.TextTruncate.None
-		frame.Key.TextWrapped = true
-		frame.Value.TextWrapped = true
-	else
-		frame.Key.AutomaticSize = Enum.AutomaticSize.None
-		frame.Value.AutomaticSize = Enum.AutomaticSize.None
-		frame.Key.RichText = false
-		frame.Value.RichText = false
-		frame.Key.TextTruncate = Enum.TextTruncate.AtEnd
-		frame.Value.TextTruncate = Enum.TextTruncate.AtEnd
-		frame.Key.TextWrapped = false
-		frame.Value.TextWrapped = false
-	end
 end
 
 -- Returns true if was edited
@@ -1502,53 +1531,104 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 	self:_setInModal(false)
 end
 
-function Tree:_expandAll(index: number)
-	local selfDepth = self._flatDepths[index]
-	self._flatBranches[index][3] = true
-	self._frames[index].Arrow.Image = CHEVRON_DOWN_IMAGE_ID
-	for i = index + 1, #self._flatDepths do
-		local depth = self._flatDepths[i]
-		if depth <= selfDepth then
-			break
-		else
-			local branch = self._flatBranches[i]
-			if branch[3] ~= nil then
-				branch[3] = true
-				local frame = self._frames[i]
-				if frame then
-					frame.Arrow.Image = CHEVRON_DOWN_IMAGE_ID
-				end
-			end
+-- Creates a modal text box then returns its result
+function Tree:_promptModalTextBox(
+	branchFrame,
+	placeholder: TextLabel,
+	target: GuiObject,
+	options: {
+		defaultText: string,
+		ignoreIndent: boolean,
+		updater: ((TextBox) -> ())?,
+	}
+)
+	local offset = 0
+	if options.ignoreIndent then
+		offset = branchFrame.UIPadding.PaddingLeft.Offset
+	end
+
+	local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
+	local textBox = Assets.ModalTextBox:Clone()
+	local width = target.AbsoluteSize.X
+		+ offset
+		- branchFrame.UIPadding.PaddingLeft.Offset
+		- branchFrame.UIPadding.PaddingRight.Offset
+
+	local modal = PopupHelper.modal(textBox, gui, {
+		includeDropShadow = false,
+	})
+	local attachment = PopupHelper.attach(textBox, target, {
+		anchor = Vector2.new(0, 0),
+		offset = Vector2.new(offset, 0),
+	})
+	local styleState = TextBoxStyleState.from(self.theme, textBox)
+	textBox.Text = options.defaultText
+	textBox.PlaceholderText = placeholder
+	textBox.Parent = gui
+	textBox.Size = UDim2.fromOffset(width, 0)
+
+	local params = Instance.new("GetTextBoundsParams")
+	params.RichText = false
+	params.Font = textBox.FontFace
+	params.Size = textBox.TextSize
+	params.Width = width
+
+	styleState:overrideBackgroundColor(self._colors.background):overrideTextColor(self._colors.plain):update("instant")
+
+	textBox:CaptureFocus()
+
+	local stop = false
+	local entered = false
+	local function update()
+		if options.updater then
+			options.updater(textBox, styleState)
 		end
 	end
 
-	self:_updateBranchVisible(index)
-	self:_redrawBranches()
+	modal.cancelled:Once(function()
+		stop = true
+	end)
+	textBox.FocusLost:Connect(function(e)
+		entered = e
+		stop = true
+	end)
+	textBox:GetPropertyChangedSignal("Text"):Connect(update)
+	update()
+
+	repeat
+		task.wait()
+	until stop
+
+	modal:destroy()
+	attachment:destroy()
+	styleState:destroy()
+	textBox:Destroy()
+
+	if entered then
+		return textBox.Text
+	end
 end
 
-function Tree:_collapseAll(index: number)
-	local selfDepth = self._flatDepths[index]
-	self._flatBranches[index][3] = false
-	self._frames[index].Arrow.Image = CHEVRON_RIGHT_IMAGE_ID
-	for i = index + 1, #self._flatDepths do
-		local depth = self._flatDepths[i]
-		if depth <= selfDepth then
-			break
-		else
-			local branch = self._flatBranches[i]
-			if branch[3] ~= nil then
-				branch[3] = false
-				local frame = self._frames[i]
-				if frame then
-					frame.Arrow.Image = CHEVRON_RIGHT_IMAGE_ID
-				end
-			end
-		end
+local function setBranchWraps(frame, wraps: boolean)
+	if wraps then
+		frame.Key.AutomaticSize = Enum.AutomaticSize.Y
+		frame.Value.AutomaticSize = Enum.AutomaticSize.Y
+		frame.Key.RichText = true
+		frame.Value.RichText = true
+		frame.Key.TextTruncate = Enum.TextTruncate.None
+		frame.Value.TextTruncate = Enum.TextTruncate.None
+		frame.Key.TextWrapped = true
+		frame.Value.TextWrapped = true
+	else
+		frame.Key.AutomaticSize = Enum.AutomaticSize.None
+		frame.Value.AutomaticSize = Enum.AutomaticSize.None
+		frame.Key.RichText = false
+		frame.Value.RichText = false
+		frame.Key.TextTruncate = Enum.TextTruncate.AtEnd
+		frame.Value.TextTruncate = Enum.TextTruncate.AtEnd
+		frame.Key.TextWrapped = false
+		frame.Value.TextWrapped = false
 	end
-
-	self:_updateBranchVisible(index)
-	self:_redrawBranches()
-	self:_clearNonVisibleBranches()
 end
 
 -- Sets up all the events for a branch frame
@@ -1558,71 +1638,6 @@ function Tree:_initializeBranchFrame(frame, index: number)
 	self:_updateBranchFrame(frame, branch, index)
 
 	frame.Arrow.Image = if branch[3] then CHEVRON_DOWN_IMAGE_ID else CHEVRON_RIGHT_IMAGE_ID
-
-	-- Creates a modal text box then returns its result
-	local function getModalTextBoxResult(
-		placeholder: TextLabel,
-		target: GuiObject,
-		options: {
-			defaultText: string,
-			ignoreIndent: boolean,
-			updater: ((TextBox) -> ())?,
-		}
-	)
-		local offset = 0
-		if options.ignoreIndent then
-			offset = frame.UIPadding.PaddingLeft.Offset
-		end
-
-		local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
-		local textBox = script.Parent.Parent.Assets.RenameTextBox:Clone()
-		local modal = PopupHelper.modal(textBox, gui)
-		local attachment = PopupHelper.attach(textBox, target, {
-			anchor = Vector2.new(0, 0),
-			offset = Vector2.new(offset, 0),
-		})
-		local styleState = TextBoxStyleState.from(self.theme, textBox)
-		textBox.Text = options.defaultText
-		textBox.PlaceholderText = placeholder
-		textBox.Parent = gui
-		textBox.Size = UDim2.fromOffset(target.AbsoluteSize.X + offset, 0)
-
-		styleState
-			:overrideBackgroundColor(self._colors.background)
-			:overrideTextColor(self._colors.plain)
-			:update("instant")
-
-		textBox:CaptureFocus()
-
-		local stop = false
-		local entered = false
-		modal.cancelled:Once(function()
-			stop = true
-		end)
-		textBox.FocusLost:Connect(function(e)
-			entered = e
-			stop = true
-		end)
-		if options.updater then
-			textBox:GetPropertyChangedSignal("Text"):Connect(function()
-				options.updater(textBox, styleState)
-			end)
-			options.updater(textBox, styleState)
-		end
-
-		repeat
-			task.wait()
-		until stop
-
-		modal:destroy()
-		attachment:destroy()
-		styleState:destroy()
-		textBox:Destroy()
-
-		if entered then
-			return textBox.Text
-		end
-	end
 
 	local function onRightClick()
 		if self.disabled then
@@ -2273,7 +2288,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 				self:_setInModal(true)
 
-				local newKey = getModalTextBoxResult("Key", frame.Key, {
+				local newKey = self:_promptModalTextBox(frame, "Key", frame.Key, {
 					defaultText = frame.Key.Text,
 					ignoreIndent = true,
 				})
@@ -2330,7 +2345,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					return
 				end
 
-				local newValue = getModalTextBoxResult("Value", frame.Value, {
+				local newValue = self:_promptModalTextBox(frame, "Value", frame.Value, {
 					defaultText = if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL
 						then ""
 						elseif typeof(branch) == "string" then `"{branch[2]}"`
