@@ -2039,9 +2039,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					copyFrame.Value.Text = frame.Value.Text
 					copyFrame.Value.TextColor3 = frame.Value.TextColor3
 
-					dropAtFrame.BackgroundColor3 = self.theme.colors.mainAccent
-					dropAtFrame.Start.BackgroundColor3 = self.theme.colors.mainAccent
-					dropAtFrame.End.BackgroundColor3 = self.theme.colors.mainAccent
+					dropAtFrame.BackgroundColor3 = self._colors.mainAccent
+					dropAtFrame.Start.BackgroundColor3 = self._colors.mainAccent
+					dropAtFrame.End.BackgroundColor3 = self._colors.mainAccent
 
 					copyFrame.Parent = self.gui
 					copyFrame.Position = UDim2.fromOffset(offsetPosition.X, offsetPosition.Y)
