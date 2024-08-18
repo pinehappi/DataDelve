@@ -582,38 +582,43 @@ function App.new(id: string)
 							})
 
 							if result then
-								local data = self.viewer:getValue()
-								if data == nil then
-									self.uiMessages:error("Cannot transfer empty key.")
+								if result.key == self.session.currentKey then
+									self.uiMessages:error(`The key is already named <b>{self.session.currentKey}</b>`)
 								else
-									local userIds, metadata = self.viewer:getKeyInfo()
+									local data = self.viewer:getValue()
+									if data == nil then
+										self.uiMessages:error("Cannot transfer empty key.")
+									else
+										local userIds, metadata = self.viewer:getKeyInfo()
 
-									self:_wrapEditKeyOperation(function()
-										local success, err = self.session:tryTransferCurrentKey({
-											data = data,
-											metadata = metadata,
-											userIds = userIds,
+										self:_wrapEditKeyOperation(function()
+											local success, err = self.session:tryTransferCurrentKey({
+												data = data,
+												metadata = metadata,
+												userIds = userIds,
 
-											newKey = result.key,
-											deleteKey = shouldDelete,
-										})
+												newKey = result.key,
+												deleteKey = shouldDelete,
+											})
 
-										if success then
-											local success, err = self:tryGetKey(result.key, { popCurrentCrumb = true })
+											if success then
+												local success, err =
+													self:tryGetKey(result.key, { popCurrentCrumb = true })
 
-											if not success then
-												self.uiMessages:reportDataStoreError(err)
+												if not success then
+													self.uiMessages:reportDataStoreError(err)
+												else
+													self.uiMessages:success(
+														if shouldDelete
+															then `Renamed key to <b>{result.key}</b>.`
+															else `Transferred key to <b>{result.key}</b>.`
+													)
+												end
 											else
-												self.uiMessages:success(
-													if shouldDelete
-														then `Renamed key to <b>{result.key}</b>.`
-														else `Transferred key to <b>{result.key}</b>.`
-												)
+												self.uiMessages:reportDataStoreError(err)
 											end
-										else
-											self.uiMessages:reportDataStoreError(err)
-										end
-									end)
+										end)
+									end
 								end
 							end
 						else
@@ -656,7 +661,7 @@ function App.new(id: string)
 		self.ui.versionsView.frame.Visible = true
 
 		local loadedConnection: RBXScriptSignal
-		local closeConnection: RBXScriptSignalXscr
+		local closeConnection: RBXScriptSignal
 		local function cleanup()
 			if self.ui.versionsView.locked then
 				return
