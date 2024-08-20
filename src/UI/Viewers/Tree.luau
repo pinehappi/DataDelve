@@ -1178,7 +1178,7 @@ function Tree:_editValue(index: number, value: any): boolean
 	return true
 end
 
-type ExtraSecretTypes = "UserId" | "array" | "object"
+type ExtraSecretTypes = "UserId" | "empty array" | "empty object"
 type PrecisionMenuOptions = {
 	position: Vector2,
 	captureValueTextBox: boolean?,
@@ -1201,8 +1201,6 @@ type PrecisionMenuOptions = {
 
 -- You must manually setInModal when using this.
 -- captureValueTextBox parameter is to tell it to CaptureFocus on the value instead of the key
--- Special secret type for arrays and objects that have values. This is only available when editing a value with that in case you only want to edit the key.
--- Another secret type for UserId which is just number with special cases
 function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValueForm.FormResult?
 	local lockKey = options.lockKey or (typeof(options.key) == "number")
 	local lockType = (options.type == "UserId")
