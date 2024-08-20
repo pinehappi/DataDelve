@@ -13,6 +13,7 @@ ContextMenuStyleState.SEPARATOR = newproxy()
 export type Options = { string | { icon: string, text: string } }
 export type ContextMenuOptions = {
 	options: Options,
+	passThroughInput: boolean?,
 }
 
 -- For convenience
@@ -39,7 +40,8 @@ function ContextMenuStyleState.createMenu(theme, container: GuiObject, options: 
 
 	local modal = PopupHelper.modal(frame, container, {
 		zIndex = 20,
-		passThroughInput = true,
+		passThroughInput = if options.passThroughInput == nil then false else options.passThroughInput,
+		scrimTransparency = if options.passThroughInput or (options.passThroughInput == nil) then 0.8 else 0,
 	})
 	modal.cancelled:Connect(function()
 		styleState:selectOption(nil)

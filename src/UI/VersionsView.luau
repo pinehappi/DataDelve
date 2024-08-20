@@ -99,14 +99,14 @@ function VersionsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 					end
 					local gui = row:FindFirstAncestorWhichIsA("PluginGui")
 					if gui then
-						loadMoreListStyleState:setSelectingStyleState(styleState)
+						local resetSelecting = loadMoreListStyleState:setSelectingStyleState(styleState)
 						local option = ContextMenuStyleState.prompt(theme, gui, gui:GetRelativeMousePosition(), {
 							options = {
 								{ icon = self.theme.icons.import, text = "Load" },
 								{ icon = self.theme.icons.delete, text = "Delete" },
 							},
 						})
-						loadMoreListStyleState:setSelectingStyleState(nil)
+						resetSelecting()
 
 						if option == "Load" then
 							self._versionLoaded:Fire(info.Version)

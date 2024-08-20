@@ -36,6 +36,7 @@ function LoadMoreListStyleState.from(theme, frame: LoadMoreList, options: LoadMo
 
 		itemStyleStates = {},
 		selectingStyleState = nil,
+		selectingId = 0,
 		options = options,
 	}, LoadMoreListStyleState)
 
@@ -83,6 +84,7 @@ function LoadMoreListStyleState:setLoadMoreVisible(visible: boolean)
 	self.frame.LoadMore.Visible = visible
 end
 
+-- Returns a function that lets you reset the selection (only if the styleState was not nil)
 function LoadMoreListStyleState:setSelectingStyleState(styleState)
 	if self.selectingStyleState then
 		self.selectingStyleState:setSelecting(false):update()
@@ -91,6 +93,14 @@ function LoadMoreListStyleState:setSelectingStyleState(styleState)
 
 	if styleState then
 		styleState:setSelecting(true):update()
+
+		self.selectingId += 1
+		local id = self.selectingId
+		return function()
+			if self.selectingStyleState == styleState and self.selectingId == id then
+				self:setSelectingStyleState(nil)
+			end
+		end
 	end
 end
 

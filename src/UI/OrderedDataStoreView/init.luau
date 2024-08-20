@@ -104,7 +104,7 @@ function OrderedDataStoreView.from(
 
 					local gui = frame:FindFirstAncestorWhichIsA("PluginGui")
 
-					loadMoreListStyleState:setSelectingStyleState(styleState)
+					local resetSelecting = loadMoreListStyleState:setSelectingStyleState(styleState)
 					local option = ContextMenuStyleState.prompt(theme, gui, gui:GetRelativeMousePosition(), {
 						options = {
 							{ icon = self.theme.icons.insert, text = "Insert" },
@@ -132,7 +132,7 @@ function OrderedDataStoreView.from(
 						self:_promptInsert()
 					end
 
-					loadMoreListStyleState:setSelectingStyleState(nil)
+					resetSelecting()
 				end
 
 				local function toggleSelect()

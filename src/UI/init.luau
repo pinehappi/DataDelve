@@ -138,7 +138,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 					end)
 
 					button.MouseButton2Click:Connect(function()
-						loadMoreListStyleState:setSelectingStyleState(styleState)
+						local resetSelecting = loadMoreListStyleState:setSelectingStyleState(styleState)
 						local option = ContextMenuStyleState.prompt(
 							self.theme,
 							self.parent,
@@ -150,7 +150,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 								},
 							}
 						)
-						loadMoreListStyleState:setSelectingStyleState(nil)
+						resetSelecting()
 
 						if option == "Load" then
 							self.styleStates.browse.key.textBox.Text = info.KeyName:gsub("@", "\\@")

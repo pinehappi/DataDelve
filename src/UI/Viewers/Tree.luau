@@ -1814,6 +1814,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		local position = self.gui:GetRelativeMousePosition()
 		local option = ContextMenuStyleState.prompt(self.theme, self.gui, position, {
 			options = options,
+			passThroughInput = true,
 		})
 
 		if option == "Edit" then
