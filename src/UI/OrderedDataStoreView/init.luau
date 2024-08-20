@@ -214,6 +214,8 @@ function OrderedDataStoreView.from(
 	}
 
 	self:_updateHighlightColors({ tween = false })
+	self.styleStates.tableLabels.Empty:update("instant")
+	self.styleStates.tableLabels.Instructions:update("instant")
 
 	-- Tooltip
 	Tooltip.bindButtonGeneric(
