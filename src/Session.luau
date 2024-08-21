@@ -38,10 +38,10 @@ end
 local actionRequestBudgets = {
 	list = { [Enum.DataStoreRequestType.ListAsync] = 1 },
 	listOrdered = { [Enum.DataStoreRequestType.GetSortedAsync] = 1 },
-	["transfer"] = { [Enum.DataStoreRequestType.SetIncrementAsync] = 1, [Enum.DataStoreRequestType.GetAsync] = 1 },
-	["rename"] = { [Enum.DataStoreRequestType.SetIncrementAsync] = 2, [Enum.DataStoreRequestType.GetAsync] = 1 },
+	["duplicate"] = { [Enum.DataStoreRequestType.SetIncrementAsync] = 1, [Enum.DataStoreRequestType.GetAsync] = 1 },
+	["move"] = { [Enum.DataStoreRequestType.SetIncrementAsync] = 2, [Enum.DataStoreRequestType.GetAsync] = 1 },
 }
-function Session:hasBudgetFor(action: "list" | "listOrdered" | "transfer" | "rename"): boolean
+function Session:hasBudgetFor(action: "list" | "listOrdered" | "duplicate" | "move"): boolean
 	for requestType, amount in actionRequestBudgets[action] do
 		if DataStoreService:GetRequestBudgetForRequestType(requestType) < amount then
 			return false
@@ -170,7 +170,7 @@ function Session:tryDeleteCurrentKey()
 	return success, err
 end
 
-export type TransferKeyOptions = {
+export type DuplicateKeyOptions = {
 	data: any,
 	metadata: any,
 	userIds: number,
@@ -180,7 +180,7 @@ export type TransferKeyOptions = {
 }
 
 -- Must call tryLoadKey after to load the transferred key.
-function Session:tryTransferCurrentKey(options: TransferKeyOptions): (boolean, string?)
+function Session:tryDuplicateKey(options: DuplicateKeyOptions): (boolean, string?)
 	assert(not self.connection.isOrdered)
 	assert(self.datastore)
 

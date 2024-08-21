@@ -456,7 +456,7 @@ function App.new(id: string)
 				{ icon = Theme.icons.export, text = "Export to JSON" },
 				{ icon = Theme.icons.import, text = "Import from JSON" },
 				ContextMenuStyleState.SEPARATOR,
-				{ icon = Theme.icons.rename, text = "Transfer/Rename Key" },
+				{ icon = Theme.icons.rename, text = "Duplicate/Move Key" },
 				{ icon = Theme.icons.storage, text = "View Data Usage" },
 			},
 		})
@@ -530,12 +530,12 @@ function App.new(id: string)
 						end)
 					end
 				end
-			elseif result == "Transfer/Rename Key" then
+			elseif result == "Duplicate/Move Key" then
 				if
 					ConfirmDialogStyleState.confirm(Theme, self.widget, position, {
 						title = "Usage Notice",
-						message = `This will first call {rfmt.code("SetAsync")} to transfer the contents of this key to another. `
-							.. `You may then delete the current key to effectively rename it. Note that version history is not transferred.`,
+						message = `This will first call {rfmt.code("SetAsync")} to duplicate the contents of this key to another. `
+							.. `You may then delete the current key to effectively move it. Note that version history is not transferred.`,
 						yesText = "Understood",
 						noText = "Cancel",
 					})
@@ -545,8 +545,8 @@ function App.new(id: string)
 					confirmDialogFrame.Position = UDim2.fromOffset(position.X, position.Y)
 
 					local confirmDialogStyleState = ConfirmDialogStyleState.from(Theme, confirmDialogFrame, {
-						title = "Do you want to delete this key after transferring it?",
-						message = `The key is <b>{self.session.currentKey}</b>. This will effectively rename the key.`,
+						title = "Do you want to delete this key after duplicating it?",
+						message = `The key is <b>{self.session.currentKey}</b>. This will effectively move the key.`,
 						yesText = "Yes",
 						noText = "No",
 					})
@@ -568,16 +568,16 @@ function App.new(id: string)
 					confirmDialogStyleState:destroy(true)
 
 					if not cancelled then
-						if self.session:hasBudgetFor(if shouldDelete then "rename" else "transfer") then
+						if self.session:hasBudgetFor(if shouldDelete then "move" else "duplicate") then
 							local result = promptKeyValueForm(Theme, self.widget, {
 								position = position,
 								anchorPoint = Vector2.new(1, 0),
-								title = if shouldDelete then "Rename to" else "Transfer to",
+								title = if shouldDelete then "Move to" else "Duplicate to",
 
 								includeKey = true,
 								includeValue = false,
 
-								yesText = if shouldDelete then "Rename" else "Transfer",
+								yesText = if shouldDelete then "Move" else "Duplicate",
 
 								constraint = if self.session.connection.allScopes then "renameAllScopes" else "rename",
 							})
@@ -588,12 +588,12 @@ function App.new(id: string)
 								else
 									local data = self.viewer:getValue()
 									if data == nil then
-										self.uiMessages:error("Cannot transfer empty key.")
+										self.uiMessages:error("Cannot duplicate empty key.")
 									else
 										local userIds, metadata = self.viewer:getKeyInfo()
 
 										self:_wrapEditKeyOperation(function()
-											local success, err = self.session:tryTransferCurrentKey({
+											local success, err = self.session:tryDuplicateKey({
 												data = data,
 												metadata = metadata,
 												userIds = userIds,
@@ -611,8 +611,8 @@ function App.new(id: string)
 												else
 													self.uiMessages:success(
 														if shouldDelete
-															then `Renamed key to <b>{result.key}</b>.`
-															else `Transferred key to <b>{result.key}</b>.`
+															then `Moved key to <b>{result.key}</b>.`
+															else `Duplicated key to <b>{result.key}</b>.`
 													)
 												end
 											else
@@ -624,7 +624,7 @@ function App.new(id: string)
 							end
 						else
 							self.uiMessages:warn(
-								"You are unable to transfer/rename the key at this moment because the requests will be throttled. "
+								"You are unable to duplicate/move the key at this moment because the requests will be throttled. "
 									.. "Wait and make fewer requests so that there can be budget for this."
 							)
 						end
