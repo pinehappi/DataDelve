@@ -271,6 +271,8 @@ function App.new(id: string)
 		if err then
 			self.uiMessages:reportDataStoreError(err)
 			return
+		else
+			self.ui.styleStates.browse.key.textBox.Text = ""
 		end
 	end)
 
