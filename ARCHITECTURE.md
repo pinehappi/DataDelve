@@ -78,7 +78,7 @@ The codebase is kind of a mess, but here is a brief overview to help you figure 
 
 > Consult this section when necessary.
 
-## Rought diagram of information flow
+## Rough diagram of information flow
 ```mermaid
 flowchart TD
     B[App] -->|Requests| C[Session & Pages]
