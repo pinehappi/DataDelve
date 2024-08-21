@@ -48,11 +48,16 @@ function LoadMoreListStyleState:add(...)
 	if key then
 		if self.itemStyleStates[key] then
 			warn(`Duplicate key ({self.frame:GetFullName()}): {key}`)
+			self.itemStyleStates[key]:destroy(true)
 		end
 		self.itemStyleStates[key] = itemStyleState
 	else
 		table.insert(self.itemStyleStates, itemStyleState)
 	end
+end
+
+function LoadMoreListStyleState:get(key: string)
+	return self.itemStyleStates[key]
 end
 
 function LoadMoreListStyleState:tryRemove(key: string?): boolean

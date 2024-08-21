@@ -147,6 +147,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 								options = {
 									{ icon = self.theme.icons.import, text = "Load" },
 									{ icon = self.theme.icons.lookup, text = "Lookup Id" },
+									{ icon = self.theme.icons.delete, text = "Delete" },
 								},
 							}
 						)
@@ -156,7 +157,9 @@ function UI.new(theme: Theme.Theme, uiMessages)
 							self.styleStates.browse.key.textBox.Text = info.KeyName:gsub("@", "\\@")
 							self.styleStates.browse.key.textBox:CaptureFocus()
 						elseif option == "Lookup Id" then
-							self._idLookedUp:Fire(info.KeyName)
+							self._idLookedUp:Fire(info)
+						elseif option == "Delete" then
+							self._keyDeleted:Fire(info)
 						end
 					end)
 
@@ -261,6 +264,10 @@ function UI.new(theme: Theme.Theme, uiMessages)
 
 	self._idLookedUp = Instance.new("BindableEvent")
 	self.idLookedUp = self._idLookedUp.Event
+
+	-- Fired when a key is deleted from the list
+	self._keyDeleted = Instance.new("BindableEvent")
+	self.keyDeleted = self._keyDeleted.Event
 
 	self._connectionRecordSelected = Instance.new("BindableEvent")
 	self._connectionRecordDeleted = Instance.new("BindableEvent")

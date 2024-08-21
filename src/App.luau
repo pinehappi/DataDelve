@@ -322,14 +322,61 @@ function App.new(id: string)
 		end
 	end)
 
-	self.ui.idLookedUp:Connect(function(key: number)
-		local id = tonumber(key:match("%d+"))
+	self.ui.idLookedUp:Connect(function(key: DataStoreKey)
+		local id = tonumber(key.KeyName:match("%d+"))
 		if not id then
 			self.uiMessages:error("Invalid Id.")
 			return
 		end
 
 		self:_tryLookupId(id)
+	end)
+
+	self.ui.keyDeleted:Connect(function(key: DataStoreKey)
+		if self.session.currentKey == key.KeyName and not self:_canEditCurrentKey() then
+			return
+		end
+
+		local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+			title = "Delete key?",
+			message = "Are you sure you want to do this?",
+		})
+
+		if confirmed then
+			if self.session.currentKey == key.KeyName and not self:_canEditCurrentKey() then
+				return
+			end
+
+			local confirmedAgain =
+				ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+					title = "Confirm again",
+					message = `You are going to delete the key <b>{key.KeyName}</b>.`,
+				})
+
+			if confirmedAgain then
+				local styleState = self.ui.styleStates.browse.loadMore:get(key.KeyName)
+				styleState:setDisabled(true):update()
+
+				local success, err = self.session:tryDeleteKey(key.KeyName)
+
+				if not success then
+					self.uiMessages:reportDataStoreError(err)
+					styleState:setDisabled(false):update()
+					return
+				else
+					self.ui.styleStates.browse.loadMore:tryRemove(key.KeyName)
+
+					local lastCrumb = self.ui.styleStates.breadcrumbs.crumbs[#self.ui.styleStates.breadcrumbs.crumbs]
+					-- NOTE: This will not work if the user quickly switches to AllScopes, reconnects to the DataStore, then gets the key (since the name will be different because AllScopes required the scope)
+					if lastCrumb.category == "key" and lastCrumb.name == key.KeyName then
+						self.ui.styleStates.breadcrumbs:popCrumb()
+						self.session:resetKey()
+					end
+
+					self.uiMessages:success(`Deleted <b>{key.KeyName}</b>.`)
+				end
+			end
+		end
 	end)
 
 	-- Saving
@@ -427,7 +474,6 @@ function App.new(id: string)
 
 					if success then
 						local keyName = self.session.currentKey
-						self.session:resetKey()
 						self.ui.styleStates.breadcrumbs:popCrumb()
 						if not Settings.get("listDeletedKeys") then
 							self.ui.styleStates.browse.loadMore:tryRemove(keyName)

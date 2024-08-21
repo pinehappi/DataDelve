@@ -167,7 +167,23 @@ function Session:tryDeleteCurrentKey()
 		self.datastore:RemoveAsync(self.currentKey)
 	end)
 
+	if success then
+		self.session:resetKey()
+	end
+
 	return success, err
+end
+
+function Session:tryDeleteKey(keyName: string)
+	if keyName == self.currentKey then
+		return self:tryDeleteCurrentKey()
+	else
+		local success, err = pcall(function()
+			self.datastore:RemoveAsync(keyName)
+		end)
+
+		return success, err
+	end
 end
 
 export type DuplicateKeyOptions = {
