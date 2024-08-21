@@ -23,8 +23,26 @@ Theme.accentHues = {
 }
 
 -- Reference: https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
-function Theme.getLuminance(color: Color3)
-	return math.sqrt(0.299 * color.R ^ 2 + 0.587 * color.G ^ 2 + 0.114 * color.B ^ 2)
+function Theme.srgbToLinear(colorChannel: number)
+	if colorChannel <= 0.03928 then
+		return colorChannel / 12.92
+	else
+		return ((colorChannel + 0.055) / 1.055) ^ 2.4
+	end
+end
+
+function Theme.getLuminance(color: Color3): number
+	return 0.2126 * Theme.srgbToLinear(color.R)
+		+ 0.7152 * Theme.srgbToLinear(color.G)
+		+ 0.0722 * Theme.srgbToLinear(color.B)
+end
+
+function Theme.getContrastRatio(L1: Color3, L2: Color3): number
+	local luminance1 = Theme.getLuminance(L1)
+	local luminance2 = Theme.getLuminance(L2)
+	local lightest = math.max(luminance1, luminance2)
+	local darkest = math.min(luminance1, luminance2)
+	return (lightest + 0.05) / (darkest + 0.05)
 end
 
 function Theme.new()
@@ -81,7 +99,8 @@ function Theme.generatePreset(preset: string, accent: string)
 	local accentHue, accentSaturation, accentValue = Theme.getAccentComponents(preset, accent)
 	local accentColor = Theme.getAccentColor(preset, accent)
 
-	local selectedText = if Theme.getLuminance(accentColor) >= 0.55
+	local selectedText = if Theme.getContrastRatio(accentColor, Color3.fromRGB(20, 20, 20))
+			>= Theme.getContrastRatio(accentColor, Color3.fromRGB(230, 230, 230))
 		then Color3.fromRGB(20, 20, 20)
 		else Color3.fromRGB(230, 230, 230)
 

@@ -19,22 +19,35 @@ export type Colors = {
 	null: Color3,
 
 	disabled: Color3,
+
+	selectText: Colors,
 }
 
 local Settings = require(script.Parent.Parent.Parent.Settings)
-
-local function colorDistance(a: Color3, b: Color3): number
-	return math.sqrt((a.R - b.R) ^ 2 + (a.G - b.G) ^ 2 + (a.B - b.G) ^ 2)
-end
 
 local function invertColor(a: Color3): Color3
 	return Color3.new(1 - a.R, 1 - a.G, 1 - a.B)
 end
 
+local textColors = {
+	"plain",
+	"root",
+	"key",
+	"index",
+	"array",
+	"object",
+	"boolean",
+	"number",
+	"string",
+	"null",
+	"disabled",
+}
+
 return function(theme)
 	local highlightColors = Settings.get("highlightColors")
+	local colors
 	if highlightColors == "Default" then
-		local colors = table.clone(theme.colors.syntaxHighlight)
+		colors = table.clone(theme.colors.syntaxHighlight)
 		colors.plain = theme.colors.text
 		colors.background = theme.colors.background
 		colors.hoverBackground = theme.colors.button.transparent.baseColor:Lerp(
@@ -47,17 +60,16 @@ return function(theme)
 		)
 		colors.mainAccent = theme.colors.mainAccent
 		colors.disabled = theme.colors.disabledText
-		return colors
 	elseif highlightColors == "Script Editor" then
 		local studio = settings().Studio
-		return {
+		colors = {
 			plain = studio["Text Color"],
 
 			background = studio["Background Color"],
 			hoverBackground = studio["Selection Background Color"]:Lerp(studio["Background Color"], 0.75),
 			selectBackground = studio["Selection Background Color"]:Lerp(studio["Background Color"], 0.5),
 
-			mainAccent = if colorDistance(theme.colors.mainAccent, studio["Background Color"]) < 0.6
+			mainAccent = if theme.getContrastRatio(theme.colors.mainAccent, studio["Background Color"]) < 4.5
 				then invertColor(studio["Background Color"]):lerp(theme.colors.mainAccent, 0.25)
 				else theme.colors.mainAccent,
 
@@ -75,4 +87,27 @@ return function(theme)
 			disabled = theme.colors.disabledText,
 		}
 	end
+
+	local moveTowardsColor = if theme.getContrastRatio(colors.selectBackground, Color3.new(0, 0, 0))
+			< theme.getContrastRatio(colors.selectBackground, Color3.new(1, 1, 1))
+		then Color3.new(1, 1, 1)
+		else Color3.new(0, 0, 0)
+
+	colors.selectText = table.clone(colors)
+
+	-- Adjusted selected colors
+	for _, color in textColors do
+		local ratio = theme.getContrastRatio(colors.selectText[color], colors.selectBackground)
+		local originalColor = colors.selectText[color]
+		if ratio < 4.5 then
+			for i = 1, 10 do
+				colors.selectText[color] = originalColor:lerp(moveTowardsColor, i / 10)
+				if theme.getContrastRatio(colors.selectText[color], colors.selectBackground) >= 4.5 then
+					break
+				end
+			end
+		end
+	end
+
+	return colors
 end

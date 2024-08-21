@@ -21550,9 +21550,9 @@
           <Ref name="RootLocalizationTable">null</Ref>
           <float name="Rotation">0</float>
           <Color3 name="ScrollBarImageColor3">
-            <R>0</R>
-            <G>0</G>
-            <B>0</B>
+            <R>0.47058824</R>
+            <G>0.47058824</G>
+            <B>0.47058824</B>
           </Color3>
           <float name="ScrollBarImageTransparency">0</float>
           <int name="ScrollBarThickness">8</int>
@@ -23705,7 +23705,7 @@
               <XS>0.5</XS>
               <XO>0</XO>
               <YS>0</YS>
-              <YO>-12</YO>
+              <YO>-13</YO>
             </UDim2>
             <Ref name="RootLocalizationTable">null</Ref>
             <float name="Rotation">0</float>

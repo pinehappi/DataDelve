@@ -985,14 +985,11 @@ end
 
 -- Updates styling
 function Tree:_updateBranchFrame(frame, branch, index)
+	local colors = if index == self._selectingBranchIndex then self._colors.selectText else self._colors
+
 	if self.disabled then
-		if index == self._selectingBranchIndex then
-			frame.Key.TextColor3 = self._colors.plain
-			frame.Value.TextColor3 = self._colors.plain
-		else
-			frame.Key.TextColor3 = self._colors.disabled
-			frame.Value.TextColor3 = self._colors.disabled
-		end
+		frame.Key.TextColor3 = colors.disabled
+		frame.Value.TextColor3 = colors.disabled
 		return
 	end
 
@@ -1001,15 +998,15 @@ function Tree:_updateBranchFrame(frame, branch, index)
 	if branch.ISROOT or branch.ISKEYROOT then
 		frame.Key.Text = branch[1]
 		frame.Key.FontFace = ITALIC_BOLD_FONT
-		frame.Key.TextColor3 = self._colors.root
+		frame.Key.TextColor3 = colors.root
 	elseif typeof(branch[1]) == "number" then
 		frame.Key.Text = `{branch[1]})`
 		frame.Key.FontFace = DEFAULT_FONT
-		frame.Key.TextColor3 = self._colors.index
+		frame.Key.TextColor3 = colors.index
 	else
 		frame.Key.Text = branch[1]
 		frame.Key.FontFace = DEFAULT_FONT
-		frame.Key.TextColor3 = self._colors.key
+		frame.Key.TextColor3 = colors.key
 	end
 
 	local value = branch[2]
@@ -1025,7 +1022,7 @@ function Tree:_updateBranchFrame(frame, branch, index)
 			end)
 			if success then
 				frame.Value.Text = time
-				frame.Value.TextColor3 = self._colors.number
+				frame.Value.TextColor3 = colors.number
 				processed = true
 			end
 		elseif value == OBJECT_SENTINEL then
@@ -1044,7 +1041,7 @@ function Tree:_updateBranchFrame(frame, branch, index)
 				end)
 				if success then
 					frame.Value.Text = time
-					frame.Value.TextColor3 = self._colors.number
+					frame.Value.TextColor3 = colors.number
 					processed = true
 				end
 			end
@@ -1054,14 +1051,12 @@ function Tree:_updateBranchFrame(frame, branch, index)
 	if not processed then
 		if typeof(value) == "number" then
 			frame.Value.Text = tostring(value)
-			frame.Value.TextColor3 = self._colors.number
+			frame.Value.TextColor3 = colors.number
 		elseif typeof(value) == "string" then
 			frame.Value.Text = JSONHelper.escapeString(value)
-			frame.Value.TextColor3 = self._colors.string
+			frame.Value.TextColor3 = colors.string
 		elseif value == OBJECT_SENTINEL then
-			frame.Value.TextColor3 = if index == self._selectingBranchIndex
-				then self._colors.plain
-				else self._colors.object
+			frame.Value.TextColor3 = colors.object
 			if self:_doesBranchHaveChildren(index) then
 				frame.Value.Text = "{object}"
 				arrowVisible = true
@@ -1070,9 +1065,7 @@ function Tree:_updateBranchFrame(frame, branch, index)
 				arrowVisible = false
 			end
 		elseif value == ARRAY_SENTINEL then
-			frame.Value.TextColor3 = if index == self._selectingBranchIndex
-				then self._colors.plain
-				else self._colors.array
+			frame.Value.TextColor3 = colors.array
 			if self:_doesBranchHaveChildren(index) then
 				frame.Value.Text = "[array]"
 				arrowVisible = true
@@ -1082,17 +1075,17 @@ function Tree:_updateBranchFrame(frame, branch, index)
 			end
 		elseif typeof(value) == "boolean" then
 			frame.Value.Text = tostring(value)
-			frame.Value.TextColor3 = self._colors.boolean
+			frame.Value.TextColor3 = colors.boolean
 		elseif typeof(value) == "nil" then
 			frame.Value.Text = "null"
-			frame.Value.TextColor3 = self._colors.null
+			frame.Value.TextColor3 = colors.null
 			font = ITALIC_FONT
 		end
 	end
 
 	frame.Arrow.Visible = arrowVisible
 	if arrowVisible then
-		frame.Arrow.ImageColor3 = self._colors.plain
+		frame.Arrow.ImageColor3 = colors.plain
 	end
 
 	if frame.Value.FontFace ~= font then
@@ -1104,12 +1097,10 @@ function Tree:_updateBranchFrame(frame, branch, index)
 	end
 
 	if branch.LOCKKEY and not branch.ISROOT then
-		frame.Key.TextColor3 = if index == self._selectingBranchIndex then self._colors.plain else self._colors.disabled
+		frame.Key.TextColor3 = colors.disabled
 	end
 	if branch.LOCKVALUE then
-		frame.Value.TextColor3 = if index == self._selectingBranchIndex
-			then self._colors.plain
-			else self._colors.disabled
+		frame.Value.TextColor3 = colors.disabled
 	end
 
 	self:_updateBranchFrameSize(frame, branch)
