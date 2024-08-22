@@ -1319,6 +1319,13 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 			styleState.errorChanged:Connect(updateConfirmButtonDisabled)
 
 			textBox:GetPropertyChangedSignal("Text"):Connect(function()
+				-- NOTE: When SignalBehavior is Deferred, when right clicking out of the modal in the edit menu this will cause an error
+				--	     because the textBox's Text will change to " " (idk why). In Immediate mode this will not error because the TextBox is
+				--       not destroyed yet.
+				if not textBox.Parent then
+					return
+				end
+
 				local number = tonumber(textBox.Text)
 				if not number then
 					styleState:setError("Invalid number."):update("veryFast")

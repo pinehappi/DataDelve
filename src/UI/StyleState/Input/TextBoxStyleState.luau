@@ -166,9 +166,7 @@ function TextBoxStyleState:destroy(completely: boolean)
 	self._focusedConnection:Disconnect()
 	self._focusLostConnection:Disconnect()
 
-	if self._errorPopup then
-		self._errorPopup:destroy(true)
-	end
+	self:_deleteErrorPopup()
 
 	if completely then
 		self.textBox:Destroy()
