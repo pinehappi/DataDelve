@@ -10,6 +10,7 @@ export type SettingsData = {
 	highlightColors: "Default" | "Script Editor",
 	listDeletedKeys: boolean,
 	automaticallyList: boolean,
+	clickToOpen: boolean,
 }
 
 local Settings = {}
@@ -17,7 +18,7 @@ local Settings = {}
 local changed = Instance.new("BindableEvent")
 Settings.changed = changed.Event
 
-local defaultSettings = {
+local defaultSettings: SettingsData = {
 	themePreset = "studio",
 	themeAccent = "neutral",
 	allScopes = false,
@@ -25,6 +26,7 @@ local defaultSettings = {
 	highlightColors = "Default",
 	listDeletedKeys = false,
 	automaticallyList = true,
+	clickToOpen = false,
 }
 
 local function fillWithDefaults(a, defaults)

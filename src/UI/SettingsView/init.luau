@@ -143,6 +143,9 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 			automaticallyListSwitch = SwitchStyleState.from(theme, frame.Content.AutomaticallyList.Switch, {
 				default = Settings.get("automaticallyList"),
 			}),
+			clickToOpenSwitch = SwitchStyleState.from(theme, frame.Content.ClickToOpen.Switch, {
+				default = Settings.get("clickToOpen"),
+			}),
 
 			settingLabels = settingLabels,
 			separators = SeparatorStyleState.fromDescendants(theme, frame),
@@ -181,6 +184,12 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 		self.theme,
 		self.frame.Content.AutomaticallyList,
 		`When this is enabled, items will be listed automatically without you having to press the {rfmt.code("List")} button, if possible.`
+	)
+
+	bindSettingTooltip(
+		self.theme,
+		self.frame.Content.ClickToOpen,
+		`Whether clicking a branch should open it in the tree viewer.`
 	)
 
 	-- Events
@@ -247,6 +256,10 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 
 	self.styleStates.automaticallyListSwitch.toggled:Connect(function(value)
 		Settings.set("automaticallyList", value)
+	end)
+
+	self.styleStates.clickToOpenSwitch.toggled:Connect(function(value)
+		Settings.set("clickToOpen", value)
 	end)
 
 	return self

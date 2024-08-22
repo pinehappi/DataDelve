@@ -1728,223 +1728,6 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 	frame.Arrow.Image = if branch[3] then CHEVRON_DOWN_IMAGE_ID else CHEVRON_RIGHT_IMAGE_ID
 
-	local function onRightClick()
-		if self.disabled then
-			return
-		end
-		if self.readOnly then
-			return
-		end
-		if self._selectingIsDragging then
-			return
-		end
-
-		self:_selectBranch(index, true)
-
-		local options = {}
-
-		if not branch.LOCKVALUE then
-			table.insert(options, { icon = self.theme.icons.edit, text = "Edit" })
-		end
-
-		if not (branch.LOCKVALUE or branch.LOCKKEY or branch.ISROOT) then
-			table.insert(options, { icon = self.theme.icons.delete, text = "Delete" })
-		end
-
-		if depth >= 1 and not branch.LOCKVALUE then
-			table.insert(options, { icon = self.theme.icons.insert, text = "Insert After" })
-		end
-
-		-- Special case for user ids, should be able to insert ids
-		if
-			((branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL) and not branch.LOCKVALUE)
-			or branch.ISUSERIDS
-			or branch.ISMETADATA
-		then
-			table.insert(options, { icon = self.theme.icons.insert, text = "Insert Into" })
-		end
-
-		if branch.ISUSERID then
-			table.insert(options, ContextMenuStyleState.SEPARATOR)
-			table.insert(options, { icon = self.theme.icons.lookup, text = "Lookup Id" })
-		end
-
-		-- Expand/collapse options
-		if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
-			if self:_doesBranchHaveChildren(index) then
-				table.insert(options, ContextMenuStyleState.SEPARATOR)
-				--[[if (not branch.ISTIME) and self:_getUniversalTimeTable(index) then
-					table.insert(options, "Display as Time")
-				elseif branch.ISTIME then
-					table.insert(options, "Display as Object")
-				end]]
-				table.insert(options, "Expand All")
-				table.insert(options, "Collapse All")
-			end
-		else
-			if branch.ISTIME then
-				if typeof(branch[2]) == "number" then
-					table.insert(options, ContextMenuStyleState.SEPARATOR)
-					table.insert(options, "Display as Number")
-				end
-			elseif typeof(branch[2]) == "number" then
-				-- It may be a timestamp!
-				if Validators.integer(branch[2]) and (branch[2] > 0) and not branch.ISUSERID then
-					table.insert(options, ContextMenuStyleState.SEPARATOR)
-					table.insert(options, "Display as Time")
-				end
-			end
-		end
-
-		if #options == 0 then
-			return
-		end
-
-		local position = self.gui:GetRelativeMousePosition()
-		local option = ContextMenuStyleState.prompt(self.theme, self.gui, position, {
-			options = options,
-			passThroughInput = true,
-		})
-
-		if option == "Edit" then
-			self:_promptEditKey(index, { position = position })
-		elseif option == "Delete" then
-			local shouldDelete = true
-
-			if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
-				if self:_doesBranchHaveChildren(index) then
-					self:_setInModal(true)
-					shouldDelete = ConfirmDialogStyleState.confirm(self.theme, self.gui, position, {
-						title = `Delete <i>{branch[1]}</i>?`,
-						message = "This will delete any children as well.",
-					})
-					self:_setInModal(false)
-				end
-			end
-
-			if shouldDelete then
-				self:_deleteBranch(index)
-				self:_redrawBranches()
-			end
-		elseif option == "Insert Into" then
-			local isArray = (branch[2] == ARRAY_SENTINEL)
-			if isArray and branch.ISUSERIDS then
-				local amount = self:_getAmountOfUserIds()
-				if amount >= 4 then
-					self.uiMessages:error("Max number of UserIds is 4.")
-					self:_setInModal(false)
-					return
-				end
-			end
-
-			self:_setInModal(true)
-
-			local result = self:_promptInsertForm({
-				title = "Insert Into",
-				keyValidator = function(key)
-					if self:_doesChildHaveKey(index, key) then
-						return false, "Already contains key."
-					else
-						return true, nil
-					end
-				end,
-				isArray = (branch[2] == ARRAY_SENTINEL),
-				useUserIdConstraint = branch.ISUSERIDS,
-				position = position,
-			})
-
-			self:_setInModal(false)
-			if result then
-				if result.type == "array" then
-					result.value = ARRAY_SENTINEL
-				elseif result.type == "object" then
-					result.value = OBJECT_SENTINEL
-				end
-
-				if isArray then
-					result.key = nil
-				end
-
-				local insertedBranch, err = self:_tryInsertInto(index, result.key, result.value)
-				if err then
-					self.uiMessages:error(err)
-				else
-					if branch.ISUSERIDS then
-						insertedBranch.ISUSERID = true
-					end
-					self:_redrawBranches()
-				end
-			end
-		elseif option == "Insert After" then
-			local isArray = (typeof(branch[1]) == "number")
-
-			if isArray and branch.ISUSERID then
-				local amount = self:_getAmountOfUserIds()
-				if amount >= 4 then
-					self.uiMessages:error("Max number of UserIds is 4.")
-					self:_setInModal(false)
-					return
-				end
-			end
-
-			self:_setInModal(true)
-
-			local result = self:_promptInsertForm({
-				title = "Insert After",
-				keyValidator = function(key)
-					if self:_doesSiblingOrSelfHaveKey(index, key) then
-						return false, "Sibling already has key"
-					else
-						return true, nil
-					end
-				end,
-				isArray = (typeof(branch[1]) == "number"),
-				useUserIdConstraint = branch.ISUSERID,
-				position = position,
-			})
-
-			self:_setInModal(false)
-
-			if result then
-				if result then
-					if result.type == "array" then
-						result.value = ARRAY_SENTINEL
-					elseif result.type == "object" then
-						result.value = OBJECT_SENTINEL
-					end
-
-					if isArray then
-						result.key = nil
-					end
-
-					local insertedBranch, err = self:_tryInsertAfter(index, result.key, result.value)
-					if err then
-						self.uiMessages:error(err)
-					else
-						if branch.ISUSERID then
-							insertedBranch.ISUSERID = true
-						end
-						self:_redrawBranches()
-					end
-				end
-			end
-		elseif option == "Lookup Id" then
-			self._idLookedUp:Fire(branch[2])
-		elseif option == "Expand All" then
-			self:_expandAll(index)
-		elseif option == "Collapse All" then
-			self:_collapseAll(index)
-		elseif option == "Display as Time" then
-			branch.ISTIME = true
-			self:_updateBranchFrame(frame, branch, index)
-		elseif option == "Display as Number" or option == "Display as Object" then
-			branch.ISTIME = false
-			self:_updateBranchFrame(frame, branch, index)
-		end
-
-		self:_setInModal(false)
-	end
-
 	local function toggleOpen()
 		if self._selectingIsDragging then
 			return
@@ -2182,6 +1965,230 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		end
 	end
 
+	local function onSingleClick()
+		self:_selectBranch(index)
+		if Settings.get("clickToOpen") then
+			toggleOpen()
+		end
+	end
+
+	local function onRightClick()
+		if self.disabled then
+			return
+		end
+		if self.readOnly then
+			return
+		end
+		if self._selectingIsDragging then
+			return
+		end
+
+		self:_selectBranch(index, true)
+
+		local options = {}
+
+		if not branch.LOCKVALUE then
+			table.insert(options, { icon = self.theme.icons.edit, text = "Edit" })
+		end
+
+		if not (branch.LOCKVALUE or branch.LOCKKEY or branch.ISROOT) then
+			table.insert(options, { icon = self.theme.icons.delete, text = "Delete" })
+		end
+
+		if depth >= 1 and not branch.LOCKVALUE then
+			table.insert(options, { icon = self.theme.icons.insert, text = "Insert After" })
+		end
+
+		-- Special case for user ids, should be able to insert ids
+		if
+			((branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL) and not branch.LOCKVALUE)
+			or branch.ISUSERIDS
+			or branch.ISMETADATA
+		then
+			table.insert(options, { icon = self.theme.icons.insert, text = "Insert Into" })
+		end
+
+		if branch.ISUSERID then
+			table.insert(options, ContextMenuStyleState.SEPARATOR)
+			table.insert(options, { icon = self.theme.icons.lookup, text = "Lookup Id" })
+		end
+
+		-- Expand/collapse options
+		if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
+			if self:_doesBranchHaveChildren(index) then
+				table.insert(options, ContextMenuStyleState.SEPARATOR)
+				--[[if (not branch.ISTIME) and self:_getUniversalTimeTable(index) then
+					table.insert(options, "Display as Time")
+				elseif branch.ISTIME then
+					table.insert(options, "Display as Object")
+				end]]
+				table.insert(options, "Expand All")
+				table.insert(options, "Collapse All")
+			end
+		else
+			if branch.ISTIME then
+				if typeof(branch[2]) == "number" then
+					table.insert(options, ContextMenuStyleState.SEPARATOR)
+					table.insert(options, "Display as Number")
+				end
+			elseif typeof(branch[2]) == "number" then
+				-- It may be a timestamp!
+				if Validators.integer(branch[2]) and (branch[2] > 0) and not branch.ISUSERID then
+					table.insert(options, ContextMenuStyleState.SEPARATOR)
+					table.insert(options, "Display as Time")
+				end
+			end
+		end
+
+		if #options == 0 then
+			return
+		end
+
+		local position = self.gui:GetRelativeMousePosition()
+		local option = ContextMenuStyleState.prompt(self.theme, self.gui, position, {
+			options = options,
+			passThroughInput = true,
+		})
+
+		if option == "Edit" then
+			self:_promptEditKey(index, { position = position })
+		elseif option == "Delete" then
+			local shouldDelete = true
+
+			if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
+				if self:_doesBranchHaveChildren(index) then
+					self:_setInModal(true)
+					shouldDelete = ConfirmDialogStyleState.confirm(self.theme, self.gui, position, {
+						title = `Delete <i>{branch[1]}</i>?`,
+						message = "This will delete any children as well.",
+					})
+					self:_setInModal(false)
+				end
+			end
+
+			if shouldDelete then
+				self:_deleteBranch(index)
+				self:_redrawBranches()
+			end
+		elseif option == "Insert Into" then
+			local isArray = (branch[2] == ARRAY_SENTINEL)
+			if isArray and branch.ISUSERIDS then
+				local amount = self:_getAmountOfUserIds()
+				if amount >= 4 then
+					self.uiMessages:error("Max number of UserIds is 4.")
+					self:_setInModal(false)
+					return
+				end
+			end
+
+			self:_setInModal(true)
+
+			local result = self:_promptInsertForm({
+				title = "Insert Into",
+				keyValidator = function(key)
+					if self:_doesChildHaveKey(index, key) then
+						return false, "Already contains key."
+					else
+						return true, nil
+					end
+				end,
+				isArray = (branch[2] == ARRAY_SENTINEL),
+				useUserIdConstraint = branch.ISUSERIDS,
+				position = position,
+			})
+
+			self:_setInModal(false)
+			if result then
+				if result.type == "array" then
+					result.value = ARRAY_SENTINEL
+				elseif result.type == "object" then
+					result.value = OBJECT_SENTINEL
+				end
+
+				if isArray then
+					result.key = nil
+				end
+
+				local insertedBranch, err = self:_tryInsertInto(index, result.key, result.value)
+				if err then
+					self.uiMessages:error(err)
+				else
+					if branch.ISUSERIDS then
+						insertedBranch.ISUSERID = true
+					end
+					self:_redrawBranches()
+				end
+			end
+		elseif option == "Insert After" then
+			local isArray = (typeof(branch[1]) == "number")
+
+			if isArray and branch.ISUSERID then
+				local amount = self:_getAmountOfUserIds()
+				if amount >= 4 then
+					self.uiMessages:error("Max number of UserIds is 4.")
+					self:_setInModal(false)
+					return
+				end
+			end
+
+			self:_setInModal(true)
+
+			local result = self:_promptInsertForm({
+				title = "Insert After",
+				keyValidator = function(key)
+					if self:_doesSiblingOrSelfHaveKey(index, key) then
+						return false, "Sibling already has key"
+					else
+						return true, nil
+					end
+				end,
+				isArray = (typeof(branch[1]) == "number"),
+				useUserIdConstraint = branch.ISUSERID,
+				position = position,
+			})
+
+			self:_setInModal(false)
+
+			if result then
+				if result then
+					if result.type == "array" then
+						result.value = ARRAY_SENTINEL
+					elseif result.type == "object" then
+						result.value = OBJECT_SENTINEL
+					end
+
+					if isArray then
+						result.key = nil
+					end
+
+					local insertedBranch, err = self:_tryInsertAfter(index, result.key, result.value)
+					if err then
+						self.uiMessages:error(err)
+					else
+						if branch.ISUSERID then
+							insertedBranch.ISUSERID = true
+						end
+						self:_redrawBranches()
+					end
+				end
+			end
+		elseif option == "Lookup Id" then
+			self._idLookedUp:Fire(branch[2])
+		elseif option == "Expand All" then
+			self:_expandAll(index)
+		elseif option == "Collapse All" then
+			self:_collapseAll(index)
+		elseif option == "Display as Time" then
+			branch.ISTIME = true
+			self:_updateBranchFrame(frame, branch, index)
+		elseif option == "Display as Number" or option == "Display as Object" then
+			branch.ISTIME = false
+			self:_updateBranchFrame(frame, branch, index)
+		end
+
+		self:_setInModal(false)
+	end
+
 	self._frameConnections[index] = {
 		frame.Arrow.Activated:Connect(toggleOpen),
 
@@ -2203,7 +2210,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		frame.Activated:Connect(function(_, count)
 			count = count % 2
 			if count == 0 then
-				self:_selectBranch(index)
+				onSingleClick()
 			end
 		end),
 		frame.InputBegan:Connect(function(input)
@@ -2230,7 +2237,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			count = count % 2
 
 			if count == 0 then
-				self:_selectBranch(index)
+				onSingleClick()
 			elseif count == 1 then
 				if self.readOnly then
 					return
@@ -2283,7 +2290,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			count = count % 2
 
 			if count == 0 then
-				self:_selectBranch(index)
+				onSingleClick()
 			elseif count == 1 then
 				if self.readOnly then
 					return
