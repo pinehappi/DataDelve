@@ -1,0 +1,22 @@
+local Validators = require(script.Parent.Parent.Validators)
+
+assert(Validators.empty(math.random(100000000)))
+
+assert(Validators.integer(0))
+assert(Validators.integer(10))
+assert(Validators.integer(-10))
+assert(not Validators.integer(0.001))
+assert(not Validators.integer(10.1))
+assert(not Validators.integer(-10.1))
+assert(not Validators.integer(1 / 0))
+assert(not Validators.integer(0 / 0))
+assert(not Validators.integer(-1 / 0))
+
+assert(Validators.userId(10))
+assert(not Validators.userId(0))
+assert(Validators.userId(123456))
+assert(not Validators.userId(1.5))
+assert(not Validators.userId(1241.242424))
+assert(not Validators.userId(-1))
+assert(not Validators.userId(-1231231))
+assert(not Validators.userId(-123.123))

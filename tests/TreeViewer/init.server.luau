@@ -5,20 +5,25 @@ local Tree = require(script.Parent.Parent.UI.Viewers.Tree)
 
 local fuzzUserIds = require(script.fuzzUserIds)
 
+type SearchForQuery = { key: string | number, value: any?, isContainer: boolean }
 type Operation = {
 	type: "delete",
-	index: number,
+	searchFor: SearchForQuery,
 	onlyChildren: boolean,
 } | {
 	type: "insertInto",
-	index: number,
+	searchFor: SearchForQuery,
 	key: string?,
 	value: number,
 } | {
 	type: "insertAfter",
-	index: number,
+	searchFor: SearchForQuery,
 	key: string?,
 	value: number,
+} | {
+	type: "move",
+	move: SearchForQuery,
+	before: SearchForQuery,
 }
 
 local fakeKeyInfo = {
@@ -169,13 +174,41 @@ local function tablesEqual(a, b): boolean
 	return true
 end
 
+local function searchFor(tree, query: SearchForQuery)
+	local atData = false
+	for i, branch in tree._flatBranches do
+		if not atData then
+			atData = branch.ISROOT
+			if not atData then
+				continue
+			end
+		end
+		if
+			branch[1] == query.key
+			and (query.value == nil or branch[2] == query.value)
+			and (if query.isContainer then typeof(branch[2]) == "userdata" else true)
+		then
+			return i
+		end
+	end
+end
+
 local function runOperation(tree, operation: Operation)
 	if operation.type == "delete" then
-		tree:_deleteBranch(operation.index, { onlyChildren = operation.onlyChildren })
+		tree:_deleteBranch(searchFor(tree, operation.searchFor), { onlyChildren = operation.onlyChildren })
 	elseif operation.type == "insertAfter" then
-		tree:_tryInsertAfter(operation.index, operation.key, operation.value)
+		tree:_tryInsertAfter(searchFor(tree, operation.searchFor), operation.key, operation.value)
 	elseif operation.type == "insertInto" then
-		tree:_tryInsertInto(operation.index, operation.key, operation.value)
+		tree:_tryInsertInto(searchFor(tree, operation.searchFor), operation.key, operation.value)
+	elseif operation.type == "move" then
+		local moveIndex = searchFor(tree, operation.move)
+		local beforeIndex = searchFor(tree, operation.before)
+		tree:_moveArrayElement(
+			moveIndex,
+			table.find(tree._visibleIndexes, moveIndex),
+			beforeIndex,
+			table.find(tree._visibleIndexes, beforeIndex)
+		)
 	end
 end
 
@@ -193,6 +226,12 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			data = data,
 			keyInfo = keyInfo,
 		})
+		for _, operation in operations do
+			if operation.type == "move" then
+				viewer:_expandAll(viewer._rootIndex) -- "move" doesn't work if the branch you moved is not visible
+				break
+			end
+		end
 		for _, operation in operations do
 			runOperation(viewer, operation)
 		end
@@ -246,61 +285,364 @@ testOutput("Test Preserves Bool", false, false, {})
 testOutput("Test Preserves Nil", nil, nil, {})
 testOutput("Test Preserves Number", 1e+123, 1e+123, {})
 
--- These tests will not work because key order is not preserved
-
---[[
 local fuzz = math.random()
 
-assert(testOutput(
-	testTree1,
-	{
-		hello = 5,
-		taxi = 3,
-		nested = {
-			hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
-			aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
-			moreNEsted = {
-				3,4,5,6,6,"slayy",{"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup", 43, {"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false}}
-			},
-			test = fuzz, -- SHOULD INSERT HERE
-		},
-		car = 34,
-		tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
-		city = false,
-		abc = true,
-	},
-	{
-		type = "insertAfter",
-		index = 4,
-		key = "test",
-		value = fuzz
-	}
-	), "Test Insert After At End 1")
-assert(testOutput(
-	testTree1,
-	{
-		hello = 5,
-		taxi = 3,
-		nested = {
-			hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
-			aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
-			moreNEsted = {
-				3,4,5,6,6,"slayy",{"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup", 43, {"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false}}
+testOutput("Test Insert After 1", testTree1, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			3,
+			4,
+			5,
+			6,
+			6,
+			"slayy",
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
 			},
 		},
-		car = 34,
-		tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
-		city = false,
-		abc = true,
+		testplzwork = fuzz, -- SHOULD INSERT HERE
 	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
 	{
 		type = "insertAfter",
-		index = 7,
-		key = "test",
-		value = fuzz
-	}
-	), "Test Insert After At End 1")
+		searchFor = { key = "moreNEsted" },
+		key = "testplzwork",
+		value = fuzz,
+	},
+})
+
+testOutput("Test Insert After 2", testTree1, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			3,
+			4,
+			5,
+			6,
+			6,
+			"slayy",
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+			},
+		},
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+	testplzwork = fuzz, -- SHOULD INSERT HERE
+}, {
+	{
+		type = "insertAfter",
+		searchFor = { key = "abc" },
+		key = "testplzwork",
+		value = fuzz,
+	},
+})
+
+testOutput("Test Insert Into 1", testTree1, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			3,
+			4,
+			5,
+			6,
+			6,
+			"slayy",
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+			},
+		},
+		testplzwork = fuzz, -- SHOULD INSERT HERE
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = "nested" },
+		key = "testplzwork",
+		value = fuzz,
+	},
+})
+
+testOutput("Test Insert Into 2", testTree1, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			3,
+			4,
+			5,
+			6,
+			6,
+			"slayy",
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+			},
+		},
+	},
+	testplzwork = fuzz, -- SHOULD INSERT HERE
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = "Data" },
+		key = "testplzwork",
+		value = fuzz,
+	},
+})
+
+testOutput("Test Delete 1", testTree1, nil, {
+	{
+		type = "delete",
+		searchFor = { key = "Data" },
+	},
+})
+
+testOutput("Test Delete 2", testTree3, {}, {
+	{
+		type = "delete",
+		searchFor = { key = "Data" },
+		onlyChildren = true,
+	},
+})
+
+testOutput("Test Delete 3", testTree1, {
+	hello = 5,
+	taxi = 3,
+	-- DELETED HERE
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "delete",
+		searchFor = { key = "nested" },
+		onlyChildren = false,
+	},
+})
+
+testOutput("Test Delete 4", testTree1, {
+	hello = 5,
+	taxi = 3,
+	nested = {},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "delete",
+		searchFor = { key = "nested" },
+		onlyChildren = true,
+	},
+})
+
+testOutput("Test Delete 5", testTree1, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			3,
+			4,
+			5,
+			6,
+			"slayy",
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+			},
+		},
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "delete",
+		searchFor = { key = 4 },
+		onlyChildren = false,
+	},
+})
+
+testOutput("Test Delete 6", testTree1, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			3,
+			4,
+			5,
+			6,
+			6,
+			"slayy",
+			{},
+		},
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "delete",
+		searchFor = { key = 7 },
+		onlyChildren = true,
+	},
+})
+
+testOutput("Test Delete 7", testTree1, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			3,
+			4,
+			5,
+			6,
+			6,
+			"slayy",
+		},
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "delete",
+		searchFor = { key = 7 },
+		onlyChildren = false,
+	},
+})
+
+testOutput("Test Move 1", testTree1, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+			},
+			3,
+			4,
+			5,
+			6,
+			6,
+			"slayy",
+		},
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "move",
+		move = { key = 7 },
+		before = { key = 1 },
+		onlyChildren = false,
+	},
+})
+
+testOutput("Test Move 2", testTree4, {
+	{ 7, 8, 9 },
+	{ 1, 2, 3 },
+	{ 4, 5, 6 },
+	{ 10, 11, 12 },
+}, {
+	{
+		type = "move",
+		move = { key = 3, isContainer = true },
+		before = { key = 1, isContainer = true },
+		onlyChildren = false,
+	},
+})
+
+testOutput("Test Move 3", testTree4, {
+	{ 1, 2, 3 },
+	{ 4, 5, 6 },
+	{ 7, 8, 9 },
+	{ 10, 12, 11 },
+}, {
+	{
+		type = "move",
+		move = { key = 3, value = 12 },
+		before = { key = 2, value = 11 },
+		onlyChildren = false,
+	},
+})
+
+testOutput("Test Move 4", testTree4, {
+	{ 4, 5, 6 },
+	{ 7, 8, 9 },
+	{ 1, 2, 3 },
+	{ 10, 11, 12 },
+}, {
+	{
+		type = "move",
+		move = { key = 1, isContainer = true },
+		before = { key = 4, isContainer = true },
+		onlyChildren = false,
+	},
+})
+
+testOutput("Test Move 5", testTree4, {
+	{ 1, 2, 3 },
+	{ 4, 5, 6 },
+	{ 7, 8, 9 },
+	{ 11, 10, 12 },
+}, {
+	{
+		type = "move",
+		move = { key = 1, value = 10 },
+		before = { key = 3, value = 12 },
+		onlyChildren = false,
+	},
+})
 
 fuzz = math.random()
-
-]]

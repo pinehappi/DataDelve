@@ -2780,6 +2780,7 @@ function Tree:getValue(): (any, boolean)
 	local start = false
 
 	local lastDepth = nil
+
 	for i, branch in self._flatBranches do
 		if not start then
 			if branch.ISROOT then
