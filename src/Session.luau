@@ -168,7 +168,7 @@ function Session:tryDeleteCurrentKey()
 	end)
 
 	if success then
-		self.session:resetKey()
+		self:resetKey()
 	end
 
 	return success, err
