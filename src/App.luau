@@ -1,6 +1,7 @@
 local plugin = script:FindFirstAncestorWhichIsA("Plugin")
 
 local Players = game:GetService("Players")
+local ContentProvider = game:GetService("ContentProvider")
 local UserService = game:GetService("UserService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local HttpService = game:GetService("HttpService")
@@ -1390,6 +1391,9 @@ function App._tryLookupId(self: App, id: number)
 		local success, err = pcall(function()
 			thumbnailUrl =
 				Players:GetUserThumbnailAsync(id, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+			local label = Instance.new("ImageLabel")
+			label.Image = thumbnailUrl
+			ContentProvider:PreloadAsync({ label })
 		end)
 
 		if not success then
