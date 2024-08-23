@@ -2071,6 +2071,15 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					})
 					self:_setInModal(false)
 				end
+			else
+				self:_setInModal(true)
+				shouldDelete = ConfirmDialogStyleState.confirm(self.theme, self.gui, position, {
+					title = "Confirm deletion",
+					message = `You will be deleting <i>{branch[1]}</i>.`,
+					yesText = "Confirm",
+					noText = "Cancel",
+				})
+				self:_setInModal(false)
 			end
 
 			if shouldDelete then

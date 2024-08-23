@@ -61,9 +61,7 @@ function ConfirmDialogStyleState.createDialog(
 		frame.Buttons.No.TextLabel.Text = options.noText
 	end
 
-	PopupHelper.clamp(frame, container, {
-		tryPivot = true,
-	})
+	PopupHelper.clamp(frame, container)
 
 	return styleState, modal
 end
