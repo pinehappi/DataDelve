@@ -443,7 +443,6 @@ function App.new(id: string)
 		end)
 	end)
 
-	-- TODO: deleting does not remove the key if it is in the ListKeysAsync list which may be unexpected
 	self.ui.styleStates.edit.delete.button.Activated:Connect(function()
 		if not self:_canEditCurrentKey() then
 			return
@@ -828,7 +827,7 @@ function App.new(id: string)
 
 			if not success then
 				self.uiMessages:reportDataStoreError(err)
-				task.wait() -- Wait for tweens so they don't clash with each other when updating... TODO: make this not necessary
+				task.wait()
 			else
 				self.ui.orderedDataStoreView:updateKey(key, value)
 			end
@@ -841,7 +840,7 @@ function App.new(id: string)
 
 			if not success then
 				self.uiMessages:reportDataStoreError(err)
-				task.wait() -- Wait for tweens so they don't clash with each other when updating... TODO: make this not necessary
+				task.wait()
 			else
 				self.ui.orderedDataStoreView:addKey(key, value)
 				self.uiMessages:success(`Key <b>{key}</b> added!`)
@@ -1377,16 +1376,15 @@ end
 
 function App._tryLookupId(self: App, id: number)
 	local info = nil
-	-- TODO: do something while yielding
+	local card = self.ui:createUserCard()
 	local success, err = pcall(function()
 		info = UserService:GetUserInfosByUserIdsAsync({ id })
 	end)
 
 	if not success then
+		card:abort()
 		self.uiMessages:error(err)
 	elseif info[1] then
-		local card = self.ui:createUserCard()
-
 		local thumbnailUrl = nil
 		local success, err = pcall(function()
 			thumbnailUrl =
@@ -1403,6 +1401,7 @@ function App._tryLookupId(self: App, id: number)
 			card:populate(thumbnailUrl, info[1])
 		end
 	else
+		card:abort()
 		self.uiMessages:error("User not found.")
 	end
 end

@@ -286,7 +286,6 @@ function OrderedDataStoreView.from(
 		if number then
 			self.minValue = number
 		elseif self.styleStates.minValue.textBox.Text:gsub("%s", "") ~= "" then
-			-- TODO: need a way to inform user the key is wrong
 			uiMessages:error("Min value must be a number.")
 		else
 			self.minValue = nil
@@ -309,7 +308,6 @@ function OrderedDataStoreView.from(
 		if number then
 			self.maxValue = number
 		elseif self.styleStates.maxValue.textBox.Text:gsub("%s", "") ~= "" then
-			-- TODO: need a better way to inform user the key is wrong
 			uiMessages:error("Max value must be a number.")
 		else
 			self.maxValue = nil

@@ -42,7 +42,6 @@ function BreadcrumbsStyleState.from(theme, frame: Frame & { UIListLayout: UIList
 	self._crumbChanged = Instance.new("BindableEvent")
 	self.crumbChanged = self._crumbChanged.Event
 
-	-- TODO: rename crumb while in dropdown invalidates _lastContentSizeX
 	task.defer(function()
 		self._lastContentSizeX = frame.UIListLayout.AbsoluteContentSize.X
 
