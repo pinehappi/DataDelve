@@ -15,10 +15,10 @@ DataDelve is a graphical interface for Roblox’s DataStore API. When you need t
 For more info on DataDelve, see this: https://devforum.roblox.com/t/3067950.
 
 # Contributing
-You can contribute by creating issues for bugs or feature requests.
+You can contribute by creating issues for bugs or feature requests. You may also contribute code.
 
 DataDelve uses custom syncing and building scripts made with Lune.
 
 See the [architecture overview](./ARCHITECTURE.md) for an overview of how this plugin is structured and how to build it.
 
-See the [contributing guide](./CONTRIBUTING.md) for how to contribute.
+See the [contributing guide](./CONTRIBUTING.md) for more on how to contribute.
