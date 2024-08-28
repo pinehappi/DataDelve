@@ -112,7 +112,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 			}),
 
 			datastoreTableLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.DataStoreList),
-			historyTableLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.History),
+			historyLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.History),
 		},
 		browse = {
 			key = ShortcutsTextBoxStyleState.from(theme, gui.BrowseKeys.Key),
