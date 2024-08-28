@@ -173,7 +173,9 @@ function OrderedDataStoreView.from(
 							anchor = Vector2.new(0, 0),
 							offset = Vector2.new(0, 0),
 						})
-						local modal = PopupHelper.modal(textBox, gui)
+						local modal = PopupHelper.modal(textBox, gui, {
+							includeDropShadow = false,
+						})
 
 						local function cleanup()
 							modal:destroy()
