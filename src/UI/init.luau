@@ -49,6 +49,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 	}, UI)
 
 	self.styleStates = {
+		headerBackground = BackgroundStyleState.from(theme, gui.HeaderBackground, { style = "header" }),
 		background = BackgroundStyleState.from(theme, gui.Background),
 		breadcrumbs = BreadcrumbsStyleState.from(theme, gui.Breadcrumbs),
 		breadcrumbsSeparator = SeparatorStyleState.from(theme, gui.BreadcrumbsSeparator),
@@ -358,6 +359,7 @@ function UI:showBreadcrumbs()
 	end
 
 	self.gui.Breadcrumbs.Visible = true
+	self.gui.HeaderBackground.Visible = true
 	self.gui.BreadcrumbsSeparator.Visible = true
 
 	self:updateSettingsButtonPosition()
@@ -374,6 +376,7 @@ function UI:hideBreadcrumbs()
 	end
 
 	self.gui.Breadcrumbs.Visible = false
+	self.gui.HeaderBackground.Visible = false
 	self.gui.BreadcrumbsSeparator.Visible = false
 
 	self:updateSettingsButtonPosition()

@@ -213,6 +213,8 @@ function Theme.generatePreset(preset: string, accent: string)
 			text = Color3.fromRGB(220, 220, 220),
 			disabledText = Color3.fromRGB(100, 100, 100),
 
+			headerBackground = Color3.fromRGB(26, 26, 26),
+
 			background = Color3.fromRGB(26, 26, 26), --Color3.fromRGB(40, 40, 40),
 			backgroundOutline = Color3.fromRGB(62, 62, 62),
 
@@ -358,6 +360,8 @@ function Theme.generatePreset(preset: string, accent: string)
 
 			text = Color3.fromRGB(20, 20, 20),
 			disabledText = Color3.fromRGB(120, 120, 120),
+
+			headerBackground = Color3.fromRGB(246, 246, 246),
 
 			background = Color3.fromRGB(246, 246, 246),
 			backgroundOutline = Color3.fromRGB(170, 170, 170),
@@ -661,6 +665,11 @@ function Theme.generatePreset(preset: string, accent: string)
 			text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText, Enum.StudioStyleGuideModifier.Default),
 			disabledText = StudioTheme:GetColor(
 				Enum.StudioStyleGuideColor.DimmedText,
+				Enum.StudioStyleGuideModifier.Default
+			),
+
+			headerBackground = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.Titlebar,
 				Enum.StudioStyleGuideModifier.Default
 			),
 
