@@ -305,6 +305,10 @@ function SelectStyleState:setSelection(selection: string, options: SetSelectionO
 end
 
 function SelectStyleState:update(...)
+	if not self.button.Parent then
+		return
+	end
+
 	self.button.Arrow.Image = if self.open then UP_ARROW_IMAGE else DOWN_ARROW_IMAGE
 	self.buttonStyleState:update(...)
 

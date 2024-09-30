@@ -38,6 +38,7 @@ local ExportImportHelper = require(script.Parent.ExportImportHelper)
 
 local promptKeyValueForm = require(script.Parent.UI.Utilities.promptKeyValueForm)
 local constraintTextBoxStyleState = require(script.Parent.UI.Utilities.constrainTextBoxStyleState)
+local disableFrameWhenModalAppears = require(script.Parent.UI.Utilities.disableFrameWhenModalAppears)
 
 local SETTINGS_TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Cubic)
 local WIDGET_INFO = DockWidgetPluginGuiInfo.new(
@@ -951,6 +952,7 @@ function App.new(id: string)
 	end)
 
 	-- Init
+	disableFrameWhenModalAppears(self.widget, { self.ui.gui })
 	self.ui.styleStates.breadcrumbs:addCrumb(GAME_ICON, "game", gameName)
 	self.ui.styleStates.breadcrumbs:setCrumbNameVisibleSafe(1, not Settings.get("hideGameName")) -- Hide the crumb name for the game if the setting says to
 	task.defer(self.ui.updateSettingsButtonPosition, self.ui)

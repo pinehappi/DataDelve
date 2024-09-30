@@ -193,10 +193,9 @@ function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: Mod
 		_cancelled = Instance.new("BindableEvent"),
 	}, Modal)
 
+	-- Create block input frame
 	modal.blockInputFrame.BackgroundTransparency = options.scrimTransparency
 	modal.blockInputFrame.ZIndex = options.zIndex
-	modal.blockInputFrame.Parent = container
-
 	if options.passThroughInput then
 		modal.blockInputFrame.ClickCapture.Active = false
 		modal.blockInputFrame.ClickCapture.Interactable = false
@@ -211,14 +210,18 @@ function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: Mod
 			end
 		end)
 	end
+	modal.blockInputFrame.Parent = container
 
+	-- Events
 	modal.cancelled = modal._cancelled.Event
 
+	-- Parenting
 	if options.reparent then
 		object.Parent = container
 	end
 	object.ZIndex = options.zIndex + 2
 
+	-- Connecting events
 	modal.blockInputFrame.ClickCapture.Activated:Connect(function()
 		modal._cancelled:Fire()
 	end)

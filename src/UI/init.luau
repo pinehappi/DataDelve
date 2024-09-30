@@ -535,7 +535,7 @@ function UI:createUserCard()
 		skeletonStyleState:animate()
 	end)
 
-	local modal = PopupHelper.modal(card, self.gui)
+	local modal = PopupHelper.modal(card, self.gui.Parent)
 
 	local function cleanup()
 		if card.Parent then
@@ -650,7 +650,7 @@ function UI:createDataUsageCard(keyUsage: number, metadataUsage: number)
 	updateBar(keyUsage, KEY_MAX_SIZE, wrapper.styleStates.dataLabel.label, card.KeyBar)
 	updateBar(metadataUsage, METADATA_MAX_SIZE, wrapper.styleStates.metadataLabel.label, card.MetadataBar)
 
-	local modal = PopupHelper.modal(card, self.gui)
+	local modal = PopupHelper.modal(card, self.gui.Parent)
 
 	local function cleanup()
 		modal:destroy()
