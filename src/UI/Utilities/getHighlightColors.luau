@@ -9,6 +9,8 @@ export type Colors = {
 
 	root: Color3,
 	key: Color3,
+	key2: Color3, -- Used when the setting "UseAlternatingKeyColors" is on
+	key3: Color3, -- Used when the setting "UseAlternatingKeyColors" is on
 	index: Color3,
 
 	array: Color3,
@@ -75,6 +77,8 @@ return function(theme)
 
 			root = studio["Keyword Color"],
 			key = studio["Property Color"],
+			key2 = studio["Built-in Function Color"],
+			key3 = studio['"self" Color'],
 			index = studio["Built-in Function Color"],
 
 			array = studio["Comment Color"],

@@ -148,6 +148,9 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 			clickToOpenSwitch = SwitchStyleState.from(theme, frame.Content.ClickToOpen.Switch, {
 				default = Settings.get("clickToOpen"),
 			}),
+			useAlternatingKeysSwitch = SwitchStyleState.from(theme, frame.Content.UseAlternatingKeyColors.Switch, {
+				default = Settings.get("useAlternatingKeyColors"),
+			}),
 
 			settingLabels = settingLabels,
 			separators = SeparatorStyleState.fromDescendants(theme, frame),
@@ -166,6 +169,12 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 		self.theme,
 		self.frame.Content.HideGameName,
 		"Whether to show the game name in the breadcrumbs. This is useful if you have a long game name."
+	)
+
+	bindSettingTooltip(
+		self.theme,
+		self.frame.Content.UseAlternatingKeyColors,
+		"Turn this on to have key and index names alternate colors based on their depth in the tree."
 	)
 
 	bindSettingTooltip(
@@ -252,6 +261,10 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 		Settings.set("hideGameName", value)
 	end)
 
+	self.styleStates.useAlternatingKeysSwitch.toggled:Connect(function(value)
+		Settings.set("useAlternatingKeyColors", value)
+	end)
+
 	self.styleStates.listDeletedKeysSwitch.toggled:Connect(function(value)
 		Settings.set("listDeletedKeys", value)
 	end)
@@ -308,12 +321,19 @@ function SettingsView:beforeOpen()
 				string = "preview",
 				bool = true,
 				null = nil,
+				{
+					nested = "object",
+				},
 			},
 			array = {
 				100 :: any,
 				"preview" :: any,
 				true :: any,
 				nil :: any,
+				{
+					"nested",
+					"array",
+				},
 			},
 		},
 		readOnly = true,

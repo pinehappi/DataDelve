@@ -201,7 +201,7 @@ function Tree.new(
 		end),
 
 		Settings.changed:Connect(function(settingName)
-			if settingName == "highlightColors" then
+			if settingName == "highlightColors" or settingName == "useAlternatingKeyColors" then
 				self._colors = getHighlightColors(theme)
 				self.frame.BackgroundColor3 = self._colors.background
 				self:_updateAllBranchFrames()
@@ -995,6 +995,16 @@ function Tree:_updateBranchFrame(frame, branch, index)
 
 	self:_updateBranchFrameBackgroundColor(index, frame)
 
+	local keyColor = nil
+	if Settings.get("useAlternatingKeyColors") then
+		local depth = (self._flatDepths[index] - 1) % 3 + 1
+		if depth == 1 then
+			keyColor = "key"
+		else
+			keyColor = "key" .. depth
+		end
+	end
+
 	if branch.ISROOT or branch.ISKEYROOT then
 		frame.Key.Text = branch[1]
 		frame.Key.FontFace = ITALIC_BOLD_FONT
@@ -1002,11 +1012,11 @@ function Tree:_updateBranchFrame(frame, branch, index)
 	elseif typeof(branch[1]) == "number" then
 		frame.Key.Text = `{branch[1]})`
 		frame.Key.FontFace = DEFAULT_FONT
-		frame.Key.TextColor3 = colors.index
+		frame.Key.TextColor3 = if keyColor then colors[keyColor] else colors.index
 	else
 		frame.Key.Text = branch[1]
 		frame.Key.FontFace = DEFAULT_FONT
-		frame.Key.TextColor3 = colors.key
+		frame.Key.TextColor3 = if keyColor then colors[keyColor] else colors.key
 	end
 
 	local value = branch[2]

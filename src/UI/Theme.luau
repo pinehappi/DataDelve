@@ -233,6 +233,8 @@ function Theme.generatePreset(preset: string, accent: string)
 			syntaxHighlight = {
 				root = Color3.fromRGB(247, 17, 255),
 				key = Color3.fromRGB(90, 223, 106),
+				key2 = Color3.fromRGB(223, 99, 28),
+				key3 = Color3.fromRGB(150, 60, 223),
 				index = Color3.fromRGB(150, 60, 223),
 
 				array = Color3.fromRGB(116, 116, 116),
@@ -381,6 +383,8 @@ function Theme.generatePreset(preset: string, accent: string)
 			syntaxHighlight = {
 				root = Color3.fromRGB(152, 11, 159),
 				key = Color3.fromRGB(60, 124, 65),
+				key2 = Color3.fromRGB(157, 83, 18),
+				key3 = Color3.fromRGB(105, 42, 157),
 				index = Color3.fromRGB(105, 42, 157),
 
 				array = Color3.fromRGB(95, 95, 95),
@@ -709,8 +713,10 @@ function Theme.generatePreset(preset: string, accent: string)
 			syntaxHighlight = if isDark
 				then {
 					root = Color3.fromRGB(248, 109, 124),
-					index = Color3.fromRGB(132, 214, 247),
 					key = Color3.fromRGB(97, 161, 241),
+					key2 = Color3.fromRGB(172, 111, 247),
+					key3 = Color3.fromRGB(132, 214, 247),
+					index = Color3.fromRGB(132, 214, 247),
 
 					array = Color3.fromRGB(102, 102, 102),
 					object = Color3.fromRGB(102, 102, 102),
@@ -722,6 +728,8 @@ function Theme.generatePreset(preset: string, accent: string)
 				else {
 					root = Color3.fromRGB(0, 0, 127),
 					key = Color3.fromRGB(72, 92, 142),
+					key2 = Color3.fromRGB(116, 72, 189),
+					key3 = Color3.fromRGB(0, 116, 189),
 					index = Color3.fromRGB(0, 116, 189),
 
 					array = Color3.fromRGB(127, 127, 127),
