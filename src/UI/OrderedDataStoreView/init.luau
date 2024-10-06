@@ -439,13 +439,14 @@ function OrderedDataStoreView:deleteKey(key: string)
 	end
 end
 
--- When setting activeKey to nil, should also list keys.
+-- When setting activeKey to nil, the caller should also list keys.
 -- activeKey is the key that they got using the `Get Key` input
 function OrderedDataStoreView:setActiveKey(key: string?, value: number?)
 	if key then
 		self.styleStates.loadMore:clear()
 		self.styleStates.loadMore:setLoadMoreVisible(false)
 		if value then
+			self:setKeysState("notEmpty")
 			self.styleStates.loadMore:add({ key = key, value = value })
 		else
 			self:setKeysState("notFound")
