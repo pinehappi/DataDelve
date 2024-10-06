@@ -287,8 +287,19 @@ function Tree:_flattenData()
 				depth += 1
 				table.insert(stack, DECREMENT_DEPTH_SENTINEL)
 
-				for i, v in t[2] do
-					table.insert(stack, { i, v })
+				-- Collect the keys so we can sort them
+				local keys = table.create(8)
+				local object = t[2]
+				for k, _ in object do
+					table.insert(keys, k)
+				end
+
+				table.sort(keys)
+
+				-- Now when we add them to the stack, they are in ASCII order
+				for i = #keys, 1, -1 do
+					local key = keys[i]
+					table.insert(stack, { key, object[key] })
 				end
 			end
 		else
