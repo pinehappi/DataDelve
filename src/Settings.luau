@@ -14,11 +14,6 @@ export type SettingsData = {
 	clickToOpen: boolean,
 }
 
-local Settings = {}
-
-local changed = Instance.new("BindableEvent")
-Settings.changed = changed.Event
-
 local defaultSettings: SettingsData = {
 	themePreset = "studio",
 	themeAccent = "neutral",
@@ -30,6 +25,12 @@ local defaultSettings: SettingsData = {
 	automaticallyList = true,
 	clickToOpen = false,
 }
+
+local Settings = {}
+Settings.data = defaultSettings
+
+local changed = Instance.new("BindableEvent")
+Settings.changed = changed.Event
 
 local function fillWithDefaults(a, defaults)
 	for key, default in defaults do
