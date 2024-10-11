@@ -15,3 +15,5 @@ assert(JSONHelper.toInputString(`"""""""""`, "string") == `"""""""""""`)
 assert(JSONHelper.toInputString("[]", "string") == `"[]"`)
 assert(JSONHelper.toInputString("{}", "string") == '"{}"')
 assert(JSONHelper.toInputString("[1, 2, 3]", "string") == "[1, 2, 3]")
+
+assert(JSONHelper.toInputString(buffer.create(1), "buffer") == "")

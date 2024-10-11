@@ -23,6 +23,18 @@ Validators.integer = function(a: any): (boolean, string?)
 	end
 end
 
+Validators.positiveNonZeroInteger = function(a: any): (boolean, string?)
+	if isValidInteger(a) then
+		if tonumber(a) > 0 then
+			return true, nil
+		else
+			return false, "Must be more than zero."
+		end
+	else
+		return false, "Must be more than zero."
+	end
+end
+
 Validators.userId = function(text: unknown): (boolean, string?)
 	if isValidInteger(text) then
 		local number = tonumber(text)

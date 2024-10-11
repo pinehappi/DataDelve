@@ -19,6 +19,7 @@ export type Colors = {
 	number: Color3,
 	string: Color3,
 	null: Color3,
+	buffer: Color3,
 
 	disabled: Color3,
 
@@ -42,6 +43,7 @@ local textColors = {
 	"number",
 	"string",
 	"null",
+	"buffer",
 	"disabled",
 }
 
@@ -87,30 +89,17 @@ return function(theme)
 			number = studio["Number Color"],
 			string = studio["String Color"],
 			null = studio['"nil" Color'],
+			buffer = studio["Comment Color"],
 
 			disabled = theme.colors.disabledText,
 		}
 	end
 
-	local moveTowardsColor = if theme.getContrastRatio(colors.selectBackground, Color3.new(0, 0, 0))
-			< theme.getContrastRatio(colors.selectBackground, Color3.new(1, 1, 1))
-		then Color3.new(1, 1, 1)
-		else Color3.new(0, 0, 0)
-
 	colors.selectText = table.clone(colors)
 
 	-- Adjusted selected colors
 	for _, color in textColors do
-		local ratio = theme.getContrastRatio(colors.selectText[color], colors.selectBackground)
-		local originalColor = colors.selectText[color]
-		if ratio < 4.5 then
-			for i = 1, 10 do
-				colors.selectText[color] = originalColor:lerp(moveTowardsColor, i / 10)
-				if theme.getContrastRatio(colors.selectText[color], colors.selectBackground) >= 4.5 then
-					break
-				end
-			end
-		end
+		colors.selectText[color] = theme.improveContrast(colors.selectText[color], colors.selectBackground)
 	end
 
 	return colors

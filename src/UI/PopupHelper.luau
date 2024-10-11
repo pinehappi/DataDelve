@@ -7,6 +7,8 @@
 local globalTheme = require(script.Parent.Theme).global
 local PopupHelper = {}
 
+PopupHelper.DEFAULT_MODAL_ZINDEX = 10
+
 --// Clamp
 
 export type ClampOptions = {
@@ -182,7 +184,7 @@ export type ModalOptions = {
 -- Turns an object into a modal and blocks all inputs in container
 function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: ModalOptions?)
 	options = options or {}
-	options.zIndex = options.zIndex or 10
+	options.zIndex = options.zIndex or PopupHelper.DEFAULT_MODAL_ZINDEX
 	options.scrimTransparency = options.scrimTransparency or globalTheme.colors.scrimTransparency
 	options.reparent = if options.reparent == nil then true else options.reparent
 

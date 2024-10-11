@@ -12,6 +12,10 @@ assert(not Validators.integer(1 / 0))
 assert(not Validators.integer(0 / 0))
 assert(not Validators.integer(-1 / 0))
 
+assert(not Validators.positiveNonZeroInteger("0"))
+assert(not Validators.positiveNonZeroInteger("-1"))
+assert(Validators.positiveNonZeroInteger("1"))
+
 assert(Validators.userId(10))
 assert(not Validators.userId(0))
 assert(Validators.userId(123456))

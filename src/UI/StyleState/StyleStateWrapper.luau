@@ -36,9 +36,7 @@ function StyleStateWrapper.new<
 end
 
 function StyleStateWrapper:update(speed: StyleStateHelper.TransitionSpeed)
-	for _, state in self.styleStates do
-		state:update(speed)
-	end
+	StyleStateHelper.update(self.styleStates, speed)
 end
 
 local function destroy(styleStates, completely: boolean)

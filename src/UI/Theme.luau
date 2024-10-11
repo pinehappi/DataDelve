@@ -45,6 +45,26 @@ function Theme.getContrastRatio(L1: Color3, L2: Color3): number
 	return (lightest + 0.05) / (darkest + 0.05)
 end
 
+function Theme.improveContrast(color: Color3, backgroundColor: Color3)
+	local moveTowardsColor = if Theme.getContrastRatio(backgroundColor, Color3.new(0, 0, 0))
+			< Theme.getContrastRatio(backgroundColor, Color3.new(1, 1, 1))
+		then Color3.new(1, 1, 1)
+		else Color3.new(0, 0, 0)
+	local ratio = Theme.getContrastRatio(color, backgroundColor)
+	local originalColor = color
+
+	if ratio < 4.5 then
+		for i = 1, 10 do
+			color = originalColor:Lerp(moveTowardsColor, i / 10)
+			if Theme.getContrastRatio(color, backgroundColor) >= 4.5 then
+				return color
+			end
+		end
+	end
+
+	return originalColor
+end
+
 function Theme.new()
 	local self = setmetatable({
 		accent = "red",
@@ -64,6 +84,8 @@ function Theme.new()
 		rename = "rbxassetid://18901732408",
 		maximize = "rbxassetid://18962414864",
 		minimize = "rbxassetid://18962422050",
+		fill = "rbxassetid://84916176036418",
+		select = "rbxassetid://127081818194911",
 	}
 
 	self._colorsChanged = Instance.new("BindableEvent")
@@ -243,6 +265,7 @@ function Theme.generatePreset(preset: string, accent: string)
 				number = Color3.fromRGB(241, 190, 36),
 				string = Color3.fromRGB(78, 199, 243),
 				null = Color3.fromRGB(243, 243, 243),
+				buffer = Color3.fromRGB(116, 116, 116),
 			},
 		}
 		colors.button.input = {
@@ -393,6 +416,7 @@ function Theme.generatePreset(preset: string, accent: string)
 				number = Color3.fromRGB(147, 116, 22),
 				string = Color3.fromRGB(44, 113, 138),
 				null = Color3.fromRGB(29, 29, 29),
+				buffer = Color3.fromRGB(95, 95, 95),
 			},
 		}
 		colors.button.input = {
@@ -724,6 +748,7 @@ function Theme.generatePreset(preset: string, accent: string)
 					number = Color3.fromRGB(255, 198, 0),
 					string = Color3.fromRGB(173, 241, 149),
 					null = Color3.fromRGB(204, 204, 204),
+					buffer = Color3.fromRGB(102, 102, 102),
 				}
 				else {
 					root = Color3.fromRGB(0, 0, 127),
@@ -738,6 +763,7 @@ function Theme.generatePreset(preset: string, accent: string)
 					number = Color3.fromRGB(0, 127, 127),
 					string = Color3.fromRGB(127, 0, 127),
 					null = Color3.fromRGB(127, 127, 0),
+					buffer = Color3.fromRGB(127, 127, 127),
 				},
 		}
 	else

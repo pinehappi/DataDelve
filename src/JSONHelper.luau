@@ -2,8 +2,8 @@ local HttpService = game:GetService("HttpService")
 
 local JSONHelper = {}
 
-export type JSONType = "string" | "number" | "array" | "object" | "boolean" | "null"
-export type JSONValue = string | number | { [string]: JSONValue } | { JSONValue } | boolean | nil
+export type JSONType = "string" | "number" | "array" | "object" | "boolean" | "null" | "buffer"
+export type JSONValue = string | number | { [string]: JSONValue } | { JSONValue } | boolean | buffer | nil
 
 -- TODO: this will error if the source string cannot be converted to JSON, like if it had an incorrect encoding issue.
 -- The only time this will pop up is with Import from JSON since these malformed strings cannot be stored in a DataStore.
@@ -75,6 +75,9 @@ function JSONHelper.toInputString(value: JSONValue, type: JSONType): string
 		else
 			return tostring(value)
 		end
+	elseif type == "buffer" then
+		-- Buffer cannot be turned into string.
+		return ""
 	end
 end
 

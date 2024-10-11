@@ -11,7 +11,7 @@ return function(textBoxStyleState, validators: { (string) -> (boolean, string?) 
 
 		local valid, err = true, nil
 		for _, validator in validators do
-			valid, err = validator(textBoxStyleState.textBox.Text)
+			valid, err = validator(textBoxStyleState:getText())
 			if not valid then
 				break
 			end

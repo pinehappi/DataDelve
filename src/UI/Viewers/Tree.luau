@@ -39,8 +39,9 @@ local Settings = require(script.Parent.Parent.Parent.Settings)
 local JSONHelper = require(script.Parent.Parent.Parent.JSONHelper)
 local Validators = require(script.Parent.Parent.Parent.Validators)
 local StyleState = script.Parent.Parent.StyleState
-local Assets = script.Parent.Parent.Assets
 local PopupHelper = require(script.Parent.Parent.PopupHelper)
+local HexEditorWidget = require(script.Parent.Parent.HexEditorWidget)
+local Assets = script.Parent.Parent.Assets
 
 local StyleStateWrapper = require(StyleState.StyleStateWrapper)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
@@ -1097,6 +1098,9 @@ function Tree:_updateBranchFrame(frame, branch, index)
 		elseif typeof(value) == "boolean" then
 			frame.Value.Text = tostring(value)
 			frame.Value.TextColor3 = colors.boolean
+		elseif typeof(value) == "buffer" then
+			frame.Value.Text = `<buffer {buffer.len(value)}>`
+			frame.Value.TextColor3 = colors.buffer
 		elseif typeof(value) == "nil" then
 			frame.Value.Text = "null"
 			frame.Value.TextColor3 = colors.null
@@ -1248,6 +1252,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 				"boolean",
 				"empty object",
 				"empty array",
+				"buffer",
 				"null",
 			},
 		}),
@@ -1316,7 +1321,9 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 		local valueType = wrapper.styleStates.typeSelect.selection
 
 		if valueType == "string" then
-			defaultValues["string"] = defaultValues["string"] or tostring(lastValue) or ""
+			defaultValues["string"] = defaultValues["string"]
+				or (if typeof(lastValue) == "buffer" then buffer.tostring(lastValue) else tostring(lastValue))
+				or ""
 
 			local textArea = script.EditMenuInputTemplates.TextArea:Clone()
 			wrapper.styleStates.value = TextBoxStyleState.from(self.theme, textArea)
@@ -1386,6 +1393,66 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 			styleState.toggled:Connect(function()
 				lastValue = styleState.value
 				defaultValues["boolean"] = lastValue
+			end)
+
+			editFrame.Form.Value.Visible = true
+		elseif valueType == "buffer" then
+			defaultValues["buffer"] = defaultValues["buffer"] or buffer.create(0)
+
+			local link = script.EditMenuInputTemplates.HexEditorLink:Clone()
+			local styleState = ButtonStyleState.from(self.theme, link, {
+				style = "secondary",
+			})
+			wrapper.styleStates.value = styleState
+			link.Parent = editFrame.Form.Value
+
+			link.Activated:Connect(function()
+				local hexEditorWidget =
+					HexEditorWidget.new("DATADELVE HEX EDITOR WIDGET", self.theme, defaultValues["buffer"])
+
+				-- Make a dummy object to get a modal up
+				local dummyObject = Instance.new("Frame")
+				dummyObject.BackgroundTransparency = 1
+				dummyObject.Size = UDim2.fromOffset(0, 0)
+
+				local modal = PopupHelper.modal(dummyObject, self.gui, {
+					zIndex = PopupHelper.DEFAULT_MODAL_ZINDEX + 5,
+				})
+
+				-- Set up result connections
+				local resultInstructionEvent = Instance.new("BindableEvent")
+
+				modal.cancelled:Connect(function()
+					resultInstructionEvent:Fire(nil)
+				end)
+
+				hexEditorWidget.interacted:Connect(function(submit)
+					if submit then
+						resultInstructionEvent:Fire("submit")
+					else
+						resultInstructionEvent:Fire(nil)
+					end
+				end)
+
+				task.wait(1) -- A little debounce in case the user clicks again because they don't see the widget
+				local shouldSubmit: boolean
+				if not hexEditorWidget.dead then
+					shouldSubmit = resultInstructionEvent.Event:Wait()
+				else
+					shouldSubmit = false
+				end
+
+				-- Wait for result instruction then act on it
+				if shouldSubmit then
+					local got, size = hexEditorWidget.editor:getRawBuffer()
+					local copy = buffer.create(size)
+					buffer.copy(copy, 0, got, 0, size)
+					lastValue = copy
+					defaultValues["buffer"] = lastValue
+				end
+
+				modal:destroy(true)
+				hexEditorWidget:destroy()
 			end)
 
 			editFrame.Form.Value.Visible = true
@@ -2345,7 +2412,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 				self:_setInModal(true)
 
-				if typeof(branch[2]) == "string" and branch[2]:find("\n") then
+				if (typeof(branch[2]) == "string" and branch[2]:find("\n")) or (typeof(branch[2]) == "buffer") then
 					self:_promptEditKey(index, {
 						captureValueTextBox = true,
 						position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),

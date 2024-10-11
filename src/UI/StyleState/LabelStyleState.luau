@@ -44,9 +44,9 @@ function LabelStyleState:update(speed: StyleStateHelper.TransitionSpeed)
 	local color = self.overridenColor
 		or self.theme.colors[if self.style == "text" then "text" elseif self.style == "error" then "error" else "text"]
 
-	TweenService:Create(self.label, tweenInfo, {
+	StyleStateHelper.tween(self.label, tweenInfo, {
 		[property] = color,
-	}):Play()
+	})
 end
 
 function LabelStyleState:overrideColor(color: Color3)
