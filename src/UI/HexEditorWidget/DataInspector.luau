@@ -40,8 +40,14 @@ export type DataInspectorImplementation = {
 	__index: DataInspectorImplementation,
 
 	new: (HexEditor.HexEditor, DataInspectorNewParams) -> DataInspector,
+
 	setTheme: (DataInspector, ThemeData) -> (),
+
+	addRow: (DataInspector, RowInfo) -> (),
+
 	destroy: (DataInspector) -> (),
+
+	--[[ Private ]]
 
 	_setTheme: (DataInspector, ThemeData) -> (),
 
@@ -70,17 +76,145 @@ export type DataInspectorFields = {
 	_rowHeight: number,
 	_keyWidth: number,
 	_valueWidth: number,
-	_rowsCount: number,
+	_rowFramesCount: number,
 
 	_header: TextLabel?,
-	_rows: { [string]: { frame: Frame, key: TextLabel, value: TextBox } },
+	_rowFrames: { [string]: { frame: Frame, key: TextLabel, value: TextBox } },
 
 	_lastOffset: number?,
+	_rowInfos: { RowInfo },
 
 	_connections: { RBXScriptConnection },
 }
 
 export type DataInspector = typeof(setmetatable({} :: DataInspectorFields, {} :: DataInspectorImplementation))
+
+type RowInfo = { name: string, strategy: RowStrategy }
+export type RowStrategy = {
+	requiredBytes: number,
+	func: (buffer: buffer, offset: number) -> unknown,
+}
+local builtInRows: { RowInfo } = {
+	{
+		name = "ascii",
+		strategy = {
+			requiredBytes = 1,
+			func = function(b, offset)
+				local ascii = buffer.readu8(b, offset)
+				if ascii > 127 then
+					return nil
+				elseif HexEditor.isCharacterPrintable(ascii) then
+					return string.char(ascii)
+				else
+					return "non-printable"
+				end
+			end,
+		},
+	},
+	{
+		name = "utf-8",
+		strategy = {
+			requiredBytes = 1,
+			func = function(b, offset)
+				local count = math.min(4, buffer.len(b) - offset)
+				local s: string
+				for i = count, 0, -1 do
+					if i == 0 then
+						return nil
+					end
+
+					s = buffer.readstring(b, offset, count)
+					if utf8.len(s) then
+						break
+					end
+				end
+
+				local start, finish = s:find(utf8.charpattern)
+				if start and finish then
+					return `{s:sub(start, finish)} ({finish - start + 1} {finish > start and "bytes" or "byte"})`
+				else
+					return nil
+				end
+			end,
+		},
+	},
+	{
+		name = "binary",
+		strategy = {
+			requiredBytes = 1,
+			func = function(b, offset)
+				local n = buffer.readu8(b, offset)
+				local s = {}
+
+				for i = 7, 0, -1 do
+					if bit32.band(bit32.lshift(0b1, i), n) == 0 then
+						table.insert(s, "0")
+					else
+						table.insert(s, "1")
+					end
+				end
+
+				return table.concat(s, "")
+			end,
+		},
+	},
+	{
+		name = "i8",
+		strategy = {
+			requiredBytes = 1,
+			func = buffer.readi8,
+		},
+	},
+	{
+		name = "u8",
+		strategy = {
+			requiredBytes = 1,
+			func = buffer.readu8,
+		},
+	},
+	{
+		name = "i16",
+		strategy = {
+			requiredBytes = 2,
+			func = buffer.readi16,
+		},
+	},
+	{
+		name = "u16",
+		strategy = {
+			requiredBytes = 2,
+			func = buffer.readu16,
+		},
+	},
+	{
+		name = "i32",
+		strategy = {
+			requiredBytes = 4,
+			func = buffer.readi32,
+		},
+	},
+	{
+		name = "u32",
+		strategy = {
+			requiredBytes = 4,
+			func = buffer.readu32,
+		},
+	},
+	{
+		name = "f32",
+		strategy = {
+			requiredBytes = 4,
+			func = buffer.readf32,
+		},
+	},
+	{
+		name = "f64",
+		strategy = {
+			requiredBytes = 8,
+			func = buffer.readf64,
+		},
+	},
+}
 
 local DataInspector: DataInspectorImplementation = {} :: DataInspectorImplementation
 DataInspector.__index = DataInspector
@@ -94,7 +228,9 @@ function DataInspector.new(editor, params)
 	self.editor = editor
 	self.horizontalSpaceUsed = 0
 
-	self._rows = {}
+	self._rowFrames = {}
+
+	self._rowInfos = table.clone(builtInRows)
 
 	self:_buildUi()
 	self:_updatePosition()
@@ -115,6 +251,18 @@ end
 function DataInspector:setTheme(theme)
 	self:_setTheme(theme)
 	self:_buildUi()
+end
+
+function DataInspector:addRow(rowInfo: RowInfo)
+	for _, info in self._rowInfos do
+		if info.name == rowInfo.name then
+			error(`Duplicate row name: {rowInfo.name}`)
+		end
+	end
+
+	table.insert(self._rowInfos, rowInfo)
+	self:_buildRow(rowInfo.name)
+	self:_updateRows()
 end
 
 function DataInspector:destroy()
@@ -165,7 +313,8 @@ function DataInspector:_buildRow(rowName: string)
 	local frame = Instance.new("Frame")
 	frame.BackgroundTransparency = 1
 	frame.Size = UDim2.fromOffset(self._keyWidth + self._theme.keyValuePadding + self._valueWidth, self._rowHeight)
-	frame.Position = UDim2.fromOffset(self._theme.bodyPadding, self._headerHeight + self._rowHeight * self._rowsCount)
+	frame.Position =
+		UDim2.fromOffset(self._theme.bodyPadding, self._headerHeight + self._rowHeight * self._rowFramesCount)
 	frame.Name = rowName
 
 	local key = Instance.new("TextLabel")
@@ -193,107 +342,36 @@ function DataInspector:_buildRow(rowName: string)
 
 	frame.Parent = self.scrollingFrame
 
-	self._rows[rowName] = {
+	self._rowFrames[rowName] = {
 		frame = frame,
 		key = key,
 		value = value,
 	}
-	self._rowsCount += 1
+	self._rowFramesCount += 1
 end
 
-export type RowStrategy = {
-	requiredBytes: number,
-	func: (buffer: buffer, offset: number) -> unknown,
-}
-local rowStrategies: { [string]: RowStrategy } = {
-	["ascii"] = {
-		requiredBytes = 1,
-		func = function(b, offset)
-			return string.char(buffer.readu8(b, offset))
-		end,
-	},
-	["utf-8"] = {
-		requiredBytes = 1,
-		func = function(b, offset)
-			local count = math.min(4, buffer.len(b) - offset)
-			local s = buffer.readstring(b, offset, count)
-			local start, finish = s:find(utf8.charpattern)
-			if start and finish then
-				return `{s:sub(start, finish)} ({finish - start + 1} {finish > start and "bytes" or "byte"})`
-			else
-				return nil
-			end
-		end,
-	},
-	["binary"] = {
-		requiredBytes = 1,
-		func = function(b, offset)
-			local n = buffer.readu8(b, offset)
-			local s = {}
-
-			for i = 7, 0, -1 do
-				if bit32.band(bit32.lshift(0b1, i), n) == 0 then
-					table.insert(s, "0")
-				else
-					table.insert(s, "1")
-				end
-			end
-
-			return table.concat(s, "")
-		end,
-	},
-	["i8"] = {
-		requiredBytes = 1,
-		func = buffer.readi8,
-	},
-	["u8"] = {
-		requiredBytes = 1,
-		func = buffer.readu8,
-	},
-	["i16"] = {
-		requiredBytes = 2,
-		func = buffer.readi16,
-	},
-	["u16"] = {
-		requiredBytes = 2,
-		func = buffer.readu16,
-	},
-	["i32"] = {
-		requiredBytes = 4,
-		func = buffer.readi32,
-	},
-	["u32"] = {
-		requiredBytes = 4,
-		func = buffer.readu32,
-	},
-	["f32"] = {
-		requiredBytes = 4,
-		func = buffer.readf32,
-	},
-	["f64"] = {
-		requiredBytes = 8,
-		func = buffer.readf64,
-	},
-}
 function DataInspector:_updateRows()
 	local b, bSize = self.editor:getRawBuffer()
 	local offset = self.editor:getCursorOffset() or self._lastOffset
 	local remaining = 0
 	if offset then
-		remaining = bSize - offset
+		remaining = bSize - offset + 1
 	end
 
-	for rowName, row in self._rows do
-		local strategy = rowStrategies[rowName]
+	for _, row in self._rowInfos do
+		local strategy = row.strategy
+		local frame = self._rowFrames[row.name]
 
-		local result = if offset and remaining > strategy.requiredBytes then tostring(strategy.func(b, offset)) else nil
+		local result = if offset and remaining > strategy.requiredBytes then strategy.func(b, offset) else nil
 
 		if result == nil then
-			row.value.Text = "none"
-			row.value.TextColor3 = self._theme.invalidValueText
+			frame.value.Text = "none"
+			frame.value.TextColor3 = self._theme.invalidValueText
 		else
-			row.value.Text = result
-			row.value.TextColor3 = self._theme.valueText
+			frame.value.Text = tostring(result)
+			frame.value.TextColor3 = if result == "non-printable"
+				then self._theme.invalidValueText
+				else self._theme.valueText
 		end
 	end
 end
@@ -321,19 +399,11 @@ function DataInspector:_buildUi()
 
 	self:_buildHeader()
 
-	self:_buildRow("ascii")
-	self:_buildRow("utf-8")
-	self:_buildRow("binary")
-	self:_buildRow("i8")
-	self:_buildRow("u8")
-	self:_buildRow("i16")
-	self:_buildRow("u16")
-	self:_buildRow("i32")
-	self:_buildRow("u32")
-	self:_buildRow("f32")
-	self:_buildRow("f64")
+	for _, row in self._rowInfos do
+		self:_buildRow(row.name)
+	end
 
-	scrollingFrame.CanvasSize = UDim2.fromOffset(0, self._headerHeight + self._rowHeight * self._rowsCount)
+	scrollingFrame.CanvasSize = UDim2.fromOffset(0, self._headerHeight + self._rowHeight * self._rowFramesCount)
 
 	local scrollingFrameProperties = self._theme.scrollingFrameProperties
 	if scrollingFrameProperties then
@@ -359,11 +429,11 @@ function DataInspector:_clearUi()
 		self._header = nil
 	end
 
-	for _, row in self._rows do
+	for _, row in self._rowFrames do
 		row.frame:Destroy()
 	end
-	self._rowsCount = 0
-	self._rows = {}
+	self._rowFramesCount = 0
+	self._rowFrames = {}
 
 	local scrollingFrame = self.scrollingFrame
 	if scrollingFrame then

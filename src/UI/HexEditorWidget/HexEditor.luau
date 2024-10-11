@@ -123,6 +123,8 @@ export type HexEditorImplementation = {
 	SINGLE_BYTE_CONTEXT_MENU_OPTIONS: { string },
 	ADD_CELL_CONTEXT_MENU_OPTIONS: { string },
 
+	isCharacterPrintable: (ascii: number) -> boolean,
+
 	--[==[ Non-static ]==]
 
 	new: (buffer, HexEditorNewParams, HexEditorDependencies) -> HexEditor,
@@ -1468,7 +1470,7 @@ function HexEditor:_updateCellStyle(offset, state)
 	end
 end
 
-local function isCharacterPrintable(asciiCode: number): boolean
+function HexEditor.isCharacterPrintable(asciiCode: number): boolean
 	if 0 <= asciiCode and asciiCode <= 31 then
 		return false
 	elseif asciiCode >= 127 then
@@ -1616,7 +1618,7 @@ function HexEditor:_rebuildCell(offset, frame)
 			local asciiCode = buffer.readu8(self._buffer, offset)
 			cell.Text = ("%02X"):format(asciiCode)
 			if asciiCell then
-				asciiCell.Text = if isCharacterPrintable(asciiCode) then string.char(asciiCode) else "·"
+				asciiCell.Text = if HexEditor.isCharacterPrintable(asciiCode) then string.char(asciiCode) else "·"
 			end
 		end
 
