@@ -823,25 +823,30 @@ function HexEditor:_createHiddenTextBox()
 
 	hiddenTextBox:GetPropertyChangedSignal("CursorPosition"):Connect(function()
 		if hiddenTextBox:IsFocused() then
-			if #hiddenTextBox.Text == 11 then
-				tryRegisterType()
-			elseif #hiddenTextBox.Text == 10 then
-				if hiddenTextBox.CursorPosition == 5 then
-					self:_incrementCursor(-1)
-				elseif hiddenTextBox.CursorPosition == 2 then
-					self:_incrementCursor(-self._layout.columns)
-				elseif hiddenTextBox.CursorPosition == 7 then
-					self:_incrementCursor(1)
-				elseif hiddenTextBox.CursorPosition == 9 then
-					self:_incrementCursor(self._layout.columns)
+			-- If SignalBehavior is immediate, text changes will trigger cursor position behavior the text itself changes.
+			-- So we have to add task.defer unfortunately
+
+			task.defer(function()
+				if #hiddenTextBox.Text == 10 then
+					if hiddenTextBox.CursorPosition == 5 then
+						self:_incrementCursor(-1)
+					elseif hiddenTextBox.CursorPosition == 2 then
+						self:_incrementCursor(-self._layout.columns)
+					elseif hiddenTextBox.CursorPosition == 7 then
+						self:_incrementCursor(1)
+					elseif hiddenTextBox.CursorPosition == 9 then
+						self:_incrementCursor(self._layout.columns)
+					end
+					resetText()
 				end
-				resetText()
-			end
+			end)
 		end
 	end)
 
 	hiddenTextBox:GetPropertyChangedSignal("Text"):Connect(function()
-		if #hiddenTextBox.Text == 9 then
+		if #hiddenTextBox.Text == 11 then
+			tryRegisterType()
+		elseif #hiddenTextBox.Text == 9 then
 			if hiddenTextBox.Text == "abc\na\nabc" then
 				if self:_isTyping() then
 					self:_cancelTyping()
@@ -867,7 +872,7 @@ function HexEditor:_createHiddenTextBox()
 					resetText()
 				end
 			end
-		elseif #hiddenTextBox.Text ~= 11 then
+		else
 			resetText()
 		end
 	end)
@@ -1522,7 +1527,7 @@ function HexEditor:_buildHeader()
 	end
 
 	self._header = header
-	self._headerOffset = header.AbsoluteSize.Y
+	self._headerOffset = self._cellHeight
 	self:_updateHeaderPosition()
 end
 

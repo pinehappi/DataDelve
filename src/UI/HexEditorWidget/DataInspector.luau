@@ -41,6 +41,7 @@ export type DataInspectorImplementation = {
 
 	new: (HexEditor.HexEditor, DataInspectorNewParams) -> DataInspector,
 	setTheme: (DataInspector, ThemeData) -> (),
+	destroy: (DataInspector) -> (),
 
 	_setTheme: (DataInspector, ThemeData) -> (),
 
@@ -114,6 +115,14 @@ end
 function DataInspector:setTheme(theme)
 	self:_setTheme(theme)
 	self:_buildUi()
+end
+
+function DataInspector:destroy()
+	self:_clearUi()
+	for _, connection in self._connections do
+		connection:Disconnect()
+	end
+	self._connections = {}
 end
 
 function DataInspector:_setTheme(theme)

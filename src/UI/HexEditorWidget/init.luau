@@ -224,6 +224,7 @@ function HexEditorWidget:destroy()
 
 	self.wrapper:destroy(true)
 	self.editor:destroy()
+	self.dataInspector:destroy()
 	self.widget:Destroy()
 end
 
