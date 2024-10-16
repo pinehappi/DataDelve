@@ -1309,6 +1309,7 @@ function HexEditor:_pushAction(action)
 
 	if #self._undoList >= MAX_UNDOS then
 		table.remove(self._undoList, 1)
+		self._undoPosition -= 1
 	end
 
 	table.insert(self._undoList, action)
