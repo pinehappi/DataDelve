@@ -126,6 +126,8 @@ function ShortcutsTextBoxStyleState:update(speed: StyleStateHelper.TransitionSpe
 	self:_updateOverlayText(true)
 end
 
+local noop = function(err: string) end
+
 type TextResult = {
 	type: "text",
 	content: string,
@@ -133,7 +135,8 @@ type TextResult = {
 	type: "error",
 	message: string,
 }
-function ShortcutsTextBoxStyleState:getText(errorHandler: TextBoxStyleState.GetTextErrorHandler): string
+function ShortcutsTextBoxStyleState:getText(errorHandler: TextBoxStyleState.GetTextErrorHandler?): string
+	local errorHandler = errorHandler or noop
 	local pieces = self._pieces :: parseShortcuts.ShortcutsString
 	local text = table.create(#pieces)
 

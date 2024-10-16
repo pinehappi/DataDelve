@@ -156,7 +156,7 @@ function TextBoxStyleState:setError(err: string?)
 end
 
 export type GetTextErrorHandler = (string) -> ()
-function TextBoxStyleState:getText(_: GetTextErrorHandler): string
+function TextBoxStyleState:getText(_: GetTextErrorHandler?): string
 	return self.textBox.Text
 end
 
