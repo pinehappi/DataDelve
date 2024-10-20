@@ -16,7 +16,7 @@ PopupFormStyleState.buttonTemplate = script.ButtonTemplate
 type PopupFormFromOptions = {
 	title: string,
 	buttons: { { text: string, options: ButtonStyleState.ButtonStyleStateFromOptions? } },
-	addContents: (Frame) -> { StyleStateHelper.StyleState },
+	addContents: (Frame) -> { StyleStateHelper.StyleState } | { [string]: StyleStateHelper.StyleState },
 }
 
 -- For convenience

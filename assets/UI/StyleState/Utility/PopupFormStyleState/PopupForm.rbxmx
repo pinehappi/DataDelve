@@ -10,7 +10,7 @@
       <BinaryString name="AttributesSerialize"></BinaryString>
       <bool name="AutoButtonColor">false</bool>
       <bool name="AutoLocalize">true</bool>
-      <token name="AutomaticSize">3</token>
+      <token name="AutomaticSize">2</token>
       <Color3 name="BackgroundColor3">
         <R>0.3137255</R>
         <G>0.3137255</G>
@@ -70,7 +70,7 @@
       <int name="SelectionOrder">0</int>
       <UDim2 name="Size">
         <XS>0</XS>
-        <XO>100</XO>
+        <XO>288</XO>
         <YS>0</YS>
         <YO>100</YO>
       </UDim2>

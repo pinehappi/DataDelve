@@ -7,6 +7,10 @@ CheckboxStyleState.__index = CheckboxStyleState
 
 type CheckboxOptions = {
 	default: boolean?,
+
+	-- The inputPair will also be used to process clicks.
+	-- Useful if you have a label next to the checkbox that you want to be clickable.
+	inputPair: GuiButton?,
 }
 function CheckboxStyleState.from(
 	theme,
@@ -33,6 +37,12 @@ function CheckboxStyleState.from(
 		self:setValue(not self.value)
 	end)
 	self.checkbox.Check.Visible = self.value
+
+	if options.inputPair then
+		self._inputPairClickedConnection = options.inputPair.Activated:Connect(function()
+			self:setValue(not self.value)
+		end)
+	end
 
 	self:update("instant")
 	return self
@@ -64,6 +74,11 @@ end
 function CheckboxStyleState:destroy(completely: boolean)
 	self.buttonStyleState:destroy(completely)
 	self._clickedConnection:Disconnect()
+
+	if self._inputPairClickedConnection then
+		self._inputPairClickedConnection:Disconnect()
+	end
+
 	self._toggled:Destroy()
 	if completely then
 		-- it will be destroyed by the button style state

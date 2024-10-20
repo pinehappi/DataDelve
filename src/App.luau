@@ -580,102 +580,51 @@ function App.new(id: string)
 					end
 				end
 			elseif result == "Duplicate/Move Key" then
-				if
-					ConfirmDialogStyleState.confirm(Theme, self.widget, position, {
-						title = "Usage Notice",
-						message = `This will first call {rfmt.code("SetAsync")} to duplicate the contents of this key to another. `
-							.. `You may then delete the current key to effectively move it. Note that version history is not transferred.`,
-						yesText = "Understood",
-						noText = "Cancel",
-					})
-				then
-					local confirmDialogFrame = ConfirmDialogStyleState.template:Clone()
-
-					confirmDialogFrame.Position = UDim2.fromOffset(position.X, position.Y)
-
-					local confirmDialogStyleState = ConfirmDialogStyleState.from(Theme, confirmDialogFrame, {
-						title = "Do you want to delete this key after duplicating it?",
-						message = `The key is <b>{self.session.currentKey}</b>. This will effectively move the key.`,
-						yesText = "Yes",
-						noText = "No",
-					})
-					local modal = PopupHelper.modal(confirmDialogFrame, self.widget, {
-						zIndex = 20,
-					})
-
-					PopupHelper.clamp(confirmDialogFrame, self.widget)
-
-					local cancelled = false
-					modal.cancelled:Connect(function()
-						confirmDialogStyleState:interact(false)
-						cancelled = true
-					end)
-
-					local shouldDelete = confirmDialogStyleState.interacted:Wait()
-
-					modal:destroy()
-					confirmDialogStyleState:destroy(true)
-
-					if not cancelled then
-						if self.session:hasBudgetFor(if shouldDelete then "move" else "duplicate") then
-							local result = promptKeyValueForm(Theme, self.widget, {
-								position = position,
-								anchorPoint = Vector2.new(1, 0),
-								title = if shouldDelete then "Move to" else "Duplicate to",
-
-								includeKey = true,
-								includeValue = false,
-
-								yesText = if shouldDelete then "Move" else "Duplicate",
-
-								constraint = if self.session.connection.allScopes then "renameAllScopes" else "rename",
-							})
-
-							if result then
-								if result.key == self.session.currentKey then
-									self.uiMessages:error(`The key is already named <b>{self.session.currentKey}</b>`)
-								else
-									local data = self.viewer:getValue()
-									if data == nil then
-										self.uiMessages:error("Cannot duplicate empty key.")
-									else
-										local userIds, metadata = self.viewer:getKeyInfo()
-
-										self:_wrapEditKeyOperation(function()
-											local success, err = self.session:tryDuplicateKey({
-												data = data,
-												metadata = metadata,
-												userIds = userIds,
-
-												newKey = result.key,
-												deleteKey = shouldDelete,
-											})
-
-											if success then
-												local success, err =
-													self:tryGetKey(result.key, { popCurrentCrumb = true })
-
-												if not success then
-													self.uiMessages:reportDataStoreError(err)
-												else
-													self.uiMessages:success(
-														if shouldDelete
-															then `Moved key to <b>{result.key}</b>.`
-															else `Duplicated key to <b>{result.key}</b>.`
-													)
-												end
-											else
-												self.uiMessages:reportDataStoreError(err)
-											end
-										end)
-									end
-								end
-							end
+				if not self.session:hasBudgetFor("move") then
+					self.uiMessages:warn(
+						"You are unable to duplicate/move the key at this moment because the requests will be throttled. "
+							.. "Wait and make fewer requests so that there can be budget for this."
+					)
+				else
+					local duplicateAction = self.ui:promptDuplicateMoveKey(position, self.session.connection.allScopes)
+					if duplicateAction then
+						if duplicateAction.key == self.session.currentKey then
+							self.uiMessages:error(`The key is already named <b>{self.session.currentKey}</b>`)
 						else
-							self.uiMessages:warn(
-								"You are unable to duplicate/move the key at this moment because the requests will be throttled. "
-									.. "Wait and make fewer requests so that there can be budget for this."
-							)
+							local data = self.viewer:getValue()
+							if data == nil then
+								self.uiMessages:error("Cannot duplicate empty key.")
+							else
+								local userIds, metadata = self.viewer:getKeyInfo()
+
+								self:_wrapEditKeyOperation(function()
+									local success, err = self.session:tryDuplicateKey({
+										data = data,
+										metadata = metadata,
+										userIds = userIds,
+
+										newKey = duplicateAction.key,
+										deleteKey = duplicateAction.shouldDelete,
+									})
+
+									if success then
+										local success, err =
+											self:tryGetKey(duplicateAction.key, { popCurrentCrumb = true })
+
+										if not success then
+											self.uiMessages:reportDataStoreError(err)
+										else
+											self.uiMessages:success(
+												if duplicateAction.shouldDelete
+													then `Moved key to <b>{duplicateAction.key}</b>.`
+													else `Duplicated key to <b>{duplicateAction.key}</b>.`
+											)
+										end
+									else
+										self.uiMessages:reportDataStoreError(err)
+									end
+								end)
+							end
 						end
 					end
 				end
