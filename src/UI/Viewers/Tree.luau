@@ -1718,25 +1718,24 @@ end
 -- Creates a modal text box then returns its result
 function Tree:_promptModalTextBox(
 	branchFrame,
-	placeholder: TextLabel,
-	target: GuiObject,
+	side: "key" | "value",
 	options: {
 		defaultText: string,
 		ignoreIndent: boolean,
 		updater: ((TextBox) -> ())?,
 	}
 )
+	local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
+	local target = if side == "key" then branchFrame.Key else branchFrame.Value
+	local textBox = Assets.ModalTextBox:Clone()
+
+	local width = target.AbsoluteSize.X
 	local offset = 0
-	if options.ignoreIndent then
+	-- If it is the key, ignore the indent
+	if side == "key" then
+		width += branchFrame.UIPadding.PaddingLeft.Offset
 		offset = branchFrame.UIPadding.PaddingLeft.Offset
 	end
-
-	local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
-	local textBox = Assets.ModalTextBox:Clone()
-	local width = target.AbsoluteSize.X
-		+ offset
-		- branchFrame.UIPadding.PaddingLeft.Offset
-		- branchFrame.UIPadding.PaddingRight.Offset
 
 	local modal = PopupHelper.modal(textBox, gui, {
 		includeDropShadow = false,
@@ -1747,7 +1746,7 @@ function Tree:_promptModalTextBox(
 	})
 	local styleState = TextBoxStyleState.from(self.theme, textBox)
 	textBox.Text = options.defaultText
-	textBox.PlaceholderText = placeholder
+	textBox.PlaceholderText = side:sub(1, 1):upper() .. side:sub(2)
 	textBox.Parent = gui
 	textBox.Size = UDim2.fromOffset(width, 0)
 
@@ -2363,9 +2362,8 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 				self:_setInModal(true)
 
-				local newKey = self:_promptModalTextBox(frame, "Key", frame.Key, {
+				local newKey = self:_promptModalTextBox(frame, "key", {
 					defaultText = frame.Key.Text,
-					ignoreIndent = true,
 				})
 
 				self:_setInModal(false)
@@ -2420,7 +2418,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					return
 				end
 
-				local newValue = self:_promptModalTextBox(frame, "Value", frame.Value, {
+				local newValue = self:_promptModalTextBox(frame, "value", {
 					defaultText = JSONHelper.toInputString(
 						branch[2],
 						if branch[2] == ARRAY_SENTINEL
@@ -2429,7 +2427,6 @@ function Tree:_initializeBranchFrame(frame, index: number)
 							elseif typeof(branch[2]) == "nil" then "null"
 							else typeof(branch[2])
 					),
-					ignoreIndent = false,
 					updater = function(textBox, styleState)
 						local valueType = JSONHelper.parseInputString(textBox.Text, "")
 						styleState:overrideTextColor(self._colors[valueType]):update("veryFast")
