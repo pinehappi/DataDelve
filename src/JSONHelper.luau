@@ -1,3 +1,5 @@
+-- Helper for JSON w/ buffers
+
 local HttpService = game:GetService("HttpService")
 
 local JSONHelper = {}

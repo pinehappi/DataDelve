@@ -54,6 +54,7 @@ local TextBoxStyleState = require(StyleState.Input.TextBoxStyleState)
 local SelectStyleState = require(StyleState.Input.SelectStyleState)
 local SwitchStyleState = require(StyleState.Input.SwitchStyleState)
 
+local TimestampHelper = require(script.Parent.Parent.Utilities.TimestampHelper)
 local promptKeyValueForm = require(script.Parent.Parent.Utilities.promptKeyValueForm)
 local getHighlightColors = require(script.Parent.Parent.Utilities.getHighlightColors)
 local lockObjectWithoutResize = require(script.Parent.Parent.Utilities.lockObjectWithoutResize)
@@ -304,6 +305,25 @@ function Tree:_flattenData()
 				end
 			end
 		else
+			-- Show it as a timestamp if it looks like one.
+			if typeof(t[1]) == "string" and typeof(t[2]) == "number" then
+				if TimestampHelper.guessTimestampType(t[2], "conservative") then
+					local loweredKey = t[1]:lower()
+					if
+						loweredKey:match("time")
+						or loweredKey:match("last")
+						or loweredKey:match("current")
+						or loweredKey:match("previous")
+						or loweredKey:match("start")
+						or loweredKey:match("update")
+						or loweredKey:match("create")
+						or loweredKey:match("stamp")
+					then
+						t.ISTIME = true
+					end
+				end
+			end
+
 			table.insert(depths, depth)
 			table.insert(branches, t)
 		end
@@ -1040,7 +1060,7 @@ function Tree:_updateBranchFrame(frame, branch, index)
 	if branch.ISTIME then
 		if typeof(value) == "number" then
 			local success, time = pcall(function()
-				return DateTime.fromUnixTimestampMillis(value):FormatUniversalTime("ll LTS", "en-us")
+				return TimestampHelper.bestGuessIntoDateTime(value):FormatUniversalTime("ll LTS", "en-us")
 			end)
 			if success then
 				frame.Value.Text = time
