@@ -703,7 +703,9 @@ function UI:promptDuplicateMoveKey(position: Vector2, isAllScopes: boolean): { k
 	popup.frame.Position = UDim2.fromOffset(position.X, position.Y)
 	popup.frame.AnchorPoint = Vector2.new(1, 0)
 
-	PopupHelper.clamp(popup.frame, self.gui.Parent)
+	PopupHelper.clamp(popup.frame, self.gui.Parent, {
+		boundaryDistance = 5,
+	})
 
 	local resultEvent = Instance.new("BindableEvent")
 
