@@ -45,6 +45,8 @@ local textColors = {
 	"null",
 	"buffer",
 	"disabled",
+	"key2",
+	"key3",
 }
 
 return function(theme)
