@@ -1,9 +1,12 @@
 -- Tests for tree viewer
 
+local FUZZ_TESTS = 25
+
 local Theme = require(script.Parent.Parent.UI.Theme)
 local Tree = require(script.Parent.Parent.UI.Viewers.Tree)
 
 local fuzzUserIds = require(script.fuzzUserIds)
+local fuzzJSON = require(script.fuzzJSON)
 
 type SearchForQuery = { key: string | number, value: any?, isContainer: boolean }
 type Operation = {
@@ -324,6 +327,11 @@ testOutput("Test Preserves Bool", false, false, {})
 testOutput("Test Preserves Nil", nil, nil, {})
 testOutput("Test Preserves Number", 1e+123, 1e+123, {})
 testOutput("Test Preserves Buffer", buffer.fromstring("hello\0 world"), buffer.fromstring("hello\0 world"), {})
+
+for i = 1, FUZZ_TESTS do
+	local json = fuzzJSON()
+	testOutput(`Test Fuzz Preserves {i}`, json, json, {})
+end
 
 local fuzz = math.random()
 
