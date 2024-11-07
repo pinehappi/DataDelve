@@ -516,6 +516,21 @@ function Tree:_bumpSiblingIndexesIncluding(index: number, bumpAmount: number)
 	end
 end
 
+-- Returns how many siblings are after the branch at this index
+function Tree:_getSiblingsAfter(index: number)
+	local depth = self._flatDepths[index]
+	local count = 0
+	for i = index, #self._flatDepths do
+		local scannedDepth = self._flatDepths[i]
+		if scannedDepth == depth then
+			count += 1
+		elseif scannedDepth < depth then
+			break
+		end
+	end
+	return count
+end
+
 -- TODO: do this in-place?
 -- Splices out part of an array from startIndex to endIndex? inclusively
 local function spliceOut(array: { unknown }, startIndex: number, endIndex: number?)
@@ -946,6 +961,93 @@ function Tree:_moveArrayElement(
 
 	if self._selectingBranchIndex == branchIndex then
 		self:_selectBranch(if moveBeforeIndex < branchIndex then moveBeforeIndex else moveBeforeIndex - branchSize - 1)
+	end
+
+	self:_makeDirty()
+end
+
+-- TODO: left off here
+-- Special case when dragging and dropping to the end of the tree
+-- ASSUMES that the end is a valid dropping point
+-- ASSUMES that the entire tree is open so you can see the end
+function Tree:_moveArrayElementToEnd(branchIndex: number, branchVisibleIndex: number)
+	assert(typeof(self._flatBranches[branchIndex][1]) == "number")
+
+	local moveToIndex = #self._flatBranches
+	local branchStartIndex = branchIndex
+	local branchStartVisibleIndex = branchVisibleIndex
+	local branchEndIndex = nil
+
+	-- Scan bounds of branch
+	local branch = self._flatBranches[branchIndex]
+	local depth = self._flatDepths[branchIndex]
+	for i = branchIndex + 1, #self._flatBranches do
+		if self._flatDepths[i] <= depth then
+			branchEndIndex = i - 1
+			break
+		end
+	end
+	if not branchEndIndex then
+		branchEndIndex = #self._flatBranches
+	end
+
+	-- Scan for visible bounds of branch
+	local branchStartVisibleIndex = branchVisibleIndex
+	local branchEndVisibleIndex: number
+	if branchStartIndex == branchEndIndex then
+		branchEndVisibleIndex = branchVisibleIndex
+	else
+		local i = branchVisibleIndex + 1
+		while true do
+			local index = self._visibleIndexes[i]
+			if index then
+				if index > branchEndIndex then
+					break
+				end
+			else
+				break
+			end
+
+			i += 1
+		end
+		branchEndVisibleIndex = i - 1
+	end
+
+	-- Bump visible indexes down to fill the hole left after moving
+	local branchSize = branchEndIndex - branchStartIndex + 1
+	local branchVisibleSize = branchEndVisibleIndex - branchStartVisibleIndex + 1
+	self:_bumpSiblingIndexesIncluding(branchIndex, -1)
+	branch[1] += self:_getSiblingsAfter(branchIndex)
+
+	-- Move everything
+	local branchTemp = table.create(branchSize)
+	local depthTemp = table.create(branchSize)
+	local visibleTemp = table.create(branchVisibleSize)
+	-- First move branch into temp tables
+	table.move(self._flatBranches, branchStartIndex, branchEndIndex, 1, branchTemp)
+	table.move(self._flatDepths, branchStartIndex, branchEndIndex, 1, depthTemp)
+	table.move(self._visibleIndexes, branchStartVisibleIndex, branchEndVisibleIndex, 1, visibleTemp)
+	-- Then bump everything down to fill the hole
+	local remaining = #self._flatBranches - branchEndIndex
+	table.move(self._flatBranches, branchEndIndex + 1, #self._flatBranches, branchStartIndex, self._flatBranches)
+	table.move(self._flatDepths, branchEndIndex + 1, #self._flatDepths, branchStartIndex, self._flatDepths)
+	local visibleRemaining = #self._visibleIndexes - branchEndVisibleIndex
+	for i = 0, (#self._visibleIndexes - branchEndVisibleIndex - 1) do
+		self._visibleIndexes[branchStartVisibleIndex + i] = self._visibleIndexes[branchEndVisibleIndex + 1 + i]
+			- branchSize
+	end
+	-- Then move back the branch to the end
+	table.move(branchTemp, 1, branchSize, branchStartIndex + remaining, self._flatBranches)
+	table.move(depthTemp, 1, branchSize, branchStartIndex + remaining, self._flatDepths)
+	for i = 0, branchVisibleSize - 1 do
+		self._visibleIndexes[branchStartVisibleIndex + visibleRemaining + i] = visibleTemp[1 + i] + remaining
+	end
+
+	self:_clearFrames()
+	self:_redrawBranches()
+
+	if self._selectingBranchIndex == branchIndex then
+		self:_selectBranch(#self._flatBranches - (branchSize - 1))
 	end
 
 	self:_makeDirty()
@@ -1981,19 +2083,21 @@ function Tree:_initializeBranchFrame(frame, index: number)
 						end
 					end
 
+					local scanBeforeIndex = dropBeforeIndex
 					if dropBeforeIndex < 0 then
 						dropBeforeIndex = -1
 					elseif dropBeforeIndex > #self._visibleIndexes then
-						dropBeforeIndex = -1
+						scanBeforeIndex = #self._visibleIndexes + 1
+						dropBeforeIndex = #self._visibleIndexes + 1
 					end
 
 					-- Calculate limits if possible
 					if
 						not lowerLimitVisibleIndex
-						and dropBeforeIndex > 0
-						and dropBeforeIndex < self._selectingBranchVisibleIndex
+						and scanBeforeIndex > 0
+						and scanBeforeIndex < self._selectingBranchVisibleIndex
 					then
-						for i = self._selectingBranchVisibleIndex, dropBeforeIndex, -1 do
+						for i = self._selectingBranchVisibleIndex, scanBeforeIndex, -1 do
 							local scannedDepth = self._flatDepths[self._visibleIndexes[i]]
 							if scannedDepth < depth then
 								lowerLimitVisibleIndex = i + 1
@@ -2003,12 +2107,13 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					end
 					if
 						not upperLimitVisibleIndex
-						and dropBeforeIndex > 0
-						and dropBeforeIndex > self._selectingBranchVisibleIndex
+						and scanBeforeIndex > 0
+						and scanBeforeIndex > self._selectingBranchVisibleIndex
 					then
-						for i = self._selectingBranchVisibleIndex, dropBeforeIndex do
+						for i = self._selectingBranchVisibleIndex, scanBeforeIndex do
+							-- scannedDepth might be nil if scanning up to the end
 							local scannedDepth = self._flatDepths[self._visibleIndexes[i]]
-							if scannedDepth < depth then
+							if scannedDepth and (scannedDepth < depth) then
 								upperLimitVisibleIndex = i
 								break
 							end
@@ -2016,18 +2121,22 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					end
 
 					-- Limit it
-					if lowerLimitVisibleIndex and dropBeforeIndex < lowerLimitVisibleIndex then
+					if lowerLimitVisibleIndex and scanBeforeIndex < lowerLimitVisibleIndex then
 						dropBeforeIndex = -1
-					elseif upperLimitVisibleIndex and dropBeforeIndex > upperLimitVisibleIndex then
+					elseif upperLimitVisibleIndex and scanBeforeIndex > upperLimitVisibleIndex then
 						dropBeforeIndex = -1
 					end
 
 					-- Make sure it's dropping into the array
-					if dropBeforeIndex > 0 then
-						local droppingBeforeDepth = self._flatDepths[self._visibleIndexes[dropBeforeIndex]]
-						if dropBeforeIndex > self._selectingBranchVisibleIndex then
-							if droppingBeforeDepth < depth then
-								for i = dropBeforeIndex - 1, self._selectingBranchVisibleIndex, -1 do
+					if scanBeforeIndex > 0 then
+						local scanBeforeDepth = self._flatDepths[self._visibleIndexes[scanBeforeIndex]]
+						if scanBeforeIndex > self._selectingBranchVisibleIndex then
+							if
+								(
+									scanBeforeDepth == nil --[[ This means its at the end of the tree ]]
+								) or (scanBeforeDepth < depth)
+							then
+								for i = scanBeforeIndex - 1, self._selectingBranchVisibleIndex, -1 do
 									local scannedDepth = self._flatDepths[self._visibleIndexes[i]]
 									if scannedDepth == depth then
 										break
@@ -2036,11 +2145,11 @@ function Tree:_initializeBranchFrame(frame, index: number)
 										break
 									end
 								end
-							elseif droppingBeforeDepth ~= depth then
+							elseif scanBeforeDepth ~= depth then
 								dropBeforeIndex = -1
 							end
 						else
-							if droppingBeforeDepth ~= depth then
+							if scanBeforeDepth ~= depth then
 								dropBeforeIndex = -1
 							end
 						end
@@ -2070,12 +2179,16 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		end
 
 		if dropBeforeIndex > 0 then
-			self:_moveArrayElement(
-				index,
-				self._selectingBranchVisibleIndex,
-				self._visibleIndexes[dropBeforeIndex],
-				dropBeforeIndex
-			)
+			if dropBeforeIndex == #self._visibleIndexes + 1 then
+				self:_moveArrayElementToEnd(index, self._selectingBranchVisibleIndex)
+			else
+				self:_moveArrayElement(
+					index,
+					self._selectingBranchVisibleIndex,
+					self._visibleIndexes[dropBeforeIndex],
+					dropBeforeIndex
+				)
+			end
 		end
 	end
 

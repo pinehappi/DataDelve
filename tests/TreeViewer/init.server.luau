@@ -24,6 +24,9 @@ type Operation = {
 	type: "move",
 	move: SearchForQuery,
 	before: SearchForQuery,
+} | {
+	type: "moveEnd",
+	move: SearchForQuery,
 }
 
 local fakeKeyInfo = {
@@ -152,12 +155,40 @@ local testTree4 = {
 
 local testTree5 = { 1 / 0 }
 
+local testTree6 = {
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			3,
+			4,
+			5,
+			"slayy",
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+			},
+			6,
+			6,
+		},
+	},
+}
+
+-- Utilities
+
+local function buffersEqual(b1: buffer, b2: buffer)
+	return buffer.tostring(b1) == buffer.tostring(b2)
+end
+
 local function tablesEqual(a, b): boolean
 	for i, v in a do
 		if typeof(v) == "table" then
 			if (not b[i]) or (not tablesEqual(v, b[i])) then
 				return false
 			end
+		elseif typeof(v) == "buffer" then
+			return buffersEqual(v, b[i])
 		elseif v ~= b[i] then
 			return false
 		end
@@ -167,6 +198,8 @@ local function tablesEqual(a, b): boolean
 			if (not a[i]) or (not tablesEqual(v, a[i])) then
 				return false
 			end
+		elseif typeof(v) == "buffer" then
+			return buffersEqual(v, a[i])
 		elseif v ~= a[i] then
 			return false
 		end
@@ -209,6 +242,9 @@ local function runOperation(tree, operation: Operation)
 			beforeIndex,
 			table.find(tree._visibleIndexes, beforeIndex)
 		)
+	elseif operation.type == "moveEnd" then
+		local moveIndex = searchFor(tree, operation.move)
+		tree:_moveArrayElementToEnd(moveIndex, table.find(tree._visibleIndexes, moveIndex))
 	end
 end
 
@@ -227,7 +263,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			keyInfo = keyInfo,
 		})
 		for _, operation in operations do
-			if operation.type == "move" then
+			if operation.type == "move" or operation.type == "moveEnd" then
 				viewer:_expandAll(viewer._rootIndex) -- "move" doesn't work if the branch you moved is not visible
 				break
 			end
@@ -245,7 +281,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 				warn("expected:", expected)
 				return
 			end
-		elseif value ~= expected then
+		elseif if typeof(expected) == "buffer" then not buffersEqual(value, expected) else (value ~= expected) then
 			warn(`{name} failed`)
 			warn("got:", value)
 			warn("expected:", expected)
@@ -271,11 +307,14 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 	end
 end
 
+-- Tests
+
 testOutput("Test Preserves 1", testTree1, testTree1, {})
 testOutput("Test Preserves 2", testTree2, testTree2, {})
 testOutput("Test Preserves 3", testTree3, testTree3, {})
 testOutput("Test Preserves 4", testTree4, testTree4, {})
 testOutput("Test Preserves 5", testTree5, testTree5, {})
+testOutput("Test Preserves 5", testTree6, testTree6, {})
 
 local randomNumber = math.random()
 testOutput("Test Preserves String", "test", "test", {})
@@ -284,6 +323,7 @@ testOutput("Test Preserves Number", randomNumber, randomNumber, {})
 testOutput("Test Preserves Bool", false, false, {})
 testOutput("Test Preserves Nil", nil, nil, {})
 testOutput("Test Preserves Number", 1e+123, 1e+123, {})
+testOutput("Test Preserves Buffer", buffer.fromstring("hello\0 world"), buffer.fromstring("hello\0 world"), {})
 
 local fuzz = math.random()
 
@@ -585,7 +625,6 @@ testOutput("Test Move 1", testTree1, {
 		type = "move",
 		move = { key = 7 },
 		before = { key = 1 },
-		onlyChildren = false,
 	},
 })
 
@@ -599,7 +638,6 @@ testOutput("Test Move 2", testTree4, {
 		type = "move",
 		move = { key = 3, isContainer = true },
 		before = { key = 1, isContainer = true },
-		onlyChildren = false,
 	},
 })
 
@@ -613,7 +651,6 @@ testOutput("Test Move 3", testTree4, {
 		type = "move",
 		move = { key = 3, value = 12 },
 		before = { key = 2, value = 11 },
-		onlyChildren = false,
 	},
 })
 
@@ -627,7 +664,6 @@ testOutput("Test Move 4", testTree4, {
 		type = "move",
 		move = { key = 1, isContainer = true },
 		before = { key = 4, isContainer = true },
-		onlyChildren = false,
 	},
 })
 
@@ -641,8 +677,99 @@ testOutput("Test Move 5", testTree4, {
 		type = "move",
 		move = { key = 1, value = 10 },
 		before = { key = 3, value = 12 },
-		onlyChildren = false,
 	},
 })
 
-fuzz = math.random()
+testOutput("Test Move End", testTree4, {
+	{ 4, 5, 6 },
+	{ 7, 8, 9 },
+	{ 10, 11, 12 },
+	{ 1, 2, 3 },
+}, {
+	{
+		type = "moveEnd",
+		move = { key = 1, isContainer = true },
+	},
+})
+
+testOutput("Test Move End 2", testTree4, {
+	{ 1, 2, 3 },
+	{ 4, 5, 6 },
+	{ 7, 8, 9 },
+	{ 11, 12, 10 },
+}, {
+	{
+		type = "moveEnd",
+		move = { key = 1, value = 10 },
+	},
+})
+
+testOutput("Test Move End 3", testTree3, {
+	1,
+	2,
+	3,
+	nil,
+	5,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	6,
+	4,
+}, {
+	{
+		type = "moveEnd",
+		move = { key = 5, value = 4 },
+	},
+})
+
+testOutput("Test Move End 4", testTree6, {
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			3,
+			4,
+			5,
+			"slayy",
+			6,
+			6,
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+			},
+		},
+	},
+}, {
+	{
+		type = "moveEnd",
+		move = { key = 5, isContainer = true },
+	},
+})
+
+testOutput("Test Move End 5", testTree6, {
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			4,
+			5,
+			"slayy",
+			{
+				"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+				43,
+				{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+			},
+			6,
+			6,
+			3,
+		},
+	},
+}, {
+	{
+		type = "moveEnd",
+		move = { key = 1, value = 3 },
+	},
+})
