@@ -1,7 +1,5 @@
 --!strict
 
--- Fuzz json given a max-depth
-
 -- Actions to generate random JSON+buffer-acceptable value
 type Action = (depth: number) -> any
 

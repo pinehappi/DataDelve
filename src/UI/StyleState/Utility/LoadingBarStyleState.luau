@@ -10,6 +10,17 @@
 
 local Theme = require(script.Parent.Parent.Parent.Theme)
 
+local GRADIENT_BILINEAR = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(0.5, 0),
+	NumberSequenceKeypoint.new(1, 1),
+})
+local GRADIENT_MOSTLY_SOLID = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0.5),
+	NumberSequenceKeypoint.new(0.5, 0),
+	NumberSequenceKeypoint.new(1, 0.5),
+})
+
 local LoadingBarStyleState = {}
 LoadingBarStyleState.__index = LoadingBarStyleState
 
@@ -44,9 +55,11 @@ function LoadingBarStyleState:update()
 		self.container.BackgroundTransparency = 0
 		local hue, _, _ = Theme.getAccentComponents(self.theme.preset, self.theme.accent)
 		self.container.BackgroundColor3 = Color3.new(0.6, 0.6, 0.6)
+		self.fill.UIGradient.Transparency = GRADIENT_MOSTLY_SOLID
 	else
 		self.container.BackgroundTransparency = 0.75
 		self.container.BackgroundColor3 = self.theme.colors.mainAccent
+		self.fill.UIGradient.Transparency = GRADIENT_BILINEAR
 	end
 	self.fill.BackgroundColor3 = self.theme.colors.mainAccent
 end
