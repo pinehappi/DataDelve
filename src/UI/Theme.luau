@@ -255,9 +255,9 @@ function Theme.generatePreset(preset: string, accent: string)
 			syntaxHighlight = {
 				root = Color3.fromRGB(247, 17, 255),
 				key = Color3.fromRGB(90, 223, 106),
-				key2 = Color3.fromRGB(223, 99, 28),
-				key3 = Color3.fromRGB(150, 60, 223),
-				index = Color3.fromRGB(150, 60, 223),
+				key2 = Color3.fromRGB(171, 96, 225),
+				key3 = Color3.fromRGB(107, 123, 230),
+				index = Color3.fromRGB(171, 96, 225),
 
 				array = Color3.fromRGB(116, 116, 116),
 				object = Color3.fromRGB(116, 116, 116),
@@ -265,7 +265,7 @@ function Theme.generatePreset(preset: string, accent: string)
 				number = Color3.fromRGB(241, 190, 36),
 				string = Color3.fromRGB(78, 199, 243),
 				null = Color3.fromRGB(243, 243, 243),
-				buffer = Color3.fromRGB(116, 116, 116),
+				buffer = Color3.fromRGB(223, 99, 28),
 			},
 		}
 		colors.button.input = {
@@ -406,8 +406,8 @@ function Theme.generatePreset(preset: string, accent: string)
 			syntaxHighlight = {
 				root = Color3.fromRGB(152, 11, 159),
 				key = Color3.fromRGB(60, 124, 65),
-				key2 = Color3.fromRGB(157, 83, 18),
-				key3 = Color3.fromRGB(105, 42, 157),
+				key2 = Color3.fromRGB(105, 42, 157),
+				key3 = Color3.fromRGB(45, 63, 135),
 				index = Color3.fromRGB(105, 42, 157),
 
 				array = Color3.fromRGB(95, 95, 95),
@@ -416,7 +416,7 @@ function Theme.generatePreset(preset: string, accent: string)
 				number = Color3.fromRGB(147, 116, 22),
 				string = Color3.fromRGB(44, 113, 138),
 				null = Color3.fromRGB(29, 29, 29),
-				buffer = Color3.fromRGB(95, 95, 95),
+				buffer = Color3.fromRGB(157, 83, 18),
 			},
 		}
 		colors.button.input = {
@@ -748,7 +748,7 @@ function Theme.generatePreset(preset: string, accent: string)
 					number = Color3.fromRGB(255, 198, 0),
 					string = Color3.fromRGB(173, 241, 149),
 					null = Color3.fromRGB(204, 204, 204),
-					buffer = Color3.fromRGB(102, 102, 102),
+					buffer = Color3.fromRGB(253, 160, 129),
 				}
 				else {
 					root = Color3.fromRGB(0, 0, 127),
@@ -763,7 +763,7 @@ function Theme.generatePreset(preset: string, accent: string)
 					number = Color3.fromRGB(0, 127, 127),
 					string = Color3.fromRGB(127, 0, 127),
 					null = Color3.fromRGB(127, 127, 0),
-					buffer = Color3.fromRGB(127, 127, 127),
+					buffer = Color3.fromRGB(127, 63, 0),
 				},
 		}
 	else
