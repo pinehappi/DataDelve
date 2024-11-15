@@ -449,7 +449,8 @@ function App.new(id: string)
 			return
 		end
 
-		local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+		local popupPosition = self.widget:GetRelativeMousePosition()
+		local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
 			title = "Delete key?",
 			message = "Are you sure you want to do this?",
 		})
@@ -459,11 +460,10 @@ function App.new(id: string)
 				return
 			end
 
-			local confirmedAgain =
-				ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-					title = "Confirm again",
-					message = `You are going to delete the key <b>{self.session.currentKey}</b>.`,
-				})
+			local confirmedAgain = ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
+				title = "Confirm again",
+				message = `You are going to delete the key <b>{self.session.currentKey}</b>.`,
+			})
 
 			if confirmedAgain then
 				if not self:_canEditCurrentKey() then
@@ -471,14 +471,17 @@ function App.new(id: string)
 				end
 
 				self:_wrapEditKeyOperation(function()
+					local keyName = self.session.currentKey
 					local success, err = self.session:tryDeleteCurrentKey()
 
 					if success then
-						local keyName = self.session.currentKey
 						self.ui.styleStates.breadcrumbs:popCrumb()
+
 						if not Settings.get("listDeletedKeys") then
 							self.ui.styleStates.browse.loadMore:tryRemove(keyName)
 						end
+
+						self.uiMessages:success(`Deleted <b>{keyName}</b>.`)
 					else
 						self.uiMessages:reportDataStoreError(err)
 					end
