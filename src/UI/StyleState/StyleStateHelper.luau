@@ -1,4 +1,4 @@
-export type TransitionSpeed = "fast" | "slow" | "instant" | "veryFast" | nil
+export type TransitionSpeed = "fast" | "slow" | "instant" | "veryFast" | "superDuperFast" | nil
 export type StyleState = {
 	from: (theme: any, object: GuiObject, ...any) -> StyleState,
 
@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 
 local StyleStateHelper = {}
 
+StyleStateHelper.superDuperFastTween = TweenInfo.new(0.05, Enum.EasingStyle.Sine)
 StyleStateHelper.veryFastTween = TweenInfo.new(0.2, Enum.EasingStyle.Quad)
 StyleStateHelper.fastTween = TweenInfo.new(0.35, Enum.EasingStyle.Sine)
 StyleStateHelper.slowTween = TweenInfo.new(1, Enum.EasingStyle.Quad)
@@ -23,6 +24,8 @@ function StyleStateHelper.getTweenInfoForSpeed(speed: TransitionSpeed)
 		tweenInfo = StyleStateHelper.instantTween
 	elseif speed == "veryFast" then
 		tweenInfo = StyleStateHelper.veryFastTween
+	elseif speed == "superDuperFast" then
+		tweenInfo = StyleStateHelper.superDuperFastTween
 	end
 
 	return tweenInfo

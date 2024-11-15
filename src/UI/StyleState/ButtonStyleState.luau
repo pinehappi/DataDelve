@@ -50,14 +50,14 @@ function ButtonStyleState.from(theme, button: TextButton, options: ButtonStyleSt
 			end)
 		elseif input.UserInputType == Enum.UserInputType.MouseMovement then
 			self._hovering = true
-			self:update()
+			self:update(if self.style == "transparent" then "superDuperFast" else nil)
 		end
 	end)
 
 	self._endedConnection = button.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			self._hovering = false
-			self:update()
+			self:update(if self.style == "transparent" then "superDuperFast" else nil)
 		end
 	end)
 
