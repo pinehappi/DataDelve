@@ -1136,5 +1136,18 @@
         <int name="ZIndex">1</int>
       </Properties>
     </Item>
+    <Item class="UIAspectRatioConstraint" referent="23">
+      <Properties>
+        <string name="Name">UIAspectRatioConstraint</string>
+        <float name="AspectRatio">2</float>
+        <token name="AspectType">1</token>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <token name="DominantAxis">1</token>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+      </Properties>
+    </Item>
   </Item>
 </roblox>
