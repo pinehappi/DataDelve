@@ -12,6 +12,7 @@ local FrameTemplate = script.FrameTemplate
 local DropShadowTemplate = script.DropShadowTemplate
 local TextLabelTemplate = script.TextLabelTemplate
 
+local APPEAR_DELAY = 0.5
 local APPEAR_DURATION = 0.06
 
 local TOOLTIP_DISTANCE = 8
@@ -24,6 +25,9 @@ local SHADOW_EXTRA_SIZE_Y = 26
 local SHADOW_OFFSET_X = -15
 local SHADOW_OFFSET_Y = -9
 
+--[[ Main Tooltip Interface ]]
+
+-- Bind tooltip to button, placing it right below.
 function Tooltip.bindButtonGeneric(theme: any, button: GuiObject, message: string)
 	Tooltip.bind(theme, button, message, {
 		on = button,
@@ -32,17 +36,46 @@ function Tooltip.bindButtonGeneric(theme: any, button: GuiObject, message: strin
 	})
 end
 
+-- Ignores rotation
+local function isHovering(object: GuiObject, position: Vector2): boolean
+	return (object.AbsolutePosition.X <= position.X)
+		and (object.AbsolutePosition.X + object.AbsoluteSize.X >= position.X)
+		and (object.AbsolutePosition.Y <= position.Y)
+		and (object.AbsolutePosition.Y + object.AbsoluteSize.Y >= position.Y)
+end
+
+-- Bind tooltip to button with extra options
 function Tooltip.bind(theme: any, interactObject: GuiObject, message: string, showOptions: ShowOptions)
 	local tooltip = Tooltip.new(theme, message)
 	local hover = nil
+
+	-- If the interactObject moves (like when scrolling), mouse events won't fire, so have to track if the mouse is
+	-- still on the object manually
+	local positionConnection: RBXScriptConnection?
 
 	interactObject.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			local myHover = newproxy()
 			hover = myHover
-			task.wait(0.5)
+			task.wait(APPEAR_DELAY)
 
 			if (not tooltip.object) and (hover == myHover) then
+				if positionConnection then
+					positionConnection:Disconnect()
+				end
+
+				positionConnection = interactObject:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+					if not isHovering(interactObject, input.Position :: any) then
+						hover = nil
+						tooltip:clear()
+
+						if positionConnection then
+							positionConnection:Disconnect()
+							positionConnection = nil
+						end
+					end
+				end)
+
 				tooltip:show(showOptions)
 			end
 		elseif
@@ -51,6 +84,11 @@ function Tooltip.bind(theme: any, interactObject: GuiObject, message: string, sh
 		then
 			hover = nil
 			tooltip:clear()
+
+			if positionConnection then
+				positionConnection:Disconnect()
+				positionConnection = nil
+			end
 		end
 	end)
 
@@ -58,9 +96,16 @@ function Tooltip.bind(theme: any, interactObject: GuiObject, message: string, sh
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			hover = nil
 			tooltip:clear()
+
+			if positionConnection then
+				positionConnection:Disconnect()
+				positionConnection = nil
+			end
 		end
 	end)
 end
+
+--[[ Internal Tooltip Stuff ]]
 
 function Tooltip.new(theme: any, message: string)
 	local self = setmetatable({
