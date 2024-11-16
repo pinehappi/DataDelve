@@ -65,6 +65,14 @@ function TabsStyleState.from(theme, frame: Frame)
 	return self
 end
 
+function TabsStyleState:isSelecting(name: string?): boolean
+	if self.selecting == nil or name == nil then
+		return self.selecting == name
+	else
+		return self.selecting:lower() == name:lower()
+	end
+end
+
 function TabsStyleState:select(name: string)
 	if self.selecting == name then
 		return

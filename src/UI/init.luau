@@ -330,9 +330,9 @@ function UI:autoFocus()
 	task.delay(0, function()
 		if self.parent and self.parent.Enabled then
 			if self.activeView == "game" then
-				if self.styleStates.connect.tabs.selecting:lower() == "connect" then
+				if self.styleStates.connect.tabs:isSelecting("connect") then
 					self.styleStates.connect.dataStoreNameTextBox.textBox:CaptureFocus()
-				elseif self.styleStates.connect.tabs.selecting:lower() == "list" then
+				elseif self.styleStates.connect.tabs:isSelecting("list") then
 					self.styleStates.connect.prefix.textBox:CaptureFocus()
 				end
 			elseif self.activeView == "datastore" then
@@ -405,7 +405,7 @@ function UI:_updateConnectCentering()
 		if
 			self.gui.ConnectDataStore.Content.DataStoreList.Visible
 			and self.gui.ConnectDataStore.Content.DataStoreList.Table.Visible
-			and self.styleStates.connect.tabs.selecting == "list"
+			and self.styleStates.connect.tabs:isSelecting("list")
 		then
 			self.gui.ConnectDataStore.Content.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 			self.gui.ConnectDataStore.Content.UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
