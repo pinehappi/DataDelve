@@ -339,7 +339,8 @@ function App.new(id: string)
 			return
 		end
 
-		local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+		local popupPosition = self.widget:GetRelativeMousePosition()
+		local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
 			title = "Delete key?",
 			message = "Are you sure you want to do this?",
 		})
@@ -349,11 +350,10 @@ function App.new(id: string)
 				return
 			end
 
-			local confirmedAgain =
-				ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-					title = "Confirm again",
-					message = `You are going to delete the key <b>{key.KeyName}</b>.`,
-				})
+			local confirmedAgain = ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
+				title = "Confirm again",
+				message = `You are going to delete the key <b>{key.KeyName}</b>.`,
+			})
 
 			if confirmedAgain then
 				local styleState = self.ui.styleStates.browse.loadMore:get(key.KeyName)
@@ -723,8 +723,9 @@ function App.new(id: string)
 	end)
 
 	self.ui.versionsView.versionDeleted:Connect(function(version: string)
+		local popupPosition = self.widget:GetRelativeMousePosition()
 		if
-			not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+			not ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
 				title = "Delete version?",
 				message = "This is PERMANENT. You cannot undo this.",
 			})
@@ -733,7 +734,7 @@ function App.new(id: string)
 		end
 
 		if
-			not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+			not ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
 				title = "Are you sure?",
 				message = 'Deleting this version is <font color="#ff0000"><b>PERMANENT</b></font>. You cannot undo this!',
 			})
