@@ -20,7 +20,14 @@ function ExportImportHelper.export(fileName: string, value: any): (boolean, stri
 
 	local originalSelection = SelectionService:Get()
 
-	local json = HttpService:JSONEncode(value)
+	local json: string
+	local success, err = pcall(function()
+		json = HttpService:JSONEncode(value)
+	end)
+	if not success then
+		return false, err
+	end
+
 	local moduleScript = Instance.new("ModuleScript")
 
 	moduleScript.Archivable = false
