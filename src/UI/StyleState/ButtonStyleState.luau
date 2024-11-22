@@ -124,19 +124,15 @@ end
 
 -- Private
 function ButtonStyleState:_findStyleableChildren()
-	for _, label in self.button:GetDescendants() do
-		if label:IsA("TextLabel") and (not label:GetAttribute("Exclude")) then
-			table.insert(self._textLabels, label)
-		end
-	end
-	for _, label in self.button:GetDescendants() do
-		if label:IsA("ImageLabel") and (not label:GetAttribute("Exclude")) then
-			table.insert(self._imageLabels, label)
-		end
-	end
-	for _, stroke in self.button:GetDescendants() do
-		if stroke:IsA("UIStroke") and (not stroke:GetAttribute("Exclude")) then
-			table.insert(self._strokes, stroke)
+	for _, descendant in self.button:GetDescendants() do
+		if not descendant:GetAttribute("Exclude") then
+			if descendant:IsA("TextLabel") then
+				table.insert(self._textLabels, descendant)
+			elseif descendant:IsA("ImageLabel") then
+				table.insert(self._imageLabels, descendant)
+			elseif descendant:IsA("UIStroke") then
+				table.insert(self._strokes, descendant)
+			end
 		end
 	end
 end

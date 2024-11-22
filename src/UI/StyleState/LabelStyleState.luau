@@ -39,7 +39,7 @@ function LabelStyleState.fromDescendants(theme, ancestor: GuiObject, options: La
 end
 
 function LabelStyleState:update(speed: StyleStateHelper.TransitionSpeed)
-	local property = if self.label:IsA("TextLabel") then "TextColor3" else "ImageColor3"
+	local property = if self.label:IsA("ImageLabel") then "ImageColor3" else "TextColor3"
 	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
 	local color = self.overridenColor
 		or self.theme.colors[if self.style == "text" then "text" elseif self.style == "error" then "error" else "text"]
