@@ -147,6 +147,7 @@ function Tree.new(
 
 	self.frame.CanvasPosition = Vector2.new(0, 0)
 	self.frame.BackgroundColor3 = self._colors.background
+	self.frame.ScrollBarImageColor3 = self._colors.scrollbar
 
 	self:_flattenData()
 	self:_updateAllVisible()
@@ -197,16 +198,12 @@ function Tree.new(
 		end),
 
 		theme.colorsChanged:Connect(function()
-			self._colors = getHighlightColors(theme)
-			self.frame.BackgroundColor3 = self._colors.background
-			self:_updateAllBranchFrames()
+			self:_updateColors()
 		end),
 
 		Settings.changed:Connect(function(settingName)
 			if settingName == "highlightColors" or settingName == "useAlternatingKeyColors" then
-				self._colors = getHighlightColors(theme)
-				self.frame.BackgroundColor3 = self._colors.background
-				self:_updateAllBranchFrames()
+				self:_updateColors()
 			end
 		end),
 	}
@@ -2683,7 +2680,7 @@ function Tree:_updateBranchVisible(index)
 		-- Splicing the closed region out
 		-- Add 1 so it doesn't include the parent branch
 		self._visibleIndexes = spliceOut(self._visibleIndexes, startVisibleIndex + 1, endVisibleIndex)
-	-- Open
+		-- Open
 	else
 		local addedVisibleIndexes = table.create(32)
 		local openedStack = table.create(8)
@@ -2773,7 +2770,7 @@ function Tree:_redrawBranches()
 			)
 			startOffset -= distanceFromSelectingBranch
 			self.frame.UIPadding.PaddingTop = UDim.new(0, startOffset)
-		-- Simulate the offset as if the selecting branch were rendered when it goes out of frame
+			-- Simulate the offset as if the selecting branch were rendered when it goes out of frame
 		elseif self.frame.CanvasPosition.Y > selectingBranchTop then
 			startOffset = SIZE_PER_BRANCH
 				* (
@@ -2970,6 +2967,13 @@ function Tree:_updateAllBranchFrames()
 	for index, frame in self._frames do
 		self:_updateBranchFrame(frame, self._flatBranches[index], index)
 	end
+end
+
+function Tree:_updateColors()
+	self._colors = getHighlightColors(self.theme)
+	self.frame.BackgroundColor3 = self._colors.background
+	self.frame.ScrollBarImageColor3 = self._colors.scrollbar
+	self:_updateAllBranchFrames()
 end
 
 function Tree:_makeDirty()

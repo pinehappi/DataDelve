@@ -243,6 +243,8 @@ function Theme.generatePreset(preset: string, accent: string)
 			popupBackground = Color3.fromRGB(40, 40, 40),
 			popupBackgroundOutline = Color3.fromRGB(62, 62, 62),
 
+			scrollbar = Color3.fromRGB(150, 150, 150),
+
 			scrimTransparency = 0.75,
 
 			imageBackground = Color3.fromRGB(60, 60, 60),
@@ -393,6 +395,8 @@ function Theme.generatePreset(preset: string, accent: string)
 
 			popupBackground = Color3.fromRGB(238, 238, 238),
 			popupBackgroundOutline = Color3.fromRGB(170, 170, 170),
+
+			scrollbar = Color3.fromRGB(120, 120, 120),
 
 			scrimTransparency = 0.75,
 
@@ -718,6 +722,8 @@ function Theme.generatePreset(preset: string, accent: string)
 				Enum.StudioStyleGuideColor.MainBackground,
 				Enum.StudioStyleGuideModifier.Default
 			):Lerp(Color3.new(0, 0, 0), if isDark then 0.3 else 0.12),
+
+			scrollbar = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DimmedText),
 
 			scrimTransparency = 0.6,
 

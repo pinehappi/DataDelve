@@ -4,6 +4,7 @@ export type Colors = {
 	background: Color3,
 	hoverBackground: Color3,
 	selectBackground: Color3,
+	scrollbar: Color3,
 
 	mainAccent: Color3,
 
@@ -66,6 +67,7 @@ return function(theme)
 		)
 		colors.mainAccent = theme.colors.mainAccent
 		colors.disabled = theme.colors.disabledText
+		colors.scrollbar = theme.colors.scrollbar
 	elseif highlightColors == "Script Editor" then
 		local studio = settings().Studio
 		colors = {
@@ -95,6 +97,11 @@ return function(theme)
 
 			disabled = theme.colors.disabledText,
 		}
+
+		colors.scrollbar = if theme.getContrastRatio(colors.background, Color3.fromRGB(200, 200, 200))
+				> theme.getContrastRatio(colors.background, Color3.fromRGB(100, 100, 100))
+			then Color3.fromRGB(200, 200, 200)
+			else Color3.fromRGB(100, 100, 100)
 	end
 
 	colors.selectText = table.clone(colors)

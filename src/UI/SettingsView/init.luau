@@ -15,6 +15,7 @@ local Tree = require(script.Parent.Viewers.Tree)
 
 local StyleStateHelper = require(StyleState.StyleStateHelper)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
+local ScrollingFrameStyleState = require(StyleState.ScrollingFrameStyleState)
 local ButtonStyleState = require(StyleState.ButtonStyleState)
 local LabelStyleState = require(StyleState.LabelStyleState)
 local SeparatorStyleState = require(StyleState.SeparatorStyleState)
@@ -118,6 +119,7 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 		theme = theme,
 		frame = frame,
 		styleStates = {
+			scrollbar = ScrollingFrameStyleState.from(theme, frame.Content),
 			headerBackground = BackgroundStyleState.from(theme, frame.HeaderBackground, { style = "header" }),
 			title = LabelStyleState.from(theme, frame.Title),
 			presetButtons = {

@@ -14,6 +14,7 @@ local StyleStateWrapper = require(StyleState.StyleStateWrapper)
 local StyleStateHelper = require(StyleState.StyleStateHelper)
 
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
+local ScrollingFrameStyleState = require(StyleState.ScrollingFrameStyleState)
 local BreadcrumbsStyleState = require(StyleState.BreadcrumbsStyleState)
 local ButtonStyleState = require(StyleState.ButtonStyleState)
 local SeparatorStyleState = require(StyleState.SeparatorStyleState)
@@ -60,6 +61,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 		}),
 
 		connect = {
+			scrollingFrame = ScrollingFrameStyleState.from(theme, gui.ConnectDataStore.Content),
 			tabs = TabsStyleState.from(theme, gui.ConnectDataStore.Content.Form.Tabs),
 
 			prefix = ShortcutsTextBoxStyleState.from(theme, gui.ConnectDataStore.Content.Form.Prefix.TextBox),
@@ -118,6 +120,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 			historyLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.History),
 		},
 		browse = {
+			scrollingFrame = ScrollingFrameStyleState.from(theme, gui.BrowseKeys.Keys),
 			key = ShortcutsTextBoxStyleState.from(theme, gui.BrowseKeys.Key),
 
 			separators = SeparatorStyleState.fromDescendants(theme, gui.BrowseKeys),

@@ -3085,7 +3085,7 @@
           <int name="SelectionOrder">0</int>
           <UDim2 name="Size">
             <XS>1</XS>
-            <XO>0</XO>
+            <XO>-4</XO>
             <YS>1</YS>
             <YO>0</YO>
           </UDim2>
@@ -3095,7 +3095,7 @@
           <Content name="TopImage">
             <url>rbxasset://textures/ui/Scroll/scroll-top.png</url>
           </Content>
-          <token name="VerticalScrollBarInset">0</token>
+          <token name="VerticalScrollBarInset">2</token>
           <token name="VerticalScrollBarPosition">0</token>
           <bool name="Visible">true</bool>
           <int name="ZIndex">1</int>
@@ -6635,7 +6635,7 @@
               </UDim>
               <UDim name="PaddingRight">
                 <S>0</S>
-                <O>16</O>
+                <O>8</O>
               </UDim>
               <UDim name="PaddingTop">
                 <S>0</S>
@@ -8693,7 +8693,7 @@
             </UDim>
             <UDim name="PaddingRight">
               <S>0</S>
-              <O>0</O>
+              <O>2</O>
             </UDim>
             <UDim name="PaddingTop">
               <S>0</S>
@@ -13668,7 +13668,7 @@
           <int name="SelectionOrder">0</int>
           <UDim2 name="Size">
             <XS>1</XS>
-            <XO>0</XO>
+            <XO>-4</XO>
             <YS>1</YS>
             <YO>-34</YO>
           </UDim2>

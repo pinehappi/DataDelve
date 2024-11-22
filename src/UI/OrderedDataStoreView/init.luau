@@ -360,6 +360,7 @@ end
 function OrderedDataStoreView:_updateHighlightColors(options: { tween: boolean })
 	self._highlightColors = getHighlightColors(self.theme)
 	self.frame.ClickBackground.BackgroundColor3 = self._highlightColors.background
+	self.frame.Keys.ScrollBarImageColor3 = self._highlightColors.scrollbar
 
 	if options.tween then
 		self.styleStates.tableLabels.Empty:overrideColor(self._highlightColors.plain):update()
