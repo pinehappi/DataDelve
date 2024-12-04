@@ -298,7 +298,7 @@
         <int64 name="SourceAssetId">-1</int64>
         <token name="Style">0</token>
         <BinaryString name="Tags"></BinaryString>
-        <bool name="Visible">false</bool>
+        <bool name="Visible">true</bool>
         <int name="ZIndex">1</int>
       </Properties>
       <Item class="UIPadding" referent="6">
@@ -2699,7 +2699,7 @@
             <XS>0</XS>
             <XO>-8</XO>
             <YS>0</YS>
-            <YO>-8</YO>
+            <YO>-7</YO>
           </UDim2>
           <Ref name="RootLocalizationTable">null</Ref>
           <float name="Rotation">0</float>
@@ -9088,7 +9088,7 @@
             <int name="SelectionOrder">0</int>
             <UDim2 name="Size">
               <XS>1</XS>
-              <XO>0</XO>
+              <XO>-12</XO>
               <YS>0</YS>
               <YO>0</YO>
             </UDim2>
@@ -22619,7 +22619,7 @@
           <int name="SelectionOrder">0</int>
           <UDim2 name="Size">
             <XS>1</XS>
-            <XO>0</XO>
+            <XO>8</XO>
             <YS>1</YS>
             <YO>-90</YO>
           </UDim2>
@@ -22785,7 +22785,7 @@
             <int name="SelectionOrder">0</int>
             <UDim2 name="Size">
               <XS>1</XS>
-              <XO>0</XO>
+              <XO>-12</XO>
               <YS>0</YS>
               <YO>0</YO>
             </UDim2>
