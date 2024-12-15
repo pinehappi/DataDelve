@@ -354,7 +354,7 @@ function UI:updateSettingsButtonPosition()
 	else
 		self.styleStates.settingsButton.button.Parent =
 			self.gui.ConnectDataStore.Content["Put settings button here when breadcrumbs is disabled"]
-		self.styleStates.settingsButton.button.Position = UDim2.new(1, -12, 0, 10)
+		self.styleStates.settingsButton.button.Position = UDim2.new(1, -2, 0, 6)
 	end
 end
 
