@@ -10,7 +10,7 @@
       <BinaryString name="AttributesSerialize"></BinaryString>
       <bool name="AutoButtonColor">false</bool>
       <bool name="AutoLocalize">true</bool>
-      <token name="AutomaticSize">2</token>
+      <token name="AutomaticSize">3</token>
       <Color3 name="BackgroundColor3">
         <R>0.3137255</R>
         <G>0.3137255</G>

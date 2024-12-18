@@ -699,6 +699,8 @@ function UI:promptDuplicateMoveKey(position: Vector2, isAllScopes: boolean): { k
 		end,
 	})
 
+	popup.frame.AutomaticSize = Enum.AutomaticSize.Y
+
 	local styleStates = popup.wrapper.styleStates
 
 	local validator = if isAllScopes then Validators.allScopesKey else Validators.dataStoreKey

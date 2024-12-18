@@ -1553,7 +1553,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 					end
 				end)
 
-				task.wait(1) -- A little debounce in case the user clicks again because they don't see the widget
+				task.wait(0.5) -- A little debounce in case the user clicks again because they don't see the widget
 				local shouldSubmit: boolean
 				if not hexEditorWidget.dead then
 					shouldSubmit = resultInstructionEvent.Event:Wait()
