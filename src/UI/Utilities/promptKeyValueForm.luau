@@ -155,7 +155,7 @@ return function(theme, gui, options: Options): FormResult?
 	end)
 	valueTextBoxStyleState.textBox:GetPropertyChangedSignal("Text"):Connect(function()
 		-- Syntax highlighting
-		local valueType = JSONHelper.parseInputString(valueTextBoxStyleState.textBox.Text, "")
+		local valueType = JSONHelper.parseInputString(valueTextBoxStyleState.textBox.Text)
 		valueTextBoxStyleState:overrideTextColor(theme.colors.syntaxHighlight[valueType]):update("veryFast")
 
 		-- Validate
