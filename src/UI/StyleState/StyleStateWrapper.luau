@@ -14,6 +14,7 @@ function StyleStateWrapper.new<
 	T --[[: {[string]: StyleState}]]
 >(theme, styleStates: T, options: StyleStateWrapperOptions?)
 	options = options or {}
+	assert(options)
 
 	local self = setmetatable({
 		styleStates = styleStates,
