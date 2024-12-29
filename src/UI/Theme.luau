@@ -65,11 +65,11 @@ function Theme.improveContrast(color: Color3, backgroundColor: Color3)
 	return originalColor
 end
 
-function Theme.new()
+function Theme.new() : Theme
 	local self = setmetatable({
 		accent = "red",
 		preset = "dark",
-	}, Theme)
+	}, Theme) :: Theme
 	self.colors = Theme.generatePreset(self.preset, self.accent)
 	self.icons = {
 		export = "rbxassetid://18872446140",
@@ -803,5 +803,5 @@ StudioSettings.ThemeChanged:Connect(function()
 	end
 end)
 
-export type Theme = typeof(Theme.new())
+export type Theme = typeof(setmetatable({},Theme))
 return Theme
