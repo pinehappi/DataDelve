@@ -59,7 +59,7 @@ function JSONHelper.parseInputString(text: string): (JSONType, JSONValue)
 	end
 end
 
-function JSONHelper.toInputString(value: JSONValue, type: JSONType): string
+function JSONHelper.toInputString(value: JSONValue, type: JSONType|string): string
 	if type == "number" or type == "boolean" then
 		return tostring(value)
 	elseif type == "null" then
