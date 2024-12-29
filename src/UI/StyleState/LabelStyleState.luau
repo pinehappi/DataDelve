@@ -9,6 +9,7 @@ export type LabelStyleStateFromOptions = {
 }
 function LabelStyleState.from(theme, label: GuiLabel, options: LabelStyleStateFromOptions?)
 	options = options or {}
+	assert(options)
 
 	local self = setmetatable({
 		label = label,
