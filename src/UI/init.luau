@@ -301,7 +301,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 	return self
 end
 
-function UI:setParent(parent: LayerCollectorer)
+function UI:setParent(parent: LayerCollector)
 	self.gui.Parent = parent
 	self.parent = parent
 end

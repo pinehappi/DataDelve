@@ -70,7 +70,7 @@ function ConfirmDialogStyleState.from(theme, dialog: typeof(script.ConfirmDialog
 	local self = setmetatable({
 		theme = theme,
 		frame = dialog,
-		options = options.options,
+		options = options,
 
 		_styleStates = {
 			background = BackgroundStyleState.from(theme, dialog, {

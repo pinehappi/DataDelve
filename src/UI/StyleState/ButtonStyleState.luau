@@ -9,6 +9,7 @@ export type ButtonStyleStateFromOptions = {
 }
 function ButtonStyleState.from(theme, button: TextButton, options: ButtonStyleStateFromOptions?)
 	options = options or {}
+	assert(options)
 
 	local self = setmetatable({
 		theme = theme,
@@ -182,5 +183,7 @@ function ButtonStyleState:_updateChildren(
 		end
 	end
 end
+
+export type ButtonStyleState = typeof(setmetatable({},ButtonStyleState))
 
 return ButtonStyleState

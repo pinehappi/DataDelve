@@ -18,6 +18,8 @@ function CheckboxStyleState.from(
 	options: CheckboxOptions?
 )
 	options = options or {}
+	assert(options)
+
 	checkbox.Check:SetAttribute("Exclude", true) -- Exclude it from button theming
 
 	local self = setmetatable({
