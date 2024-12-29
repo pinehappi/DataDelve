@@ -1846,7 +1846,7 @@ function Tree:_promptModalTextBox(
 	options: {
 		defaultText: string,
 		ignoreIndent: boolean,
-		updater: ((TextBox) -> ())?,
+		updater: ((TextBox,TextBoxStyleState.TextBoxStyleState) -> ())?,
 	}
 )
 	local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
@@ -1888,7 +1888,7 @@ function Tree:_promptModalTextBox(
 	local entered = false
 	local function update()
 		if options.updater then
-			options.updater(textBox)
+			options.updater(textBox,styleState)
 		end
 	end
 
