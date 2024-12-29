@@ -2,7 +2,6 @@ local rfmt = require(script.Parent.rfmt)
 
 local Types = require(script.Parent.Types)
 local Theme = require(script.Theme)
-local Validators = require(script.Parent.Validators)
 
 local PopupHelper = require(script.PopupHelper)
 local Tooltip = require(script.Tooltip)
@@ -14,7 +13,6 @@ local StyleStateWrapper = require(StyleState.StyleStateWrapper)
 local StyleStateHelper = require(StyleState.StyleStateHelper)
 
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
-local ScrollingFrameStyleState = require(StyleState.ScrollingFrameStyleState)
 local BreadcrumbsStyleState = require(StyleState.BreadcrumbsStyleState)
 local ButtonStyleState = require(StyleState.ButtonStyleState)
 local SeparatorStyleState = require(StyleState.SeparatorStyleState)
@@ -27,7 +25,6 @@ local ShortcutsTextBoxStyleState = require(StyleState.Input.ShortcutsTextBoxStyl
 
 local SkeletonStyleState = require(StyleState.Utility.SkeletonStyleState)
 local ContextMenuStyleState = require(StyleState.Utility.ContextMenuStyleState)
-local PopupFormStyleState = require(StyleState.Utility.PopupFormStyleState)
 
 local OrderedDataStoreView = require(script.OrderedDataStoreView)
 local SettingsView = require(script.SettingsView)
@@ -61,7 +58,6 @@ function UI.new(theme: Theme.Theme, uiMessages)
 		}),
 
 		connect = {
-			scrollingFrame = ScrollingFrameStyleState.from(theme, gui.ConnectDataStore.Content),
 			tabs = TabsStyleState.from(theme, gui.ConnectDataStore.Content.Form.Tabs),
 
 			prefix = ShortcutsTextBoxStyleState.from(theme, gui.ConnectDataStore.Content.Form.Prefix.TextBox),
@@ -120,7 +116,6 @@ function UI.new(theme: Theme.Theme, uiMessages)
 			historyLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.History),
 		},
 		browse = {
-			scrollingFrame = ScrollingFrameStyleState.from(theme, gui.BrowseKeys.Keys),
 			key = ShortcutsTextBoxStyleState.from(theme, gui.BrowseKeys.Key),
 
 			separators = SeparatorStyleState.fromDescendants(theme, gui.BrowseKeys),
@@ -301,7 +296,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 	return self
 end
 
-function UI:setParent(parent: LayerCollectorer)
+function UI:setParent(parent: LayerCollector)
 	self.gui.Parent = parent
 	self.parent = parent
 end
@@ -333,9 +328,9 @@ function UI:autoFocus()
 	task.delay(0, function()
 		if self.parent and self.parent.Enabled then
 			if self.activeView == "game" then
-				if self.styleStates.connect.tabs:isSelecting("connect") then
+				if self.styleStates.connect.tabs.selecting:lower() == "connect" then
 					self.styleStates.connect.dataStoreNameTextBox.textBox:CaptureFocus()
-				elseif self.styleStates.connect.tabs:isSelecting("list") then
+				elseif self.styleStates.connect.tabs.selecting:lower() == "list" then
 					self.styleStates.connect.prefix.textBox:CaptureFocus()
 				end
 			elseif self.activeView == "datastore" then
@@ -354,7 +349,7 @@ function UI:updateSettingsButtonPosition()
 	else
 		self.styleStates.settingsButton.button.Parent =
 			self.gui.ConnectDataStore.Content["Put settings button here when breadcrumbs is disabled"]
-		self.styleStates.settingsButton.button.Position = UDim2.new(1, -2, 0, 6)
+		self.styleStates.settingsButton.button.Position = UDim2.new(1, -12, 0, 10)
 	end
 end
 
@@ -408,7 +403,7 @@ function UI:_updateConnectCentering()
 		if
 			self.gui.ConnectDataStore.Content.DataStoreList.Visible
 			and self.gui.ConnectDataStore.Content.DataStoreList.Table.Visible
-			and self.styleStates.connect.tabs:isSelecting("list")
+			and self.styleStates.connect.tabs.selecting == "list"
 		then
 			self.gui.ConnectDataStore.Content.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 			self.gui.ConnectDataStore.Content.UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -666,108 +661,6 @@ function UI:createDataUsageCard(keyUsage: number, metadataUsage: number)
 	modal.cancelled:Once(cleanup)
 
 	return card
-end
-
-function UI:promptDuplicateMoveKey(position: Vector2, isAllScopes: boolean): { key: string, shouldDelete: boolean }?
-	local popup, modal = PopupFormStyleState.createPopup(self.theme, self.gui.Parent, UDim2.fromOffset(0, 0), {
-		title = "Duplicate/Move Key",
-		buttons = { { text = "Duplicate", options = { style = "primary" } }, { text = "Cancel" } },
-		addContents = function(parent)
-			local message = Assets.Forms.Message:Clone()
-			message.Text = `This will call {rfmt.code("SetAsync")} on the new key with the contents of this key.`
-			message.Parent = parent
-
-			local textRow = Assets.Forms.TextRow:Clone()
-			textRow.Title.Text = "Key"
-			textRow.Parent = parent
-
-			local confirm = Assets.Forms.ConfirmActionCheckboxRow:Clone()
-			confirm.Message.Text = "Delete this key after (will effectively move the key)"
-			confirm.Parent = parent
-
-			return {
-				message = LabelStyleState.from(self.theme, message),
-
-				keyLabel = LabelStyleState.from(self.theme, textRow.Title),
-				keyTextBox = ShortcutsTextBoxStyleState.from(self.theme, textRow.TextBox),
-
-				confirmLabel = LabelStyleState.from(self.theme, confirm.Message),
-				confirmCheckbox = CheckboxStyleState.from(self.theme, confirm.Check, {
-					inputPair = confirm,
-				}),
-			}
-		end,
-	})
-
-	popup.frame.AutomaticSize = Enum.AutomaticSize.Y
-
-	local styleStates = popup.wrapper.styleStates
-
-	local validator = if isAllScopes then Validators.allScopesKey else Validators.dataStoreKey
-
-	popup.frame.Position = UDim2.fromOffset(position.X, position.Y)
-	popup.frame.AnchorPoint = Vector2.new(1, 0)
-
-	PopupHelper.clamp(popup.frame, self.gui.Parent, {
-		boundaryDistance = 5,
-	})
-
-	local resultEvent = Instance.new("BindableEvent")
-
-	local function updateDisabled(instant: boolean)
-		if styleStates.contents.keyTextBox.textBox.Text == "" then
-			styleStates.contents.keyTextBox:setError(nil):update("vertFast")
-			styleStates.buttons.Duplicate:setDisabled(true):update(if instant then "instant" else nil)
-		else
-			local valid, err = validator(styleStates.contents.keyTextBox.textBox.Text)
-			if valid then
-				styleStates.contents.keyTextBox:setError(nil):update("vertFast")
-				styleStates.buttons.Duplicate:setDisabled(false):update(if instant then "instant" else nil)
-			else
-				styleStates.contents.keyTextBox:setError(err):update("vertFast")
-				styleStates.buttons.Duplicate:setDisabled(true):update(if instant then "instant" else nil)
-			end
-		end
-	end
-
-	styleStates.contents.keyTextBox.textBox.FocusLost:Connect(function(entered, input)
-		if input and entered and not styleStates.buttons.Duplicate.disabled then
-			popup:interact("Duplicate")
-		end
-	end)
-	styleStates.contents.keyTextBox.textBox:GetPropertyChangedSignal("Text"):Connect(updateDisabled)
-	updateDisabled(true)
-	styleStates.contents.confirmCheckbox.toggled:Connect(function(value)
-		if value then
-			styleStates.buttons.Duplicate.button.TextLabel.Text = "Move"
-		else
-			styleStates.buttons.Duplicate.button.TextLabel.Text = "Duplicate"
-		end
-	end)
-
-	popup.interacted:Connect(function(action)
-		if action == "Duplicate" then
-			resultEvent:Fire(true)
-		else
-			resultEvent:Fire(false)
-		end
-	end)
-
-	local shouldSubmit = resultEvent.Event:Wait()
-
-	popup:destroy(true)
-	modal:destroy()
-
-	if shouldSubmit then
-		return {
-			key = styleStates.contents.keyTextBox:getText(function(err: string)
-				self.uiMessages:error(err)
-			end),
-			shouldDelete = styleStates.contents.confirmCheckbox.value,
-		}
-	else
-		return nil
-	end
 end
 
 function UI:destroy()
