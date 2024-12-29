@@ -102,7 +102,8 @@ export type ToastOptions = {
 	duration: number?,
 }
 function UIMessages:toast(options: ToastOptions?)
-	options = options or {}
+	options = options or {text=""}
+	assert(options)
 
 	local frame = FrameTemplate:Clone()
 	frame.BackgroundColor3 = self.theme.colors.message.background
@@ -117,6 +118,8 @@ function UIMessages:toast(options: ToastOptions?)
 	local icon: ImageLabel?
 	if options.icon then
 		icon = IconTemplate:Clone()
+		assert(icon)
+		
 		icon.Image = options.icon
 		icon.ImageColor3 = options.iconColor or self.theme.colors.message.text
 
