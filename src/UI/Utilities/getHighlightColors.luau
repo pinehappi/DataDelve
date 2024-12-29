@@ -78,7 +78,7 @@ return function(theme)
 			selectBackground = studio["Selection Background Color"]:Lerp(studio["Background Color"], 0.5),
 
 			mainAccent = if theme.getContrastRatio(theme.colors.mainAccent, studio["Background Color"]) < 4.5
-				then invertColor(studio["Background Color"]):lerp(theme.colors.mainAccent, 0.25)
+				then invertColor(studio["Background Color"]):Lerp(theme.colors.mainAccent, 0.25)
 				else theme.colors.mainAccent,
 
 			root = studio["Keyword Color"],
