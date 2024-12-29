@@ -65,7 +65,11 @@ function LoadMoreListStyleState:tryRemove(key: string?): boolean
 	if styleState then
 		styleState:destroy(true)
 		self.itemStyleStates[key] = nil
+		
+		return true
 	end
+	
+	return false
 end
 
 function LoadMoreListStyleState:isEmpty(): boolean
@@ -122,5 +126,7 @@ function LoadMoreListStyleState:destroy(completely: boolean)
 		self.frame:Destroy()
 	end
 end
+
+export type LoadMoreListStyleState = typeof(setmetatable({},LoadMoreListStyleState))
 
 return LoadMoreListStyleState
