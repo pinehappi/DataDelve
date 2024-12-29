@@ -662,8 +662,8 @@ function App.new(id: string)
 		})
 		self.ui.versionsView.frame.Visible = true
 
-		local loadedConnection: RBXScriptSignal
-		local closeConnection: RBXScriptSignal
+		local loadedConnection: RBXScriptConnection
+		local closeConnection: RBXScriptConnection
 		local function cleanup()
 			if self.ui.versionsView.locked then
 				return
@@ -1084,7 +1084,7 @@ end
 function App.tryGetKey(
 	self: App,
 	keyName: string,
-	options: { version: string, popCurrentCrumb: boolean }
+	options: { version: string?, popCurrentCrumb: boolean? }
 ): (boolean, string?)
 	if self._isGettingKey then
 		return false, "Already getting another key."
@@ -1245,7 +1245,7 @@ function App._wrapOrderedDataStoreOperation(self: App, func: () -> ())
 	endLoadingBar()
 end
 
-function App._tryListOrderedKeys(self: ReplicatedStorage)
+function App._tryListOrderedKeys(self: App)
 	self:_wrapOrderedDataStoreOperation(function()
 		local success, err = self.session:tryCreateOrderedKeyPages(
 			self.ui.orderedDataStoreView.order,
