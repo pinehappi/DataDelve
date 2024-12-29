@@ -409,7 +409,7 @@ function Tree:_doesChildHaveKey(index: number, key: string): boolean
 			return self:_doesSiblingOrSelfHaveKey(index + 1, key)
 		end
 	end
-	
+
 	return false
 end
 
@@ -545,7 +545,7 @@ end
 
 -- This assumes that the index to insert into is visible!
 -- Returns the branch if it was successful
-function Tree:_tryInsertInto(index: number, key: string|number, value: unknown): (any?, string?)
+function Tree:_tryInsertInto(index: number, key: string | number, value: unknown): (any?, string?)
 	self:_makeDirty()
 
 	local branch = self._flatBranches[index]
@@ -846,7 +846,7 @@ function Tree:_moveArrayElement(
 		local inbetweenRegionSize = branchStartIndex - moveBeforeIndex
 		for i = 0, branchVisibleSize do
 			newVisibleIndexes[moveBeforeVisibleIndex + i] = self._visibleIndexes[branchStartVisibleIndex + i]
-			- inbetweenRegionSize
+				- inbetweenRegionSize
 		end
 		for i = 0, branchStartVisibleIndex - moveBeforeVisibleIndex - 1 do
 			newVisibleIndexes[moveBeforeVisibleIndex + branchVisibleSize + 1 + i] = self._visibleIndexes[moveBeforeVisibleIndex + i]
@@ -891,8 +891,8 @@ function Tree:_moveArrayElement(
 		local inbetweenRegionVisibleSize = (moveBeforeVisibleIndex - 1) - branchEndVisibleIndex
 		for i = 0, inbetweenRegionVisibleSize do
 			newVisibleIndexes[branchStartVisibleIndex + i] = self._visibleIndexes[branchEndVisibleIndex + i + 1]
-			- branchSize
-			- 1
+				- branchSize
+				- 1
 		end
 		for i = 0, branchVisibleSize do
 			newVisibleIndexes[branchStartVisibleIndex + inbetweenRegionVisibleSize + 1 + i] = self._visibleIndexes[branchStartVisibleIndex + i]
@@ -1032,7 +1032,7 @@ function Tree:_moveArrayElementToEnd(branchIndex: number, branchVisibleIndex: nu
 	local visibleRemaining = #self._visibleIndexes - branchEndVisibleIndex
 	for i = 0, (#self._visibleIndexes - branchEndVisibleIndex - 1) do
 		self._visibleIndexes[branchStartVisibleIndex + i] = self._visibleIndexes[branchEndVisibleIndex + 1 + i]
-		- branchSize
+			- branchSize
 	end
 	-- Then move back the branch to the end
 	table.move(branchTemp, 1, branchSize, branchStartIndex + remaining, self._flatBranches)
@@ -1111,7 +1111,7 @@ function Tree:_updateBranchFrameSize(frame, branch)
 	local keyWidth =
 		math.clamp(CHAR_WIDTH * keyLen + 20, if typeof(branch[1]) == "number" then 25 else 100, self._maxKeyWidth)
 	frame.Key.Size = UDim2.fromOffset(keyWidth, 18)
-	frame.Value.Position = UDim2.fromOffset(25 + keyWidth,0)
+	frame.Value.Position = UDim2.fromOffset(25 + keyWidth, 0)
 	frame.Value.Size = UDim2.new(1, -(25 + keyWidth), 0, 18)
 end
 
@@ -1255,7 +1255,7 @@ end
 function Tree:_editKey(index: number, key: any, options: { skipSiblingCheck: boolean? }?): boolean
 	options = options or {}
 	assert(options)
-	
+
 	if (not options.skipSiblingCheck) and self:_doesSiblingOrSelfHaveKey(index, key) then
 		self.uiMessages:error(`Duplicate key: {key}.`)
 		return false
@@ -1428,8 +1428,8 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 	-- This variable is used when the user first switches to a type and the plugin has to find out the best default value (based on the last value).
 	-- For the object, array, and null when converting to string, calling tostring on them will not yield a useful value, so just default to "" in that case
 	local lastValue = if defaultType:find("object")
-		or defaultType:find("array")
-		or defaultType == "null"
+			or defaultType:find("array")
+			or defaultType == "null"
 		then ""
 		else defaultValues[defaultType]
 
@@ -1630,7 +1630,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 			value = defaultValues[wrapper.styleStates.typeSelect.selection],
 			type = wrapper.styleStates.typeSelect.selection,
 		}
-		
+
 		assert(result)
 
 		if options.onUnexpand(result) then
@@ -1757,7 +1757,7 @@ function Tree:_promptInsertForm(options: {
 	isArray: boolean,
 	useUserIdConstraint: boolean,
 	position: Vector2,
-	})
+})
 	local result = promptKeyValueForm(self.theme, self.gui, {
 		position = options.position,
 		title = options.title,
@@ -1846,7 +1846,7 @@ function Tree:_promptModalTextBox(
 	options: {
 		defaultText: string,
 		ignoreIndent: boolean,
-		updater: ((TextBox,TextBoxStyleState.TextBoxStyleState) -> ())?,
+		updater: ((TextBox, TextBoxStyleState.TextBoxStyleState) -> ())?,
 	}
 )
 	local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
@@ -1888,7 +1888,7 @@ function Tree:_promptModalTextBox(
 	local entered = false
 	local function update()
 		if options.updater then
-			options.updater(textBox,styleState)
+			options.updater(textBox, styleState)
 		end
 	end
 
@@ -2052,7 +2052,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				-- Main behavior
 
 				local relativePosition = mousePosition
-				- self.frame.AbsolutePosition
+					- self.frame.AbsolutePosition
 					+ Vector2.new(0, self.frame.CanvasPosition.Y)
 				copyFrame.Position = UDim2.fromOffset(offsetPosition.X, offsetPosition.Y)
 
@@ -2076,8 +2076,8 @@ function Tree:_initializeBranchFrame(frame, index: number)
 						local index = math.floor((relativePosition.Y - selectingEnd) / SIZE_PER_BRANCH)
 							+ self._selectingBranchVisibleIndex
 						local positionRelativeToIndex = relativePosition.Y
-						- (SIZE_PER_BRANCH * index)
-						- self._selectingBranchOffset
+							- (SIZE_PER_BRANCH * index)
+							- self._selectingBranchOffset
 						if positionRelativeToIndex <= DRAG_AND_DROP_REGION_SIZE / 2 then
 							dropBeforeIndex = index + 1
 						elseif positionRelativeToIndex >= SIZE_PER_BRANCH - DRAG_AND_DROP_REGION_SIZE / 2 then
@@ -2165,11 +2165,11 @@ function Tree:_initializeBranchFrame(frame, index: number)
 							self.frame.AbsolutePosition.X,
 							self.frame.AbsolutePosition.Y
 								+ SIZE_PER_BRANCH * (dropBeforeIndex - 1)
-							- self.frame.CanvasPosition.Y
+								- self.frame.CanvasPosition.Y
 								+ (
 									if dropBeforeIndex > self._selectingBranchVisibleIndex
-									then self._selectingBranchOffset
-									else 0
+										then self._selectingBranchOffset
+										else 0
 								)
 						)
 						dropAtFrame.Size = UDim2.fromOffset(self.frame.AbsoluteCanvasSize.X, 2)
@@ -2214,7 +2214,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 		self:_selectBranch(index, true)
 
-		local options : {[number]:any} = {}
+		local options: { [number]: any } = {}
 
 		if not branch.LOCKVALUE then
 			table.insert(options, { icon = self.theme.icons.edit, text = "Edit" })

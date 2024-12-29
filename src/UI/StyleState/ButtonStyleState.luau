@@ -184,6 +184,6 @@ function ButtonStyleState:_updateChildren(
 	end
 end
 
-export type ButtonStyleState = typeof(setmetatable({},ButtonStyleState))
+export type ButtonStyleState = typeof(setmetatable({}, ButtonStyleState))
 
 return ButtonStyleState

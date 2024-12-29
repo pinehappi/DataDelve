@@ -59,7 +59,7 @@ function JSONHelper.parseInputString(text: string): (JSONType, JSONValue)
 	end
 end
 
-function JSONHelper.toInputString(value: JSONValue, type: JSONType|string): string
+function JSONHelper.toInputString(value: JSONValue, type: JSONType | string): string
 	if type == "number" or type == "boolean" then
 		return tostring(value)
 	elseif type == "null" then
@@ -71,7 +71,7 @@ function JSONHelper.toInputString(value: JSONValue, type: JSONType|string): stri
 		-- Constructing non-empty objects from input string not support
 		return "{}"
 	elseif type == "string" then
-		local parsedType, parsedValue = JSONHelper.parseInputString(value::string)
+		local parsedType, parsedValue = JSONHelper.parseInputString(value :: string)
 		if (parsedType ~= type) or (parsedType == "string" and parsedValue ~= value) then
 			return `"{value}"`
 		else
@@ -81,7 +81,7 @@ function JSONHelper.toInputString(value: JSONValue, type: JSONType|string): stri
 		-- Buffer cannot be turned into string.
 		return ""
 	end
-	
+
 	return ""
 end
 

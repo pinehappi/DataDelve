@@ -10,7 +10,7 @@ type BackgroundStyleStateOptions = {
 function BackgroundStyleState.from(theme, background: Frame, options: BackgroundStyleStateOptions?)
 	options = options or {} :: BackgroundStyleStateOptions
 	assert(options)
-	
+
 	options.style = options.style or "default"
 
 	local self = setmetatable({

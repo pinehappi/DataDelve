@@ -187,9 +187,11 @@ function BreadcrumbsStyleState:popCrumb(options: { silently: boolean? }?)
 
 	local crumb = table.remove(self.crumbs)
 	self:_cleanupCrumb(crumb)
-	
+
 	local ptr = table.remove(self._pointers)
-	if ptr then ptr:Destroy() end
+	if ptr then
+		ptr:Destroy()
+	end
 
 	if not options.silently then
 		if self.currentCrumbIndex > #self.crumbs then

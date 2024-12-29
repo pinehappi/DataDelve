@@ -22,8 +22,8 @@ function PopupHelper.clamp(object: GuiObject, container: GuiBase2d?, options: Cl
 	assert(options)
 
 	container = container or object:FindFirstAncestorWhichIsA("LayerCollector")
-		
-	options.boundaryDistance = options.boundaryDistance or 10	
+
+	options.boundaryDistance = options.boundaryDistance or 10
 	assert(options.boundaryDistance)
 
 	assert(container, `{object} is not parented to a LayerCollector.`)
@@ -189,10 +189,10 @@ export type ModalOptions = {
 function PopupHelper.modal(object: GuiObject, container: GuiBase2d, options: ModalOptions?)
 	options = options or {}
 	assert(options)
-	
+
 	options.zIndex = options.zIndex or PopupHelper.DEFAULT_MODAL_ZINDEX
 	assert(options.zIndex)
-	
+
 	options.scrimTransparency = options.scrimTransparency or globalTheme.colors.scrimTransparency
 	options.reparent = if options.reparent == nil then true else options.reparent
 

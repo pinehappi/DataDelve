@@ -60,7 +60,7 @@ function Pages.wrapListing(callback: () -> DataStoreListingPages)
 				return { items = state.pages:GetCurrentPage(), isFinished = state.pages.IsFinished }
 			end
 		end,
-	}::PagesInterface)
+	} :: PagesInterface)
 end
 
 function Pages:get(pageNumber: number): ({ unknown }?, string?)
@@ -85,7 +85,7 @@ function Pages:get(pageNumber: number): ({ unknown }?, string?)
 	elseif pageNumber > #self.cache then
 		return nil, "Page number not loaded yet."
 	end
-	
+
 	return
 end
 

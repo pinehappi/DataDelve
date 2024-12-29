@@ -65,10 +65,10 @@ function LoadMoreListStyleState:tryRemove(key: string?): boolean
 	if styleState then
 		styleState:destroy(true)
 		self.itemStyleStates[key] = nil
-		
+
 		return true
 	end
-	
+
 	return false
 end
 
@@ -127,6 +127,6 @@ function LoadMoreListStyleState:destroy(completely: boolean)
 	end
 end
 
-export type LoadMoreListStyleState = typeof(setmetatable({},LoadMoreListStyleState))
+export type LoadMoreListStyleState = typeof(setmetatable({}, LoadMoreListStyleState))
 
 return LoadMoreListStyleState

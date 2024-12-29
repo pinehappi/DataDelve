@@ -65,7 +65,7 @@ function Theme.improveContrast(color: Color3, backgroundColor: Color3)
 	return originalColor
 end
 
-function Theme.new() : Theme
+function Theme.new(): Theme
 	local self = setmetatable({
 		accent = "red",
 		preset = "dark",
@@ -803,5 +803,5 @@ StudioSettings.ThemeChanged:Connect(function()
 	end
 end)
 
-export type Theme = typeof(setmetatable({},Theme))
+export type Theme = typeof(setmetatable({}, Theme))
 return Theme
