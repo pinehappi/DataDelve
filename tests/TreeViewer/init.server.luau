@@ -8,11 +8,11 @@ local Tree = require(script.Parent.Parent.UI.Viewers.Tree)
 local fuzzUserIds = require(script.fuzzUserIds)
 local fuzzJSON = require(script.fuzzJSON)
 
-type SearchForQuery = { key: string | number, value: any?, isContainer: boolean }
+type SearchForQuery = { key: string | number, value: any?, isContainer: boolean? }
 type Operation = {
 	type: "delete",
 	searchFor: SearchForQuery,
-	onlyChildren: boolean,
+	onlyChildren: boolean?,
 } | {
 	type: "insertInto",
 	searchFor: SearchForQuery,
