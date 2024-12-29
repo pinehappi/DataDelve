@@ -10,8 +10,8 @@ local IS_CANARY = script.Parent.IsCanaryRelease.Value
 
 local RunService = game:GetService("RunService")
 
-local App: App = require(script.Parent.App)
-local ClientFallbackApp: App = require(script.Parent.ClientFalbackApp)
+local App: App = require(script.Parent.App) :: App
+local ClientFallbackApp: App = require(script.Parent.ClientFalbackApp) :: App
 
 local History = require(script.Parent.History).global
 local Settings = require(script.Parent.Settings)
