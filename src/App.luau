@@ -930,7 +930,7 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 	end
 
 	if Settings.get("allScopes") and not connection.isOrdered then
-		(connection :: any).allScopes = true
+		(connection :: any).allScopes = true;
 		(connection :: any).scope = "" -- Has to be to work
 	end
 
