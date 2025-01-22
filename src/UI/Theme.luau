@@ -808,7 +808,7 @@ end)
 export type Theme = typeof(setmetatable({
 	accent = "red",
 	preset = "dark",
-	colors = Theme.generatePreset("\red","dark"),
+	colors = Theme.generatePreset("red", "dark"),
 	icons = defaultIcons,
 	_colorsChanged = Instance.new("BindableEvent"),
 	colorsChanged = Instance.new("BindableEvent").Event,
