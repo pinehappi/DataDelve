@@ -22,6 +22,23 @@ Theme.accentHues = {
 	neutral = 0, -- Special case
 }
 
+local defaultIcons = {
+	export = "rbxassetid://18872446140",
+	import = "rbxassetid://18872442909",
+	lookup = "rbxassetid://18872448764",
+	edit = "rbxassetid://18872450875",
+	delete = "rbxassetid://18872454033",
+	storage = "rbxassetid://18872458094",
+	insert = "rbxassetid://18872509789",
+	pin = "rbxassetid://18886260860",
+	unpin = "rbxassetid://18886277155",
+	rename = "rbxassetid://18901732408",
+	maximize = "rbxassetid://18962414864",
+	minimize = "rbxassetid://18962422050",
+	fill = "rbxassetid://84916176036418",
+	select = "rbxassetid://127081818194911",
+}
+
 -- Reference: https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
 function Theme.srgbToLinear(colorChannel: number)
 	if colorChannel <= 0.03928 then
@@ -71,22 +88,7 @@ function Theme.new(): Theme
 		preset = "dark",
 	}, Theme) :: Theme
 	self.colors = Theme.generatePreset(self.preset, self.accent)
-	self.icons = {
-		export = "rbxassetid://18872446140",
-		import = "rbxassetid://18872442909",
-		lookup = "rbxassetid://18872448764",
-		edit = "rbxassetid://18872450875",
-		delete = "rbxassetid://18872454033",
-		storage = "rbxassetid://18872458094",
-		insert = "rbxassetid://18872509789",
-		pin = "rbxassetid://18886260860",
-		unpin = "rbxassetid://18886277155",
-		rename = "rbxassetid://18901732408",
-		maximize = "rbxassetid://18962414864",
-		minimize = "rbxassetid://18962422050",
-		fill = "rbxassetid://84916176036418",
-		select = "rbxassetid://127081818194911",
-	}
+	self.icons = table.clone(defaultIcons)
 
 	self._colorsChanged = Instance.new("BindableEvent")
 	self.colorsChanged = self._colorsChanged.Event
@@ -803,5 +805,13 @@ StudioSettings.ThemeChanged:Connect(function()
 	end
 end)
 
-export type Theme = typeof(setmetatable({}, Theme))
+export type Theme = typeof(setmetatable({
+	accent = "red",
+	preset = "dark",
+	colors = Theme.generatePreset("red", "dark"),
+	icons = defaultIcons,
+	_colorsChanged = Instance.new("BindableEvent"),
+	colorsChanged = Instance.new("BindableEvent").Event,
+}, Theme))
+
 return Theme
