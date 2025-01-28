@@ -3366,6 +3366,7 @@
                 <bool name="SelectionGroup">false</bool>
                 <Ref name="SelectionImageObject">null</Ref>
                 <int name="SelectionOrder">0</int>
+                <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
                 <bool name="ShowNativeInput">true</bool>
                 <UDim2 name="Size">
                   <XS>0</XS>
@@ -3720,6 +3721,7 @@
                 <bool name="SelectionGroup">false</bool>
                 <Ref name="SelectionImageObject">null</Ref>
                 <int name="SelectionOrder">0</int>
+                <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
                 <bool name="ShowNativeInput">true</bool>
                 <UDim2 name="Size">
                   <XS>0</XS>
@@ -5967,6 +5969,7 @@
                 <bool name="SelectionGroup">false</bool>
                 <Ref name="SelectionImageObject">null</Ref>
                 <int name="SelectionOrder">0</int>
+                <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
                 <bool name="ShowNativeInput">true</bool>
                 <UDim2 name="Size">
                   <XS>1</XS>
@@ -10256,6 +10259,7 @@
           <bool name="SelectionGroup">false</bool>
           <Ref name="SelectionImageObject">null</Ref>
           <int name="SelectionOrder">0</int>
+          <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
           <bool name="ShowNativeInput">true</bool>
           <UDim2 name="Size">
             <XS>1</XS>
@@ -10579,6 +10583,7 @@
           <bool name="SelectionGroup">false</bool>
           <Ref name="SelectionImageObject">null</Ref>
           <int name="SelectionOrder">0</int>
+          <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
           <bool name="ShowNativeInput">true</bool>
           <UDim2 name="Size">
             <XS>1</XS>
@@ -11992,6 +11997,7 @@
           <bool name="SelectionGroup">false</bool>
           <Ref name="SelectionImageObject">null</Ref>
           <int name="SelectionOrder">0</int>
+          <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
           <bool name="ShowNativeInput">true</bool>
           <UDim2 name="Size">
             <XS>0</XS>
@@ -12251,6 +12257,7 @@
           <bool name="SelectionGroup">false</bool>
           <Ref name="SelectionImageObject">null</Ref>
           <int name="SelectionOrder">0</int>
+          <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
           <bool name="ShowNativeInput">true</bool>
           <UDim2 name="Size">
             <XS>1</XS>
@@ -12484,6 +12491,7 @@
           <bool name="SelectionGroup">false</bool>
           <Ref name="SelectionImageObject">null</Ref>
           <int name="SelectionOrder">0</int>
+          <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
           <bool name="ShowNativeInput">true</bool>
           <UDim2 name="Size">
             <XS>0</XS>
@@ -23831,6 +23839,7 @@
             <bool name="SelectionGroup">false</bool>
             <Ref name="SelectionImageObject">null</Ref>
             <int name="SelectionOrder">0</int>
+            <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
             <bool name="ShowNativeInput">true</bool>
             <UDim2 name="Size">
               <XS>0</XS>
@@ -24000,6 +24009,7 @@
             <bool name="SelectionGroup">false</bool>
             <Ref name="SelectionImageObject">null</Ref>
             <int name="SelectionOrder">0</int>
+            <bool name="ShouldEmitUpAndDownArrowEvents">false</bool>
             <bool name="ShowNativeInput">true</bool>
             <UDim2 name="Size">
               <XS>0</XS>
