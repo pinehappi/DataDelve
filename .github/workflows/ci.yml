@@ -60,3 +60,4 @@ jobs:
           overwrite: true
           body: "Hello, World!"
           prerelease: true
+          tag: "canary"
