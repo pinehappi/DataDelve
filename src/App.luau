@@ -402,6 +402,19 @@ function App.new(id: string)
 			end
 		end
 
+		if self.session:trySeeKeyChanged() == "changed" then
+			if
+				not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
+					title = "Key written to while editing",
+					message = "This key was written to somewhere else while you were editing it. You may be overwritting this new data.",
+					yesText = "Continue",
+					noText = "Abort",
+				})
+			then
+				return
+			end
+		end
+
 		local userIds, metadata = self.viewer:getKeyInfo()
 
 		self:_wrapEditKeyOperation(function()

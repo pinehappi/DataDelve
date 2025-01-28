@@ -138,6 +138,38 @@ function Session:resetKey()
 	self.versionPages = nil
 end
 
+function Session:trySeeKeyChanged(): "changed" | "failed" | "unchanged"
+	assert(not self.connection.isOrdered)
+
+	if self.currentVersion then
+		-- Loading a version will always have the UpdatedTime before the latest UpdatedTime,
+		-- so just ignore this check
+		return "failed"
+	end
+
+	local params = Instance.new("DataStoreGetOptions")
+	params.UseCache = false
+
+	local gotValue, gotKeyInfo = nil, nil
+	local success, err = pcall(function()
+		gotValue, gotKeyInfo = self.datastore:GetAsync(self.currentKey, params)
+	end)
+
+	if success then
+		if self.currentKeyInfo then
+			if self.currentKeyInfo.UpdatedTime + 1 < gotKeyInfo.UpdatedTime then
+				return "changed"
+			else
+				return "unchanged"
+			end
+		elseif gotKeyInfo then
+			return "changed"
+		end
+	else
+		return "failed"
+	end
+end
+
 function Session:trySaveCurrentKey(value: any, userIds: { number }, metadata: { [string]: any })
 	assert(not self.connection.isOrdered)
 
