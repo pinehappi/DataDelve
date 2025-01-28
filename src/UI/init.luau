@@ -669,7 +669,7 @@ function UI:createDataUsageCard(keyUsage: number, metadataUsage: number)
 end
 
 function UI:promptDuplicateMoveKey(position: Vector2, isAllScopes: boolean): { key: string, shouldDelete: boolean }?
-	local popup, modal = PopupFormStyleState.createPopup(self.theme, self.gui.Parent, UDim2.fromOffset(0, 0), {
+	local popup, modal = PopupFormStyleState.createPopup(self.theme, self.gui.Parent, Vector2.zero, {
 		title = "Duplicate/Move Key",
 		buttons = { { text = "Duplicate", options = { style = "primary" } }, { text = "Cancel" } },
 		addContents = function(parent)

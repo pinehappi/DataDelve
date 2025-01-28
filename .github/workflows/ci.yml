@@ -53,6 +53,7 @@ jobs:
 
       # Publish
       - name: Upload binaries to release
+        if: github.ref == 'refs/heads/main'
         uses: svenstaro/upload-release-action@v2
         with:
           file: build/github_action_release.rbxm
