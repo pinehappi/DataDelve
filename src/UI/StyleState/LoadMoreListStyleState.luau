@@ -3,7 +3,8 @@
 -- `Pages` does this when a new page is loaded.
 --
 -- StyleStates produced from `createItemStyleState` can have method `setSelecting(bool)` to make them
--- eligible for the `setSelectingStyleState` method of this object
+-- eligible for the `setSelectingStyleState` method of this object which is used when you right click
+-- and you want to have the item look selected.
 --
 -- `createItemStyleState` can optionally return a second return which is a key.
 -- You can then access the StyleState created using loadMoreListStyleState.itemStyleStates[key]

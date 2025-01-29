@@ -1,8 +1,13 @@
--- When a ScrollingFrame named Block Input with a TextButton child named ClickCapture is added to the frame,
--- set Interactable false for all the frames.
+-- `PopupHelper.modal` creates a frame to block input, but it does not block MouseMovement inputs.
+-- To fix that, this utility function will detect when the input blocking frame of `PopupHelper.modal`
+-- appears and disable `Interactable` for all the frames you give it. This will prevent MouseMovement
+-- inputs from being fired.
 
--- Brittle, but prevents inputs like MouseMovement from passing through the modal.
+-- DRAWBACK: You can only have one layer of MouseMovement input blocking. See right clicking in versions view
+--           and how MouseMovement events still fire for the buttons.
 
+-- @param  modalParent  What the modal will be parented too. Used for detecting when it appears.
+-- @param  frames  The frames you want to disable MouseMovement events for when a modal appears.
 return function(modalParent: Frame, frames: { Frame })
 	local blockedInputs = 0
 

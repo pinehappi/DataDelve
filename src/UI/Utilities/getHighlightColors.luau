@@ -1,3 +1,8 @@
+--!strict
+
+-- Gets highlight colors for the TreeViewer. Depends on global state from `Settings`
+-- to see if it should use the built-in theme or the script editors theme.
+
 export type Colors = {
 	plain: Color3,
 
@@ -96,6 +101,8 @@ return function(theme)
 			buffer = studio["Comment Color"],
 
 			disabled = theme.colors.disabledText,
+
+			scrollbar = Color3.new(1, 1, 1),
 		}
 
 		colors.scrollbar = if theme.getContrastRatio(colors.background, Color3.fromRGB(200, 200, 200))
@@ -106,7 +113,7 @@ return function(theme)
 
 	colors.selectText = table.clone(colors)
 
-	-- Adjusted selected colors
+	-- Adjusted selected colors so contrast is OK
 	for _, color in textColors do
 		colors.selectText[color] = theme.improveContrast(colors.selectText[color], colors.selectBackground)
 	end

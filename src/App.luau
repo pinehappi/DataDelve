@@ -19,7 +19,6 @@ local Types = require(script.Parent.Types)
 local Settings = require(script.Parent.Settings)
 local Session = require(script.Parent.Session)
 local History = require(script.Parent.History).global
-History:load(plugin)
 
 local Tree = require(script.Parent.UI.Viewers.Tree)
 
@@ -32,11 +31,10 @@ local ConfirmDialogStyleState = require(script.Parent.UI.StyleState.Utility.Conf
 local ContextMenuStyleState = require(script.Parent.UI.StyleState.Utility.ContextMenuStyleState)
 
 local Theme = require(script.Parent.UI.Theme).global
-local BUI = require(script.Parent.UI)
-local BUIMessages = require(script.Parent.UI.UIMessages)
+local UI = require(script.Parent.UI)
+local UIMessages = require(script.Parent.UI.UIMessages)
 local ExportImportHelper = require(script.Parent.ExportImportHelper)
 
-local promptKeyValueForm = require(script.Parent.UI.Utilities.promptKeyValueForm)
 local constraintTextBoxStyleState = require(script.Parent.UI.Utilities.constrainTextBoxStyleState)
 local disableFrameWhenModalAppears = require(script.Parent.UI.Utilities.disableFrameWhenModalAppears)
 
@@ -67,11 +65,11 @@ local App = {}
 App.__index = App
 
 function App.new(id: string)
-	local uiMessages = BUIMessages.new(Theme)
+	local uiMessages = UIMessages.new(Theme)
 	local self = setmetatable({
 		id = id,
 		session = Session.new(),
-		ui = BUI.new(Theme, uiMessages),
+		ui = UI.new(Theme, uiMessages),
 		uiMessages = uiMessages,
 
 		viewer = nil,

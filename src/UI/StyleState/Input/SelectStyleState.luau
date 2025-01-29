@@ -9,8 +9,6 @@ local PopupHelper = require(script.Parent.Parent.Parent.PopupHelper)
 local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
 local ButtonStyleState = require(script.Parent.Parent.ButtonStyleState)
 
-local DOWN_ARROW_IMAGE = "rbxassetid://17650880752"
-local UP_ARROW_IMAGE = "rbxassetid://18557565597"
 local SELECT_MENU_OFFSET = 2
 
 local SelectStyleState = {}
@@ -309,7 +307,7 @@ function SelectStyleState:update(...)
 		return
 	end
 
-	self.button.Arrow.Image = if self.open then UP_ARROW_IMAGE else DOWN_ARROW_IMAGE
+	self.button.Arrow.Image = if self.open then self.theme.icons.upArrow else self.theme.icons.downArrow
 	self.buttonStyleState:update(...)
 
 	if self.menu then

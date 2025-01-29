@@ -37,6 +37,8 @@ local defaultIcons = {
 	minimize = "rbxassetid://18962422050",
 	fill = "rbxassetid://84916176036418",
 	select = "rbxassetid://127081818194911",
+	downArrow = "rbxassetid://17650880752",
+	upArrow = "rbxassetid://18557565597",
 }
 
 -- Reference: https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color

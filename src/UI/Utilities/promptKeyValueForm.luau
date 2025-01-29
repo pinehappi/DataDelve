@@ -1,3 +1,8 @@
+-- Form that has two fields (each one is optional, but you must have one field active)
+-- Used in:
+--	- Insert Into/After
+--	- Insert for OrderedDataStore
+
 local Assets = script.Parent.Parent.Assets
 local StyleState = script.Parent.Parent.StyleState
 
