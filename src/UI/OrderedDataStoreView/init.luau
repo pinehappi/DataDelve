@@ -391,7 +391,12 @@ function OrderedDataStoreView:addKey(key: string, value: number)
 	if self.styleStates.loadMore:isEmpty() then
 		self.styleStates.loadMore:setLoadMoreVisible(false)
 	end
-	self.styleStates.loadMore:add({ key = key, value = value })
+
+	local styleState = self.styleStates.loadMore:add({ key = key, value = value })
+	self.styleStates.loadMore:setSelectingStyleState(styleState)
+
+	-- Scroll all the way down to see the key
+	self.frame.Keys.CanvasPosition = Vector2.new(0, self.frame.Keys.AbsoluteCanvasSize.Y)
 end
 
 function OrderedDataStoreView:updateKey(key: string, value: number)

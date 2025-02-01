@@ -579,13 +579,13 @@ local function spliceReplace(destination: { unknown }, destinationIndex: number,
 end
 
 -- This assumes that the index to insert into is visible!
--- Returns the branch if it was successful
+-- Returns the branch if it was successful and the index of it
 function Tree:_tryInsertInto(
 	index: number,
 	key: string | number,
 	value: unknown,
 	valueIsArray: boolean | "isArray"?
-): (any, string?)
+): (any, any)
 	self:_makeDirty()
 
 	local branch = self._flatBranches[index]
@@ -646,16 +646,17 @@ function Tree:_tryInsertInto(
 	self:_clearFrames()
 	self:_updateCanvasSize()
 
-	return insertingBranches[1]
+	return insertingBranches[1], insertAt
 end
 
 -- This assumes that the index to insert after is visible!
+-- Returns the branch if successful and the index of it.
 function Tree:_tryInsertAfter(
 	index: number,
 	key: string,
 	value: unknown,
 	valueIsArray: boolean | "isArray"?
-): (any, string?)
+): (any, any)
 	self:_makeDirty()
 
 	local depth = self._flatDepths[index]
@@ -723,7 +724,7 @@ function Tree:_tryInsertAfter(
 	self:_clearFrames()
 	self:_updateCanvasSize()
 
-	return insertingBranches[1]
+	return insertingBranches[1], insertAt
 end
 
 function Tree:_deleteBranch(index: number, options: { onlyChildren: boolean? }?)
@@ -2481,13 +2482,17 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				end
 
 				local insertedBranch, err = self:_tryInsertInto(index, result.key, result.value, valueIsArray)
-				if err then
+				if not insertedBranch then
 					self.uiMessages:error(err)
 				else
 					if branch.ISUSERIDS then
 						insertedBranch.ISUSERID = true
 					end
+
 					self:_redrawBranches()
+
+					-- When it is successful, the err is actually the index of the branch inserted
+					self:_selectBranch(err)
 				end
 			end
 		elseif option == "Insert After" then
@@ -2529,13 +2534,17 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					end
 
 					local insertedBranch, err = self:_tryInsertAfter(index, result.key, result.value, valueIsArray)
-					if err then
+					if not insertedBranch then
 						self.uiMessages:error(err)
 					else
 						if branch.ISUSERID then
 							insertedBranch.ISUSERID = true
 						end
+
 						self:_redrawBranches()
+
+						-- When it is successful, the err is actually the index of the branch inserted
+						self:_selectBranch(err)
 					end
 				end
 			end

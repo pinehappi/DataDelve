@@ -55,6 +55,8 @@ function LoadMoreListStyleState:add(...)
 	else
 		table.insert(self.itemStyleStates, itemStyleState)
 	end
+
+	return itemStyleState
 end
 
 function LoadMoreListStyleState:get(key: string)
