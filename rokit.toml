@@ -5,5 +5,5 @@
 
 [tools]
 lune = "lune-org/lune@0.8.7"
-StyLua = "JohnnyMorganz/StyLua@0.20.0"
+StyLua = "JohnnyMorganz/StyLua@2.0.2"
 selene = "Kampfkarren/selene@0.27.1"
