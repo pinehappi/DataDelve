@@ -7,7 +7,7 @@ local ButtonStyleState = require(script.Parent.Parent.ButtonStyleState)
 local SwitchStyleState = {}
 SwitchStyleState.__index = SwitchStyleState
 
-type SwitchOptions = {
+export type SwitchOptions = {
 	default: boolean?,
 }
 function SwitchStyleState.from(theme, switch: TextButton & { Circle: GuiObject }, options: SwitchOptions?)

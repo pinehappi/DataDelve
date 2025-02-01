@@ -13,7 +13,7 @@ PopupFormStyleState.__index = PopupFormStyleState
 PopupFormStyleState.template = script.PopupForm
 PopupFormStyleState.buttonTemplate = script.ButtonTemplate
 
-type PopupFormFromOptions = {
+export type PopupFormFromOptions = {
 	title: string,
 	buttons: { { text: string, options: ButtonStyleState.ButtonStyleStateFromOptions? } },
 	addContents: (Frame) -> { StyleStateHelper.StyleState } | { [string]: StyleStateHelper.StyleState },

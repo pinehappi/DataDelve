@@ -5,7 +5,7 @@ local ButtonStyleState = require(script.Parent.Parent.ButtonStyleState)
 local CheckboxStyleState = {}
 CheckboxStyleState.__index = CheckboxStyleState
 
-type CheckboxOptions = {
+export type CheckboxOptions = {
 	default: boolean?,
 
 	-- The inputPair will also be used to process clicks.

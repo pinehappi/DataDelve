@@ -11,7 +11,7 @@ local ConfirmDialogStyleState = {}
 ConfirmDialogStyleState.__index = ConfirmDialogStyleState
 ConfirmDialogStyleState.template = script.ConfirmDialog
 
-type ContextMenuOptions = {
+export type ContextMenuOptions = {
 	title: string,
 	message: string,
 	yesText: string?,

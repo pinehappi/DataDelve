@@ -17,12 +17,12 @@ local ButtonStyleState = require(script.Parent.ButtonStyleState)
 local LoadMoreListStyleState = {}
 LoadMoreListStyleState.__index = LoadMoreListStyleState
 
-type LoadMoreList = Frame & {
+export type LoadMoreList = Frame & {
 	LoadMore: TextButton,
 	LoadMorePadding: GuiObject,
 }
 
-type LoadMoreListOptions = {
+export type LoadMoreListOptions = {
 	createItemStyleState: (parent: LoadMoreListStyleState, ...any) -> (StyleStateHelper.StyleState, unknown?),
 }
 
