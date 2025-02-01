@@ -10,10 +10,6 @@
 
 -- Other random notes:
 
--- FatBranch is a branch that uses Roblox layout. It is a lot of children, so I am going to not use it, but there just in case.
--- Branch is a branch that uses manual layout. With this approach, non-visible branches can be hidden and fancier optimizations can be made.
--- Later, it would be good idea to benchmark FatBranch against Branch and maybe fallback to FatBranch for small tables.
-
 -- Right now insertions, deletions, and toggling visiblity are O(n)
 -- This could be improved by not flattening the base tree since it doesn't really help with anything since the main iteration hotpath is in
 -- _redrawBranches which iterates over visibleIndexes which can be constructed from the tree as needed instead of flattening the tree in the beginning
