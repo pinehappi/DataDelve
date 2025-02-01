@@ -38,6 +38,7 @@ local defaultIcons = {
 	fill = "rbxassetid://84916176036418",
 	select = "rbxassetid://127081818194911",
 	downArrow = "rbxassetid://17650880752",
+	rightArrow = "rbxassetid://17650877462",
 	upArrow = "rbxassetid://18557565597",
 }
 

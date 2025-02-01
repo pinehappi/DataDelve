@@ -100,7 +100,7 @@ return function(theme, forceDefault: "forceDefault"?)
 			null = studio['"nil" Color'],
 			buffer = studio["Comment Color"],
 
-			disabled = theme.colors.disabledText,
+			disabled = studio["Comment Color"]:Lerp(studio["Background Color"], 0.25),
 			error = studio["Error Color"],
 
 			scrollbar = Color3.new(1, 1, 1),

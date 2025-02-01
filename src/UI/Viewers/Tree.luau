@@ -60,8 +60,6 @@ local SIZE_PER_BRANCH = script.Branch.AbsoluteSize.Y
 local DRAG_AND_DROP_REGION_SIZE = 10
 
 local FRAME_POOL_SIZE_LIMIT = 256
-local CHEVRON_DOWN_IMAGE_ID = "rbxassetid://17650880752"
-local CHEVRON_RIGHT_IMAGE_ID = "rbxassetid://17650877462"
 
 -- For inconsolata
 local CHAR_WIDTH = 7.2
@@ -1138,7 +1136,7 @@ end
 function Tree:_expandAll(index: number)
 	local selfDepth = self._flatDepths[index]
 	self._flatBranches[index][3] = true
-	self._frames[index].Arrow.Image = CHEVRON_DOWN_IMAGE_ID
+	self._frames[index].Arrow.Image = self.theme.icons.downArrow
 	for i = index + 1, #self._flatDepths do
 		local depth = self._flatDepths[i]
 		if depth <= selfDepth then
@@ -1149,7 +1147,7 @@ function Tree:_expandAll(index: number)
 				branch[3] = true
 				local frame = self._frames[i]
 				if frame then
-					frame.Arrow.Image = CHEVRON_DOWN_IMAGE_ID
+					frame.Arrow.Image = self.theme.icons.downArrow
 				end
 			end
 		end
@@ -1162,7 +1160,7 @@ end
 function Tree:_collapseAll(index: number)
 	local selfDepth = self._flatDepths[index]
 	self._flatBranches[index][3] = false
-	self._frames[index].Arrow.Image = CHEVRON_RIGHT_IMAGE_ID
+	self._frames[index].Arrow.Image = self.theme.icons.rightArrow
 	for i = index + 1, #self._flatDepths do
 		local depth = self._flatDepths[i]
 		if depth <= selfDepth then
@@ -1173,7 +1171,7 @@ function Tree:_collapseAll(index: number)
 				branch[3] = false
 				local frame = self._frames[i]
 				if frame then
-					frame.Arrow.Image = CHEVRON_RIGHT_IMAGE_ID
+					frame.Arrow.Image = self.theme.icons.rightArrow
 				end
 			end
 		end
@@ -1204,8 +1202,11 @@ function Tree:_updateBranchFrame(frame, branch, index)
 	local colors = if index == self._selectingBranchIndex then self._colors.selectText else self._colors
 
 	if self.disabled then
-		frame.Key.TextColor3 = colors.disabled
-		frame.Value.TextColor3 = colors.disabled
+		-- Reason using this is because Roblox default theme has green comments which
+		-- don't look disabled, so opt for the built-in theme one.
+		local realDisabledColor = self.theme.colors.disabledText
+		frame.Key.TextColor3 = realDisabledColor
+		frame.Value.TextColor3 = realDisabledColor
 		return
 	end
 
@@ -2082,7 +2083,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 	local branch = self._flatBranches[index]
 	self:_updateBranchFrame(frame, branch, index)
 
-	frame.Arrow.Image = if branch[3] then CHEVRON_DOWN_IMAGE_ID else CHEVRON_RIGHT_IMAGE_ID
+	frame.Arrow.Image = if branch[3] then self.theme.icons.downArrow else self.theme.icons.rightArrow
 
 	local function toggleOpen()
 		if self._selectingIsDragging then
@@ -2094,10 +2095,10 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		self:_redrawBranches()
 
 		if not branch[3] then
-			frame.Arrow.Image = CHEVRON_RIGHT_IMAGE_ID
+			frame.Arrow.Image = self.theme.icons.rightArrow
 			self:_clearNonVisibleBranches()
 		else
-			frame.Arrow.Image = CHEVRON_DOWN_IMAGE_ID
+			frame.Arrow.Image = self.theme.icons.downArrow
 		end
 	end
 
