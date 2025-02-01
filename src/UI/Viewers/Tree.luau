@@ -16,6 +16,8 @@
 -- so there shouldn't be a major performance gain from using an array over a tree (probably)
 
 -- Branch metadata tags:
+-- TODO: Extract this into bit flag to save precious memory???
+--		 Only if necessary
 --	ISROOT: for the root of the data
 --	ISKEYROOT: for the root of key info
 --	ISUSERID: if it is a user id
@@ -1964,6 +1966,7 @@ function Tree:_promptModalTextBox(
 	side: "key" | "value",
 	options: {
 		defaultText: string,
+		locked: boolean?,
 	}
 ): ("submit" | "empty" | "cancel", any, boolean)
 	local isKey = (side == "key")
@@ -2009,6 +2012,11 @@ function Tree:_promptModalTextBox(
 	params.Width = width
 
 	textBox:CaptureFocus()
+	if options.locked then
+		textBox.TextEditable = false
+		textBox.SelectionStart = 1
+		textBox.CursorPosition = #textBox.Text + 1
+	end
 
 	local stop = false
 	local entered = false
@@ -2030,7 +2038,7 @@ function Tree:_promptModalTextBox(
 	styleState:destroy()
 	textBox:Destroy()
 
-	if entered then
+	if entered and not options.locked then
 		if textBox.Text == "" then
 			return "empty", textBox.Text, false
 		end
@@ -2602,14 +2610,17 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					return
 				end
 
+				local locked = false
+
 				if branch.ISROOT or branch.LOCKKEY then
 					if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
 						toggleOpen()
 						return
+					else
+						locked = true
 					end
 
 					self.uiMessages:warn("Cannot edit this key.")
-					return
 				end
 				if typeof(branch[1]) == "number" then
 					self.uiMessages:warn("Drag and drop to change the order of elements in an array.")
@@ -2620,6 +2631,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 				local userResponse, newKey = self:_promptModalTextBox(frame, "key", {
 					defaultText = frame.Key.Text,
+					locked = locked,
 				})
 
 				self:_setInModal(false)
@@ -2650,19 +2662,27 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					return
 				end
 
+				local locked = false
+
 				if branch.LOCKVALUE then
 					if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
 						toggleOpen()
 						return
+					else
+						locked = true
 					end
 
 					self.uiMessages:warn("Cannot edit this value.")
-					return
 				end
 
 				self:_setInModal(true)
 
 				if (typeof(branch[2]) == "string" and branch[2]:find("\n")) or (typeof(branch[2]) == "buffer") then
+					-- Read-only edit menu not supported so abort.
+					if locked then
+						return
+					end
+
 					self:_promptEditKey(index, {
 						captureValueTextBox = true,
 						position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
@@ -2679,6 +2699,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 							elseif typeof(branch[2]) == "nil" then "null"
 							else typeof(branch[2])
 					),
+					locked = locked,
 				})
 
 				self:_setInModal(false)

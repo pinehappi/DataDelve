@@ -149,6 +149,12 @@ function OrderedDataStoreView.from(
 						toggleSelect()
 					elseif count == 1 then
 						uiMessages:warn("Cannot edit ordered datastore keys at the moment.")
+						self:_promptModalTextBox(key, {
+							frame = key,
+							side = "key",
+							defaultText = key.Key.Text,
+							locked = true,
+						})
 					end
 				end)
 				key.Value.Activated:Connect(function(_, count: number)
@@ -156,51 +162,21 @@ function OrderedDataStoreView.from(
 					if count == 0 then
 						toggleSelect()
 					elseif count == 1 then
-						local gui = frame:FindFirstAncestorWhichIsA("LayerCollector")
-						local textBox = Assets.ModalTextBox:Clone()
-						local styleState = TextBoxStyleState.from(theme, textBox)
-
-						styleState
-							:overrideTextColor(self._highlightColors.number)
-							:overrideBackgroundColor(self._highlightColors.background)
-							:update("instant")
-
-						textBox.PlaceholderText = "Value"
-						textBox.Text = key.Value.Text
-						textBox.Size = UDim2.fromOffset(key.Value.AbsoluteSize.X, key.Value.AbsoluteSize.Y)
-
-						local attachment = PopupHelper.attach(textBox, key.Value, {
-							anchor = Vector2.new(0, 0),
-							offset = Vector2.new(0, 0),
-						})
-						local modal = PopupHelper.modal(textBox, gui, {
-							includeDropShadow = false,
+						local newValue = self:_promptModalTextBox(key, {
+							frame = key,
+							side = "value",
+							defaultText = key.Value.Text,
+							locked = false,
 						})
 
-						local function cleanup()
-							modal:destroy()
-							attachment:destroy()
-							styleState:destroy()
-							textBox:Destroy()
-						end
-
-						modal.cancelled:Once(cleanup)
-						textBox.FocusLost:Connect(function(entered)
-							if entered then
-								local valid, _ = Validators.integer(textBox.Text)
-								if valid then
-									self._keyEdited:Fire(info.key, tonumber(textBox.Text))
-								else
-									uiMessages:error("Value must be an integer!")
-								end
+						if newValue then
+							local valid, _ = Validators.integer(newValue)
+							if valid then
+								self._keyEdited:Fire(info.key, tonumber(newValue))
+							else
+								self.uiMessages:error("Value must be an integer!")
 							end
-							cleanup()
-						end)
-
-						-- Weird bug, without this the textbox jitters
-						task.delay(0, function()
-							textBox:CaptureFocus()
-						end)
+						end
 					end
 				end)
 
@@ -454,6 +430,75 @@ function OrderedDataStoreView:setActiveKey(key: string?, value: number?)
 		end
 	end
 	self.activeKey = key
+end
+
+type PromptModalTextBoxOptions = {
+	frame: typeof(Assets.OrderedDataStoreKey),
+	side: "key" | "value",
+	defaultText: string,
+	locked: boolean,
+}
+function OrderedDataStoreView:_promptModalTextBox(key: string, options: PromptModalTextBoxOptions): string
+	local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
+	local textBox = Assets.ModalTextBox:Clone()
+	local styleState = TextBoxStyleState.from(self.theme, textBox)
+
+	styleState
+		:overrideTextColor(if options.side == "key" then self._highlightColors.key else self._highlightColors.number)
+		:overrideBackgroundColor(self._highlightColors.background)
+		:update("instant")
+
+	local attachTo = if options.side == "key" then options.frame.Key else options.frame.Value
+
+	textBox.PlaceholderText = "Value"
+	textBox.Text = options.defaultText
+	textBox.Size = UDim2.fromOffset(attachTo.AbsoluteSize.X, attachTo.AbsoluteSize.Y)
+
+	if options.locked then
+		textBox.TextEditable = false
+	end
+
+	local attachment = PopupHelper.attach(textBox, attachTo, {
+		anchor = Vector2.new(0, 0),
+		offset = Vector2.new(0, 0),
+	})
+	local modal = PopupHelper.modal(textBox, gui, {
+		includeDropShadow = false,
+	})
+
+	local done = false
+	local result = nil
+
+	local function cleanup()
+		modal:destroy()
+		attachment:destroy()
+		styleState:destroy()
+		textBox:Destroy()
+		done = true
+	end
+
+	modal.cancelled:Once(cleanup)
+	textBox.FocusLost:Connect(function(entered)
+		if entered then
+			result = textBox.Text
+		end
+		cleanup()
+	end)
+
+	-- Weird bug, without this the textbox jitters
+	task.delay(0, function()
+		textBox:CaptureFocus()
+		if options.locked then
+			textBox.SelectionStart = 1
+			textBox.CursorPosition = #textBox.Text + 1
+		end
+	end)
+
+	repeat
+		task.wait()
+	until done
+
+	return result
 end
 
 function OrderedDataStoreView:_promptInsert()
