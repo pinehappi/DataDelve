@@ -1,7 +1,7 @@
 -- Handles displaying data in a tree.
 
 -- Overview of how this works:
---  1. Flatten out the JSON into two flat arrays (see #_flattenData)
+--  1. Flatten out the JSON into two flat arrays (see #_initializeBranchesFromData)
 --       Given index n, _flatBranch[n] has the key, value, and metadata about the nth branch in the tree and _flatDepths[n] has
 --       the depth of that branch.
 --  2. Render based on what branches should be visible.
@@ -28,8 +28,6 @@
 -- NOTE: right now `Display as Time` for objects is disabled because it requires the children to update the parent when they change
 -- NOTE: right now hierarchy bars are disabled because they're ugly
 
-local TextService = game:GetService("TextService")
-
 local Settings = require(script.Parent.Parent.Parent.Settings)
 
 local JSONHelper = require(script.Parent.Parent.Parent.JSONHelper)
@@ -47,6 +45,7 @@ local ButtonStyleState = require(StyleState.ButtonStyleState)
 local ContextMenuStyleState = require(StyleState.Utility.ContextMenuStyleState)
 local ConfirmDialogStyleState = require(StyleState.Utility.ConfirmDialogStyleState)
 local TextBoxStyleState = require(StyleState.Input.TextBoxStyleState)
+local JsonTextBoxStyleState = require(StyleState.Input.JsonTextBoxStyleState)
 local SelectStyleState = require(StyleState.Input.SelectStyleState)
 local SwitchStyleState = require(StyleState.Input.SwitchStyleState)
 
@@ -79,11 +78,13 @@ export type KeyInfo = {
 	Metadata: any,
 }
 
-type TreeOptions = {
+export type TreeOptions = {
 	data: JSONHelper.JSONValue,
 	keyInfo: KeyInfo?,
 	dirty: boolean?, -- If it's dirty by default
 	readOnly: boolean,
+
+	isTesting: boolean?,
 }
 function Tree.new(
 	theme,
@@ -99,9 +100,6 @@ function Tree.new(
 
 		disabled = false,
 		readOnly = options.readOnly,
-
-		_originalData = options.data,
-		_originalKeyInfo = options.keyInfo,
 
 		_colors = getHighlightColors(theme),
 
@@ -131,6 +129,8 @@ function Tree.new(
 		-- Bars to help see hierarchy.
 		_hierarchyBarFolder = Instance.new("Folder", frame),
 		_hierarchyBars = {},
+
+		_isTesting = options.isTesting,
 	}, Tree)
 
 	--
@@ -145,7 +145,13 @@ function Tree.new(
 	self.frame.BackgroundColor3 = self._colors.background
 	self.frame.ScrollBarImageColor3 = self._colors.scrollbar
 
-	self:_flattenData()
+	self:_initializeBranchesFromData(options.data, options.keyInfo or {
+		CreatedTime = nil,
+		UpdatedTime = nil,
+		Version = nil,
+		UserIds = {},
+		Metadata = nil,
+	})
 	self:_updateAllVisible()
 	self:_redrawBranches()
 
@@ -210,51 +216,103 @@ end
 local ARRAY_SENTINEL = newproxy()
 local OBJECT_SENTINEL = newproxy()
 local DECREMENT_DEPTH_SENTINEL = newproxy()
--- Flattens out the tree for fast iterating.
-function Tree:_flattenData()
-	local depths = table.create(256)
-	local branches = table.create(256)
 
-	-- Add key info stuff
+function Tree:_initializeBranchesFromData(data: JSONHelper.JSONValue, keyInfo: KeyInfo)
+	local dataDepths, dataBranches = self:_flatten({
+		key = "Data",
+		value = data,
+		initialDepth = 0,
+		expectLarge = true,
+	})
+	dataBranches[1].ISROOT = true
+	dataBranches[1].LOCKKEY = true
 
-	local keyInfo: KeyInfo = self._originalKeyInfo
-		or {
-			CreatedTime = nil,
-			UpdatedTime = nil,
-			Version = nil,
-			UserIds = {},
-			Metadata = nil,
-		}
-	table.insert(branches, { "Key Info", OBJECT_SENTINEL, false, LOCKKEY = true, LOCKVALUE = true, ISKEYROOT = true })
-	table.insert(depths, 0)
-	table.insert(branches, {
+	local metadataDepths, metadataBranches = self:_flatten({
+		key = "Metadata",
+		value = keyInfo.Metadata,
+		initialDepth = 1,
+		expectLarge = true,
+	})
+	metadataBranches[1].LOCKKEY = true
+	metadataBranches[1].LOCKVALUE = true
+	metadataBranches[1].ISMETADATA = true
+	metadataBranches[1][3] = true -- Auto-open
+
+	local keyInfoDepths = table.create(5 + #keyInfo.UserIds)
+	local keyInfoBranches = table.create(5 + #keyInfo.UserIds)
+	table.insert(
+		keyInfoBranches,
+		{ "Key Info", OBJECT_SENTINEL, false, LOCKKEY = true, LOCKVALUE = true, ISKEYROOT = true }
+	)
+	table.insert(keyInfoDepths, 0)
+	table.insert(keyInfoBranches, {
 		"CreatedTime",
 		keyInfo.CreatedTime,
 		LOCKKEY = true,
 		LOCKVALUE = true,
 		ISTIME = true,
 	})
-	table.insert(depths, 1)
-	table.insert(branches, {
+	table.insert(keyInfoDepths, 1)
+	table.insert(keyInfoBranches, {
 		"UpdatedTime",
 		keyInfo.UpdatedTime,
 		LOCKKEY = true,
 		LOCKVALUE = true,
 		ISTIME = true,
 	})
-	table.insert(depths, 1)
-	table.insert(branches, { "Version", keyInfo.Version, LOCKKEY = true, LOCKVALUE = true })
-	table.insert(depths, 1)
-	table.insert(branches, { "UserIds", ARRAY_SENTINEL, true, LOCKKEY = true, LOCKVALUE = true, ISUSERIDS = true })
-	table.insert(depths, 1)
+	table.insert(keyInfoDepths, 1)
+	table.insert(keyInfoBranches, { "Version", keyInfo.Version, LOCKKEY = true, LOCKVALUE = true })
+	table.insert(keyInfoDepths, 1)
+	table.insert(
+		keyInfoBranches,
+		{ "UserIds", ARRAY_SENTINEL, true, LOCKKEY = true, LOCKVALUE = true, ISUSERIDS = true }
+	)
+	table.insert(keyInfoDepths, 1)
+	self._userIdsIndex = #keyInfoDepths
 	for i, id in keyInfo.UserIds do
-		table.insert(branches, { i, id, ISUSERID = true })
-		table.insert(depths, 2)
+		table.insert(keyInfoBranches, { i, id, ISUSERID = true })
+		table.insert(keyInfoDepths, 2)
 	end
 
+	-- Combine it all together
+	local totalCapacity = #keyInfoDepths + #metadataDepths + #dataDepths
+	local depths = table.create(totalCapacity)
+	local branches = table.create(totalCapacity)
+
+	table.move(keyInfoDepths, 1, #keyInfoDepths, 1, depths)
+	table.move(keyInfoBranches, 1, #keyInfoBranches, 1, branches)
+
+	table.move(metadataDepths, 1, #metadataDepths, #depths + 1, depths)
+	table.move(metadataBranches, 1, #metadataBranches, #branches + 1, branches)
+
+	self._rootIndex = #branches + 1
+	table.move(dataDepths, 1, #dataDepths, #depths + 1, depths)
+	table.move(dataBranches, 1, #dataBranches, #branches + 1, branches)
+
+	-- Final touches
+	self._visibleIndexes = { 1, self._rootIndex }
+
+	self._flatDepths = depths
+	self._flatBranches = branches
+end
+
+type FlattenOptions = {
+	key: string,
+	value: JSONHelper.JSONValue,
+	initialDepth: number,
+	expectLarge: boolean,
+	allOpen: boolean?,
+}
+-- Flattens out table for fast iterating
+function Tree:_flatten(options: FlattenOptions)
+	local initialCapacity = if options.expectLarge then 256 else 4
+	local depths = table.create(initialCapacity)
+	local branches = table.create(initialCapacity)
+
 	-- Stack is array of {KEY, VALUE}
-	local stack = { { "Data", self._originalData }, DECREMENT_DEPTH_SENTINEL, { "Metadata", keyInfo.Metadata } }
-	local depth = 1
+	local stack = { { options.key, options.value } }
+	local depth = options.initialDepth
+	local allOpen = options.allOpen
 	while #stack > 0 do
 		local t = table.remove(stack)
 		if t == DECREMENT_DEPTH_SENTINEL then
@@ -265,7 +323,7 @@ function Tree:_flattenData()
 		if typeof(t[2]) == "table" then
 			if #t[2] > 0 then -- It's an array
 				table.insert(depths, depth)
-				table.insert(branches, { t[1], ARRAY_SENTINEL, t[3] or depth < 1 })
+				table.insert(branches, { t[1], ARRAY_SENTINEL, allOpen or t[3] or depth < 1 })
 
 				depth += 1
 				table.insert(stack, DECREMENT_DEPTH_SENTINEL)
@@ -277,7 +335,7 @@ function Tree:_flattenData()
 				end
 			else
 				table.insert(depths, depth)
-				table.insert(branches, { t[1], OBJECT_SENTINEL, t[3] or depth < 1 })
+				table.insert(branches, { t[1], OBJECT_SENTINEL, allOpen or t[3] or depth < 1 })
 
 				depth += 1
 				table.insert(stack, DECREMENT_DEPTH_SENTINEL)
@@ -322,39 +380,7 @@ function Tree:_flattenData()
 		end
 	end
 
-	-- Find the metadata branch and lock it. It always be the first one named metadata.
-	-- Then find the root and mark it as root
-	local didMetadata = false
-	local didUserIds = false
-	for i, branch in branches do
-		if not didUserIds then
-			if branch[1] == "UserIds" then
-				self._userIdsIndex = i
-				didUserIds = true
-			end
-		elseif not didMetadata then
-			if branch[1] == "Metadata" then
-				branch.LOCKKEY = true
-				branch.LOCKVALUE = true
-				branch.ISMETADATA = true
-				branch[3] = true -- Auto-open
-				didMetadata = true
-			end
-		else
-			local depth = depths[i]
-			if depth == 0 then -- Root always be the first branch after metadata that has depth of 0
-				self._rootIndex = i
-				break
-			end
-		end
-	end
-
-	branches[self._rootIndex].ISROOT = true
-	branches[self._rootIndex].LOCKKEY = true
-	self._visibleIndexes = { 1, self._rootIndex }
-
-	self._flatDepths = depths
-	self._flatBranches = branches
+	return depths, branches
 end
 
 -- Utilities for analyzing branches
@@ -489,7 +515,7 @@ function Tree:_bumpVisibleIndexesIncluding(index: number, bumpAmount: number, pr
 		end
 	end
 
-	if self._selectingBranchVisibleIndex and self._selectingBranchVisibleIndex > visibleIndex then
+	if self._selectingBranchVisibleIndex and self._selectingBranchVisibleIndex >= visibleIndex then
 		self._selectingBranchVisibleIndex += bumpAmount
 	end
 end
@@ -539,9 +565,25 @@ local function spliceOut(array: { unknown }, startIndex: number, endIndex: numbe
 	end
 end
 
+local function spliceIn(destination: { unknown }, destinationIndex: number, array: { unknown })
+	table.move(destination, destinationIndex, #destination, destinationIndex + #array)
+	table.move(array, 1, #array, destinationIndex, destination)
+end
+
+-- Like splice in, but replaces the value it splices in at
+local function spliceReplace(destination: { unknown }, destinationIndex: number, array: { unknown })
+	table.move(destination, destinationIndex + 1, #destination, destinationIndex + #array)
+	table.move(array, 1, #array, destinationIndex, destination)
+end
+
 -- This assumes that the index to insert into is visible!
 -- Returns the branch if it was successful
-function Tree:_tryInsertInto(index: number, key: string | number, value: unknown): (any?, string?)
+function Tree:_tryInsertInto(
+	index: number,
+	key: string | number,
+	value: unknown,
+	valueIsArray: boolean | "isArray"?
+): (any, string?)
 	self:_makeDirty()
 
 	local branch = self._flatBranches[index]
@@ -565,31 +607,53 @@ function Tree:_tryInsertInto(index: number, key: string | number, value: unknown
 		end
 	end
 
-	local insertedBranch = { key, value, false }
-	table.insert(self._flatBranches, insertAt, insertedBranch)
-	table.insert(self._flatDepths, insertAt, depth + 1)
+	local insertingDepths, insertingBranches = self:_flatten({
+		key = key,
+		value = value,
+		initialDepth = depth + 1,
+		expectLarge = false,
+		allOpen = true,
+	})
+	local totalInserted = #insertingDepths
+
+	if valueIsArray then
+		insertingBranches[1][2] = ARRAY_SENTINEL
+	end
+
+	spliceIn(self._flatDepths, insertAt, insertingDepths)
+	spliceIn(self._flatBranches, insertAt, insertingBranches)
 
 	-- Parent branch was open
 	if branch[3] then
 		local visibleIndex = table.find(self._visibleIndexes, index)
 		if visibleIndex then
-			self:_bumpVisibleIndexesAfter(index, 1, visibleIndex)
-			table.insert(self._visibleIndexes, visibleIndex + 1, insertAt)
+			local insertingVisibleIndexes = table.create(totalInserted)
+			for i = 1, totalInserted do
+				table.insert(insertingVisibleIndexes, insertAt + i - 1)
+			end
+
+			self:_bumpVisibleIndexesAfter(index, totalInserted, visibleIndex)
+			spliceIn(self._visibleIndexes, visibleIndex + 1, insertingVisibleIndexes)
 		end
 	else
 		branch[3] = true
-		self:_bumpVisibleIndexesAfter(index, 1)
+		self:_bumpVisibleIndexesAfter(index, totalInserted)
 		self:_updateBranchVisible(index)
 	end
 
 	self:_clearFrames()
 	self:_updateCanvasSize()
 
-	return insertedBranch
+	return insertingBranches[1]
 end
 
 -- This assumes that the index to insert after is visible!
-function Tree:_tryInsertAfter(index: number, key: string, value: unknown): (boolean, string?)
+function Tree:_tryInsertAfter(
+	index: number,
+	key: string,
+	value: unknown,
+	valueIsArray: boolean | "isArray"?
+): (any, string?)
 	self:_makeDirty()
 
 	local depth = self._flatDepths[index]
@@ -605,18 +669,6 @@ function Tree:_tryInsertAfter(index: number, key: string, value: unknown): (bool
 		insertAt += 1
 	until insertAt > len or self._flatDepths[insertAt] <= depth
 
-	local visibleIndex = table.find(self._visibleIndexes, insertAt - 1)
-	if visibleIndex then
-		self:_bumpVisibleIndexesAfter(insertAt - 1, 1, visibleIndex)
-		table.insert(self._visibleIndexes, visibleIndex + 1, insertAt)
-	else -- If no visible index, probably was a container behind that was closed
-		local indexVisibleIndex = table.find(self._visibleIndexes, index)
-		if indexVisibleIndex then
-			self:_bumpVisibleIndexesAfter(index, 1, indexVisibleIndex)
-		end
-		table.insert(self._visibleIndexes, (indexVisibleIndex or #self._visibleIndexes) + 1, insertAt)
-	end
-
 	-- Special case for array
 	if typeof(self._flatBranches[index][1]) == "number" then
 		local next = self._flatDepths[insertAt]
@@ -629,14 +681,47 @@ function Tree:_tryInsertAfter(index: number, key: string, value: unknown): (bool
 		end
 	end
 
-	local insertedBranch = { key, value, false }
-	table.insert(self._flatBranches, insertAt, insertedBranch)
-	table.insert(self._flatDepths, insertAt, depth)
+	local insertingDepths, insertingBranches = self:_flatten({
+		key = key,
+		value = value,
+		initialDepth = depth,
+		expectLarge = false,
+		allOpen = true,
+	})
+	local totalInserted = #insertingDepths
+
+	if valueIsArray then
+		insertingBranches[1][2] = ARRAY_SENTINEL
+	end
+
+	-- Visible indexes updating
+
+	local insertingVisibleIndexes = table.create(totalInserted)
+	for i = 1, totalInserted do
+		table.insert(insertingVisibleIndexes, insertAt + i - 1)
+	end
+
+	local insertingAtVisibleIndex = table.find(self._visibleIndexes, insertAt)
+	if insertingAtVisibleIndex then
+		self:_bumpVisibleIndexesIncluding(insertAt, totalInserted, insertingAtVisibleIndex)
+		spliceIn(self._visibleIndexes, insertingAtVisibleIndex, insertingVisibleIndexes)
+	elseif insertAt > len then
+		spliceIn(self._visibleIndexes, #self._visibleIndexes + 1, insertingVisibleIndexes)
+	else
+		warn(
+			"`tryInsertAfter` failed. Please report this bug. In the meantime, open and close the parent branch to reset things."
+		)
+		print("dump:", insertAt, len, self._visibleIndexes)
+	end
+
+	-- This has to be done after updating the visible indexes because it will mess it up
+	spliceIn(self._flatDepths, insertAt, insertingDepths)
+	spliceIn(self._flatBranches, insertAt, insertingBranches)
 
 	self:_clearFrames()
 	self:_updateCanvasSize()
 
-	return true
+	return insertingBranches[1]
 end
 
 function Tree:_deleteBranch(index: number, options: { onlyChildren: boolean? }?)
@@ -1267,7 +1352,7 @@ function Tree:_editKey(index: number, key: any, options: { skipSiblingCheck: boo
 end
 
 -- Returns if the value was edited
-function Tree:_editValue(index: number, value: any): boolean
+function Tree:_editValue(index: number, value: any, valueIsArray: boolean | "isArray"?): boolean
 	local branch = self._flatBranches[index]
 
 	if branch.ISUSERID and (not Validators.userId(value)) then
@@ -1275,39 +1360,73 @@ function Tree:_editValue(index: number, value: any): boolean
 		return false
 	end
 
+	local deletedChildren = false
 	if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
 		if self:_doesBranchHaveChildren(index) then
 			self:_setInModal(true)
 
-			local confirmed =
-				ConfirmDialogStyleState.confirm(self.theme, self.gui, self.gui:GetRelativeMousePosition(), {
+			local confirmed = self._isTesting
+				or ConfirmDialogStyleState.confirm(self.theme, self.gui, self.gui:GetRelativeMousePosition(), {
 					title = `Are you sure you want to change this value?`,
 					message = "This will delete any children as well.",
 				})
 
-			if confirmed then
-				self:_makeDirty()
-
-				local frame = self._frames[index]
-				self:_deleteBranch(index, { onlyChildren = true })
-				branch[2] = value
-				self:_updateBranchFrame(frame, branch, index)
-				self:_redrawBranches()
-
-				return true
-			end
-
 			self:_setInModal(false)
-
-			return false
+			if confirmed then
+				self:_deleteBranch(index, { onlyChildren = true })
+				deletedChildren = true
+			else
+				return false
+			end
 		end
 	end
 
 	-- Default path
 	self:_makeDirty()
 
-	branch[2] = value
-	self:_updateBranchFrame(self._frames[index], branch, index)
+	local insertingDepths, insertingBranches = self:_flatten({
+		key = branch[1],
+		value = value,
+		initialDepth = self._flatDepths[index],
+		expectLarge = false,
+		allOpen = true,
+	})
+
+	local totalInserting = #insertingBranches
+
+	if valueIsArray then
+		insertingBranches[1][2] = ARRAY_SENTINEL
+	end
+
+	if totalInserting > 1 then
+		local visibleIndex = table.find(self._visibleIndexes, index)
+		if visibleIndex then
+			local insertingVisibleIndexes = table.create(totalInserting)
+			for i = 1, totalInserting do
+				table.insert(insertingVisibleIndexes, index + i - 1)
+			end
+			self:_bumpVisibleIndexesAfter(index, totalInserting - 1, visibleIndex)
+			spliceReplace(self._visibleIndexes, visibleIndex, insertingVisibleIndexes)
+		end
+
+		spliceReplace(self._flatDepths, index, insertingDepths)
+		spliceReplace(self._flatBranches, index, insertingBranches)
+
+		self:_clearFrames()
+		self:_updateCanvasSize()
+		self:_redrawBranches()
+	else
+		branch[2] = insertingBranches[1][2]
+		if deletedChildren then
+			self:_updateCanvasSize()
+			self:_redrawBranches()
+		else
+			local frame = self._frames[index]
+			if frame then
+				self:_updateBranchFrame(self._frames[index], branch, index)
+			end
+		end
+	end
 
 	return true
 end
@@ -1726,15 +1845,16 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 				end
 
 				local newValue = result.value
+				local newValueIsArray = (result.type == "array") or (result.type == "empty array")
 				if result.type == "empty array" then
-					newValue = ARRAY_SENTINEL
+					newValue = {}
 				elseif result.type == "empty object" then
-					newValue = OBJECT_SENTINEL
+					newValue = {}
 				elseif result.type == "null" then
 					newValue = nil
 				end
 
-				if self:_editValue(index, newValue) then
+				if self:_editValue(index, newValue, newValueIsArray) then
 					self:_editKey(index, newKey, { skipSiblingCheck = true })
 					return true
 				else
@@ -1754,7 +1874,7 @@ function Tree:_promptInsertForm(options: {
 	useUserIdConstraint: boolean,
 	position: Vector2,
 })
-	local result = promptKeyValueForm(self.theme, self.gui, {
+	local formResult = promptKeyValueForm(self.theme, self.gui, {
 		position = options.position,
 		title = options.title,
 
@@ -1832,27 +1952,29 @@ function Tree:_promptInsertForm(options: {
 		end,
 	})
 
-	return result
+	return formResult
 end
 
--- Creates a modal text box then returns its result
+-- Creates a modal text box then returns what the user put into it.
+-- First return: User response
+-- Second return: The inputted value. If `side` was "value", the JSON that was parsed.
+-- Third return: If `side` was "value", whether or not it was an array that was parsed.
 function Tree:_promptModalTextBox(
 	branchFrame,
 	side: "key" | "value",
 	options: {
 		defaultText: string,
-		ignoreIndent: boolean,
-		updater: ((TextBox, TextBoxStyleState.TextBoxStyleState) -> ())?,
 	}
-)
+): ("submit" | "empty" | "cancel", any, boolean)
+	local isKey = (side == "key")
 	local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
-	local target = if side == "key" then branchFrame.Key else branchFrame.Value
+	local target = if isKey then branchFrame.Key else branchFrame.Value
 	local textBox = Assets.ModalTextBox:Clone()
 
 	local width = target.AbsoluteSize.X
 	local offset = 0
 	-- If it is the key, ignore the indent
-	if side == "key" then
+	if isKey then
 		width += branchFrame.UIPadding.PaddingLeft.Offset
 		offset = branchFrame.UIPadding.PaddingLeft.Offset
 	end
@@ -1864,7 +1986,17 @@ function Tree:_promptModalTextBox(
 		anchor = Vector2.new(0, 0),
 		offset = Vector2.new(offset, 0),
 	})
-	local styleState = TextBoxStyleState.from(self.theme, textBox)
+	local styleState = if isKey
+		then TextBoxStyleState.from(self.theme, textBox)
+		else JsonTextBoxStyleState.from(self.theme, textBox)
+
+	if isKey then
+		styleState
+			:overrideBackgroundColor(self._colors.background)
+			:overrideTextColor(self._colors.plain)
+			:update("instant")
+	end
+
 	textBox.Text = options.defaultText
 	textBox.PlaceholderText = side:sub(1, 1):upper() .. side:sub(2)
 	textBox.Parent = gui
@@ -1876,17 +2008,10 @@ function Tree:_promptModalTextBox(
 	params.Size = textBox.TextSize
 	params.Width = width
 
-	styleState:overrideBackgroundColor(self._colors.background):overrideTextColor(self._colors.plain):update("instant")
-
 	textBox:CaptureFocus()
 
 	local stop = false
 	local entered = false
-	local function update()
-		if options.updater then
-			options.updater(textBox, styleState)
-		end
-	end
 
 	modal.cancelled:Once(function()
 		stop = true
@@ -1895,8 +2020,6 @@ function Tree:_promptModalTextBox(
 		entered = e
 		stop = true
 	end)
-	textBox:GetPropertyChangedSignal("Text"):Connect(update)
-	update()
 
 	repeat
 		task.wait()
@@ -1908,8 +2031,18 @@ function Tree:_promptModalTextBox(
 	textBox:Destroy()
 
 	if entered then
-		return textBox.Text
+		if textBox.Text == "" then
+			return "empty", textBox.Text, false
+		end
+
+		if isKey then
+			return "submit", textBox.Text, false
+		else
+			return "submit", styleState:getJson()
+		end
 	end
+
+	return "cancel", nil, false
 end
 
 local function setBranchWraps(frame, wraps: boolean)
@@ -2333,17 +2466,13 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 			self:_setInModal(false)
 			if result then
-				if result.type == "array" then
-					result.value = ARRAY_SENTINEL
-				elseif result.type == "object" then
-					result.value = OBJECT_SENTINEL
-				end
+				local valueIsArray = (result.type == "array")
 
 				if isArray then
 					result.key = nil
 				end
 
-				local insertedBranch, err = self:_tryInsertInto(index, result.key, result.value)
+				local insertedBranch, err = self:_tryInsertInto(index, result.key, result.value, valueIsArray)
 				if err then
 					self.uiMessages:error(err)
 				else
@@ -2385,17 +2514,13 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 			if result then
 				if result then
-					if result.type == "array" then
-						result.value = ARRAY_SENTINEL
-					elseif result.type == "object" then
-						result.value = OBJECT_SENTINEL
-					end
+					local valueIsArray = (result.type == "array")
 
 					if isArray then
 						result.key = nil
 					end
 
-					local insertedBranch, err = self:_tryInsertAfter(index, result.key, result.value)
+					local insertedBranch, err = self:_tryInsertAfter(index, result.key, result.value, valueIsArray)
 					if err then
 						self.uiMessages:error(err)
 					else
@@ -2493,17 +2618,15 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 				self:_setInModal(true)
 
-				local newKey = self:_promptModalTextBox(frame, "key", {
+				local userResponse, newKey = self:_promptModalTextBox(frame, "key", {
 					defaultText = frame.Key.Text,
 				})
 
 				self:_setInModal(false)
 
-				if newKey == "" then
+				if userResponse == "empty" then
 					self.uiMessages:error("Key was empty.")
-					return
-				end
-				if newKey then
+				elseif userResponse == "submit" then
 					-- It did not change
 					if newKey == branch[1] then
 						return
@@ -2512,8 +2635,6 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					self:_editKey(index, newKey)
 				end
 			end
-
-			return Enum.ContextActionResult.Pass
 		end),
 		frame.Value.Activated:Connect(function(_, count)
 			if self.disabled then
@@ -2549,7 +2670,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					return
 				end
 
-				local newValue = self:_promptModalTextBox(frame, "value", {
+				local userResponse, newValue, newValueIsArray = self:_promptModalTextBox(frame, "value", {
 					defaultText = JSONHelper.toInputString(
 						branch[2],
 						if branch[2] == ARRAY_SENTINEL
@@ -2558,29 +2679,14 @@ function Tree:_initializeBranchFrame(frame, index: number)
 							elseif typeof(branch[2]) == "nil" then "null"
 							else typeof(branch[2])
 					),
-					updater = function(textBox, styleState)
-						local valueType = JSONHelper.parseInputString(textBox.Text)
-						styleState:overrideTextColor(self._colors[valueType]):update("veryFast")
-					end,
 				})
 
 				self:_setInModal(false)
 
-				if newValue then
-					if newValue == "" then
-						self.uiMessages:error("Value was empty.")
-						return
-					end
-
-					local valueType, parsedValue = JSONHelper.parseInputString(newValue)
-
-					if valueType == "array" then
-						parsedValue = ARRAY_SENTINEL
-					elseif valueType == "object" then
-						parsedValue = OBJECT_SENTINEL
-					end
-
-					self:_editValue(index, parsedValue)
+				if userResponse == "empty" then
+					self.uiMessages:error("Value was empty.")
+				elseif userResponse == "submit" then
+					self:_editValue(index, newValue, newValueIsArray)
 				end
 			end
 		end),
@@ -2644,6 +2750,8 @@ function Tree:_updateAllVisible()
 	self:_updateBranchVisible(self._rootIndex)
 end
 
+-- This actually updates if it is open, not if it is visible...
+-- TODO: change the name of this function
 function Tree:_updateBranchVisible(index)
 	local startVisibleIndex = table.find(self._visibleIndexes, index)
 	if not startVisibleIndex then

@@ -74,6 +74,6 @@ actions = {
 	end,
 }
 
-return function()
-	return actions[math.random(1, #actions)](0)
+return function(maxDepth: number?)
+	return actions[math.random(1, #actions)](MAX_DEPTH - (maxDepth or MAX_DEPTH))
 end

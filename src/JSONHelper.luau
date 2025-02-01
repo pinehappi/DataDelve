@@ -1,5 +1,7 @@
 -- Helper for JSON w/ buffers
 
+-- Does "dumb" parsing of input strings.
+
 local HttpService = game:GetService("HttpService")
 
 local JSONHelper = {}
@@ -18,6 +20,10 @@ function JSONHelper.escapeString(source: string): string
 		:gsub("\b", "\\b")
 		:gsub("\t", "\\t")
 		:gsub("\"", "\\\"")]]
+end
+
+function JSONHelper.encode(value: any): string
+	return HttpService:JSONEncode(value)
 end
 
 -- THIS IS NOT FOR PARSING JSON
@@ -71,11 +77,15 @@ function JSONHelper.toInputString(value: JSONValue, type: JSONType | string): st
 		-- Constructing non-empty objects from input string not support
 		return "{}"
 	elseif type == "string" then
-		local parsedType, parsedValue = JSONHelper.parseInputString(value :: string)
-		if (parsedType ~= type) or (parsedType == "string" and parsedValue ~= value) then
-			return `"{value}"`
+		if JSONHelper.looksDumb(value) then
+			local parsedType, parsedValue = JSONHelper.parseInputString(value :: string)
+			if (parsedType ~= type) or (parsedType == "string" and parsedValue ~= value) then
+				return `"{value}"`
+			else
+				return tostring(value)
+			end
 		else
-			return tostring(value)
+			return JSONHelper.escapeString(value)
 		end
 	elseif type == "buffer" then
 		-- Buffer cannot be turned into string.
@@ -83,6 +93,12 @@ function JSONHelper.toInputString(value: JSONValue, type: JSONType | string): st
 	end
 
 	return ""
+end
+
+local JSON5_PATTERN = [=[^%s*[%[%{"']]=]
+-- Here "dumb" means it looks like they are not trying to type in a JSON object/array
+function JSONHelper.looksDumb(source: string): boolean
+	return not source:match(JSON5_PATTERN)
 end
 
 return JSONHelper

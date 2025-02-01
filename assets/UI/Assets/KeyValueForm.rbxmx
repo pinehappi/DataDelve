@@ -480,13 +480,10 @@
             <bool name="Draggable">false</bool>
             <Font name="FontFace">
               <Family>
-                <url>rbxasset://fonts/families/SourceSansPro.json</url>
+                <url>rbxasset://fonts/families/Inconsolata.json</url>
               </Family>
               <Weight>400</Weight>
               <Style>Normal</Style>
-              <CachedFaceId>
-                <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
-              </CachedFaceId>
             </Font>
             <bool name="Interactable">true</bool>
             <int name="LayoutOrder">1</int>
@@ -543,7 +540,7 @@
             <token name="TextDirection">0</token>
             <bool name="TextEditable">true</bool>
             <bool name="TextScaled">false</bool>
-            <float name="TextSize">18</float>
+            <float name="TextSize">16</float>
             <Color3 name="TextStrokeColor3">
               <R>0</R>
               <G>0</G>
@@ -835,13 +832,10 @@
             <bool name="Draggable">false</bool>
             <Font name="FontFace">
               <Family>
-                <url>rbxasset://fonts/families/SourceSansPro.json</url>
+                <url>rbxasset://fonts/families/Inconsolata.json</url>
               </Family>
               <Weight>400</Weight>
               <Style>Normal</Style>
-              <CachedFaceId>
-                <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
-              </CachedFaceId>
             </Font>
             <bool name="Interactable">true</bool>
             <int name="LayoutOrder">1</int>
@@ -898,7 +892,7 @@
             <token name="TextDirection">0</token>
             <bool name="TextEditable">true</bool>
             <bool name="TextScaled">false</bool>
-            <float name="TextSize">18</float>
+            <float name="TextSize">16</float>
             <Color3 name="TextStrokeColor3">
               <R>0</R>
               <G>0</G>

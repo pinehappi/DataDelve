@@ -17,12 +17,14 @@ type Operation = {
 	type: "insertInto",
 	searchFor: SearchForQuery,
 	key: string?,
-	value: number,
+	value: any,
+	isArray: boolean?,
 } | {
 	type: "insertAfter",
 	searchFor: SearchForQuery,
 	key: string?,
-	value: number,
+	value: any,
+	isArray: boolean?,
 } | {
 	type: "move",
 	move: SearchForQuery,
@@ -30,6 +32,11 @@ type Operation = {
 } | {
 	type: "moveEnd",
 	move: SearchForQuery,
+} | {
+	type: "edit",
+	searchFor: SearchForQuery,
+	value: any,
+	isArray: boolean?,
 }
 
 local fakeKeyInfo = {
@@ -188,22 +195,26 @@ local function tablesEqual(a, b): boolean
 	for i, v in a do
 		if typeof(v) == "table" then
 			if (not b[i]) or (not tablesEqual(v, b[i])) then
+				print("NOT EQUAL AT (A1)", "B:", b[i], "A:", v, "KEY:", i)
 				return false
 			end
 		elseif typeof(v) == "buffer" then
 			return buffersEqual(v, b[i])
 		elseif v ~= b[i] then
+			print("NOT EQUAL AT (A2)", "B:", b[i], "A:", v, "KEY:", i)
 			return false
 		end
 	end
 	for i, v in b do
 		if typeof(v) == "table" then
 			if (not a[i]) or (not tablesEqual(v, a[i])) then
+				print("NOT EQUAL AT (B1)", "A:", a[i], "B:", v, "KEY:", i)
 				return false
 			end
 		elseif typeof(v) == "buffer" then
 			return buffersEqual(v, a[i])
 		elseif v ~= a[i] then
+			print("NOT EQUAL AT (B2)", "A:", a[i], "B:", v, "KEY:", i)
 			return false
 		end
 	end
@@ -233,9 +244,9 @@ local function runOperation(tree, operation: Operation)
 	if operation.type == "delete" then
 		tree:_deleteBranch(searchFor(tree, operation.searchFor), { onlyChildren = operation.onlyChildren })
 	elseif operation.type == "insertAfter" then
-		tree:_tryInsertAfter(searchFor(tree, operation.searchFor), operation.key, operation.value)
+		tree:_tryInsertAfter(searchFor(tree, operation.searchFor), operation.key, operation.value, operation.isArray)
 	elseif operation.type == "insertInto" then
-		tree:_tryInsertInto(searchFor(tree, operation.searchFor), operation.key, operation.value)
+		tree:_tryInsertInto(searchFor(tree, operation.searchFor), operation.key, operation.value, operation.isArray)
 	elseif operation.type == "move" then
 		local moveIndex = searchFor(tree, operation.move)
 		local beforeIndex = searchFor(tree, operation.before)
@@ -248,6 +259,9 @@ local function runOperation(tree, operation: Operation)
 	elseif operation.type == "moveEnd" then
 		local moveIndex = searchFor(tree, operation.move)
 		tree:_moveArrayElementToEnd(moveIndex, table.find(tree._visibleIndexes, moveIndex))
+	elseif operation.type == "edit" then
+		local index = searchFor(tree, operation.searchFor)
+		tree:_editValue(index, operation.value, operation.isArray)
 	end
 end
 
@@ -264,9 +278,16 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			rootName = "test",
 			data = data,
 			keyInfo = keyInfo,
+			isTesting = true,
 		})
 		for _, operation in operations do
-			if operation.type == "move" or operation.type == "moveEnd" then
+			if
+				operation.type == "insertInto"
+				or operation.type == "insertAfter"
+				or operation.type == "move"
+				or operation.type == "moveEnd"
+				or operation.type == "edit"
+			then
 				viewer:_expandAll(viewer._rootIndex) -- "move" doesn't work if the branch you moved is not visible
 				break
 			end
@@ -279,9 +300,9 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 		local userIds, metadata = viewer:getKeyInfo()
 		if typeof(expected) == "table" then
 			if not tablesEqual(value, expected) then
-				warn(`data {name} failed`)
-				warn("got:", value)
-				warn("expected:", expected)
+				warn(`data {name} failed. See above for where not equal.`)
+				--warn("got:", value)
+				--warn("expected:", expected)
 				return
 			end
 		elseif if typeof(expected) == "buffer" then not buffersEqual(value, expected) else (value ~= expected) then
@@ -403,6 +424,371 @@ testOutput("Test Insert After 2", testTree1, {
 	},
 })
 
+testOutput("Test Insert After 3", {
+	a = 1,
+	b = {
+		a1 = 2,
+		b2 = 3,
+		c3 = 4,
+	},
+}, {
+	a = 1,
+	b = {
+		a1 = 2,
+		b2 = 3,
+		c3 = 4,
+	},
+	test = "worked",
+}, {
+	{
+		type = "insertAfter",
+		searchFor = { key = "b" },
+		key = "test",
+		value = "worked",
+	},
+})
+
+testOutput("Test Insert After 3", {
+	1,
+	{
+		2,
+		3,
+		4,
+	},
+}, {
+	1,
+	{
+		2,
+		3,
+		4,
+	},
+	10, -- <-- INSERT HERE
+}, {
+	{
+		type = "insertAfter",
+		searchFor = { key = 2, isContainer = true },
+		key = "Ykoaeksf",
+		value = 10,
+	},
+})
+
+testOutput("Test Insert After 4", {
+	1,
+	{
+		2,
+		3,
+		4,
+		{ { { { {} } } } },
+	},
+	6,
+	7,
+	8,
+	9,
+	10,
+}, {
+	1,
+	{
+		2,
+		3,
+		4,
+		{ { { { {} } } } },
+	},
+	999, -- <-- INSERT HERE
+	6,
+	7,
+	8,
+	9,
+	10,
+}, {
+	{
+		type = "insertAfter",
+		searchFor = { key = 2, isContainer = true },
+		key = "Ykoaeksf",
+		value = 999,
+	},
+})
+
+testOutput("Test Insert After 5 (At End)", {
+	1,
+	{
+		2,
+		3,
+		4,
+		{ { { { {} } } } },
+	},
+	6,
+	7,
+	8,
+	9,
+	10,
+}, {
+	1,
+	{
+		2,
+		3,
+		4,
+		{ { { { {} } } } },
+	},
+	6,
+	7,
+	8,
+	9,
+	10,
+	999, -- <-- INSERT HERE
+}, {
+	{
+		type = "insertAfter",
+		searchFor = { key = 7 },
+		key = "yayasdfokaksdf",
+		value = 999,
+	},
+})
+
+testOutput("Test Insert Multiple After", {
+	1,
+	{
+		2,
+		3,
+		4,
+		{ { { { {} } } } },
+	},
+	6,
+	7,
+	8,
+	9,
+	10,
+}, {
+	1,
+	{
+		2,
+		3,
+		4,
+		{ { { { {} } } } },
+	},
+	6,
+	7,
+	8,
+	9,
+	10,
+	testTree4, -- <-- INSERT HERE
+}, {
+	{
+		type = "insertAfter",
+		searchFor = { key = 7 },
+		key = "yayasdfokaksdf",
+		value = testTree4,
+	},
+})
+
+testOutput("Test Insert Mutliple After 2", {
+	a = 1,
+	b = {
+		a1 = 2,
+		b2 = 3,
+		c3 = 4,
+	},
+	c = 10,
+}, {
+	a = 1,
+	b = {
+		a1 = 2,
+		b2 = 3,
+		c3 = 4,
+		test = testTree2, -- <-- INSERT HERE
+	},
+	c = 10,
+}, {
+	{
+		type = "insertAfter",
+		searchFor = { key = "c3" },
+		key = "test",
+		value = testTree2,
+	},
+})
+
+testOutput("Test Insert Multiple After 3 (Empty)", { {} }, { {}, testTree2 }, {
+	{
+		type = "insertAfter",
+		searchFor = { key = 1 },
+		key = "testplzwork",
+		value = testTree2,
+	},
+})
+
+testOutput("Test Insert Multiple After 4 (Sandwich)", { {}, {} }, { {}, testTree2, {} }, {
+	{
+		type = "insertAfter",
+		searchFor = { key = 1 },
+		key = "testplzwork",
+		value = testTree2,
+	},
+})
+
+testOutput("Test Insert Multiple After 5 (Sandwich Keys)", { a = {}, c = {} }, { a = {}, b = testTree1, c = {} }, {
+	{
+		type = "insertAfter",
+		searchFor = { key = "a" },
+		key = "b",
+		value = testTree1,
+	},
+})
+
+testOutput("Test Insert Mutliple After 6 (Big Test)", {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			hello = 5,
+			taxi = 3,
+			nested = {
+				hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+				aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+				moreNEsted = {
+					3,
+					4,
+					5,
+					6,
+					6,
+					"slayy",
+					{
+						"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+						43,
+						{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+					},
+					{
+						hello = 5,
+						taxi = 3,
+						nested = {
+							hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+							aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+							moreNEsted = {
+								3,
+								4,
+								5,
+								6,
+								6,
+								"slayy",
+								{
+									"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+									43,
+									{
+										"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus",
+										45,
+										true,
+										false,
+									},
+								},
+							},
+						},
+						car = 34,
+						tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+						city = false,
+						abc = true,
+					},
+				},
+			},
+			APPLE = 34,
+			tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+			city = false,
+			abc = true,
+		},
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			hello = 5,
+			taxi = 3,
+			nested = {
+				hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+				aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+				moreNEsted = {
+					3,
+					4,
+					5,
+					6,
+					6,
+					"slayy",
+					{
+						"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+						43,
+						{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+					},
+					{
+						hello = 5,
+						taxi = 3,
+						nested = {
+							hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+							aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+							moreNEsted = {
+								3,
+								4,
+								5,
+								6,
+								6,
+								"slayy",
+								{
+									"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+									43,
+									{
+										"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus",
+										45,
+										true,
+										false,
+									},
+								},
+							},
+						},
+						car = 34,
+						tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+						city = false,
+						abc = true,
+					},
+				},
+			},
+			APPLE = 34,
+			PEAR = testTree2,
+			TOMATO = testTree4,
+			ONION = testTree3,
+			tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+			city = false,
+			abc = true,
+		},
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "insertAfter",
+		searchFor = { key = "APPLE" },
+		key = "PEAR",
+		value = testTree2,
+	},
+	{
+		type = "insertAfter",
+		searchFor = { key = "PEAR" },
+		key = "TOMATO",
+		value = testTree4,
+	},
+	{
+		type = "insertAfter",
+		searchFor = { key = "TOMATO" },
+		key = "ONION",
+		value = testTree3,
+	},
+})
+
 testOutput("Test Insert Into 1", testTree1, {
 	hello = 5,
 	taxi = 3,
@@ -468,6 +854,321 @@ testOutput("Test Insert Into 2", testTree1, {
 		searchFor = { key = "Data" },
 		key = "testplzwork",
 		value = fuzz,
+	},
+})
+
+testOutput("Test Insert Into 3", {
+	1,
+	2,
+	3,
+}, {
+	0, -- <-- INSERT HERE
+	1,
+	2,
+	3,
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = "Data" },
+		key = "!@$!$!",
+		value = 0,
+	},
+})
+
+testOutput("Test Insert Into 4", {
+	1,
+	2,
+	3,
+	{ 4 },
+}, {
+	1,
+	2,
+	3,
+	{ 0, 4 }, -- <-- INSERT HERE
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = 4, isContainer = true },
+		key = "!@$!$!",
+		value = 0,
+	},
+})
+
+testOutput("Test Insert Into 5", {
+	1,
+	2,
+	{
+		hey = "stop",
+		eating = {
+			"my",
+			"food",
+		},
+	},
+	3,
+}, {
+	1,
+	2,
+	{
+		["!@$!$!"] = 0, -- <-- INSERT HERE
+		hey = "stop",
+		eating = {
+			"my",
+			"food",
+		},
+	},
+	3,
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = 3, isContainer = true },
+		key = "!@$!$!",
+		value = 0,
+	},
+})
+
+testOutput("Test Insert Into 6 (Empty)", {}, { dog = 1 }, {
+	{
+		type = "insertInto",
+		searchFor = { key = "Data" },
+		key = "dog",
+		value = 1,
+	},
+})
+
+testOutput("Test Insert Multiple Into 1", {
+	1,
+	2,
+	{
+		hey = "stop",
+		eating = {
+			"my",
+			"food",
+		},
+	},
+	3,
+}, {
+	1,
+	2,
+	{
+		["!@$!$!"] = { "this", "is", "an", "array" }, -- <-- INSERT HERE
+		hey = "stop",
+		eating = {
+			"my",
+			"food",
+		},
+	},
+	3,
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = 3, isContainer = true },
+		key = "!@$!$!",
+		value = { "this", "is", "an", "array" },
+		isArray = true,
+	},
+})
+
+testOutput("Test Insert Multiple Into 2", {
+	nested = {
+		{ 1, 2, 3 },
+		{ test = {} },
+		{ 1, 2, 3 },
+		{ 1, 2, 3 },
+		{ 1, 2, 3 },
+	},
+}, {
+	nested = {
+		{ 1, 2, 3 },
+		{ test = { hey = testTree2 } },
+		{ 1, 2, 3 },
+		{ 1, 2, 3 },
+		{ 1, 2, 3 },
+	},
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = "test" },
+		key = "hey",
+		value = testTree2,
+	},
+})
+
+testOutput("Test Insert Multiple Into 3", {
+	nested = {
+		{ 1, 2, 3 },
+		{ test = {} },
+		{ 1, 2, 3 },
+		{ 1, 2, 3 },
+		{ 1, 2, 3 },
+	},
+}, {
+	nested = {
+		{ 1, 2, 3 },
+		{ test = {} },
+		{ 1, 2, 3 },
+		{ testTree4, 1, 2, 3 },
+		{ 1, 2, 3 },
+	},
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = 4 },
+		key = "hey",
+		value = testTree4,
+	},
+})
+
+testOutput("Test Insert Multiple Into 4", {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			hello = 5,
+			taxi = 3,
+			nested = {
+				hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+				aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+				moreNEsted = {
+					3,
+					4,
+					5,
+					6,
+					6,
+					"slayy",
+					{
+						"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+						43,
+						{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+					},
+					{
+						hello = 5,
+						taxi = 3,
+						nested = {
+							hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+							aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+							moreNEsted = {
+								3,
+								4,
+								5,
+								6,
+								6,
+								"slayy",
+								{
+									"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+									43,
+									{
+										"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus",
+										45,
+										true,
+										false,
+									},
+								},
+							},
+						},
+						car = 34,
+						tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+						city = false,
+						abc = true,
+						yay = {},
+					},
+				},
+			},
+			car = 34,
+			tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+			city = false,
+			abc = true,
+		},
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	hello = 5,
+	taxi = 3,
+	nested = {
+		hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+		aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+		moreNEsted = {
+			hello = 5,
+			taxi = 3,
+			nested = {
+				hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+				aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+				moreNEsted = {
+					3,
+					4,
+					5,
+					6,
+					6,
+					"slayy",
+					{
+						"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+						43,
+						{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+					},
+					{
+						hello = 5,
+						taxi = 3,
+						nested = {
+							hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+							aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+							moreNEsted = {
+								3,
+								4,
+								5,
+								6,
+								6,
+								"slayy",
+								{
+									"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+									43,
+									{
+										"Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus",
+										45,
+										true,
+										false,
+									},
+								},
+							},
+						},
+						car = 34,
+						tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+						city = false,
+						abc = true,
+						yay = { rah = testTree2 },
+					},
+				},
+			},
+			car = 34,
+			tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+			city = false,
+			abc = true,
+		},
+	},
+	car = 34,
+	tree = "wassa w3f aw3f aw3f aw3 aw3 aw3f aw wa3 aw3 aw wa3 aw3 aw3a w3fup",
+	city = false,
+	abc = true,
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = "yay" },
+		key = "rah",
+		value = testTree2,
+	},
+})
+
+testOutput("Test Insert Multiple Into 5 (Empty)", {}, {
+	yes = testTree5,
+}, {
+	{
+		type = "insertInto",
+		searchFor = { key = "Data" },
+		key = "yes",
+		value = testTree5,
 	},
 })
 
@@ -779,5 +1480,118 @@ testOutput("Test Move End 5", testTree6, {
 	{
 		type = "moveEnd",
 		move = { key = 1, value = 3 },
+	},
+})
+
+for i = 1, 3 do
+	local fuzz1 = fuzzJSON(0)
+	testOutput("Test Edit 1 Fuzz " .. i, testTree6, {
+		nested = {
+			hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+			aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+			moreNEsted = {
+				fuzz1,
+				4,
+				5,
+				"slayy",
+				{
+					"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+					43,
+					{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+				},
+				6,
+				6,
+			},
+		},
+	}, {
+		{
+			type = "edit",
+			searchFor = { key = 1, value = 3 },
+			value = fuzz1,
+		},
+	})
+end
+for i = 1, 3 do
+	local fuzz1 = fuzzJSON()
+	testOutput("Test Edit 2 Fuzz " .. i, testTree6, {
+		nested = {
+			hello = "y aw3faw3 faw3f aw3 aw3 aw3 faw3 fw3 faw3 aw3 wa3 aw3 aw3f es",
+			aeoae = "wasafw 3faw3 awf aw3 aw3 aw3 aw aw aw3 aw3 aw3 aw3 aw3 aw3 aw wa3 aw3 wa3 aw3tt 3asup",
+			moreNEsted = {
+				fuzz1,
+				4,
+				5,
+				"slayy",
+				{
+					"wafawefawf awfawefawefawfeawefawfwaef awef awef aewf awef awefssup",
+					43,
+					{ "Uusfa wefawf waefewa fawfa weafwaef awef awef awfe aw3f awe waaw efus", 45, true, false },
+				},
+				6,
+				6,
+			},
+		},
+	}, {
+		{
+			type = "edit",
+			searchFor = { key = 1, value = 3 },
+			value = fuzz1,
+		},
+	})
+end
+
+testOutput("Test Edit 3 Has Children", {
+	thisTable = {
+		hasChildren = 1,
+		its = true,
+		its2 = false,
+	},
+}, {
+	thisTable = 3,
+}, {
+	{
+		type = "edit",
+		searchFor = { key = "thisTable" },
+		value = 3,
+	},
+})
+
+testOutput("Test Edit 4 Has Children Replace Many", {
+	thisTable = {
+		hasChildren = 1,
+		its = true,
+		its2 = false,
+	},
+}, {
+	thisTable = testTree2,
+}, {
+	{
+		type = "edit",
+		searchFor = { key = "thisTable" },
+		value = testTree2,
+	},
+})
+
+testOutput("Test Edit 5 Empty", {
+	{},
+}, {
+	5,
+}, {
+	{
+		type = "edit",
+		searchFor = { key = 1 },
+		value = 5,
+	},
+})
+
+testOutput("Test Edit 6 Empty Replace Many", {
+	{},
+}, {
+	testTree2,
+}, {
+	{
+		type = "edit",
+		searchFor = { key = 1 },
+		value = testTree2,
 	},
 })

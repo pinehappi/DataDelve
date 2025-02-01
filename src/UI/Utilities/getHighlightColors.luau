@@ -1,5 +1,3 @@
---!strict
-
 -- Gets highlight colors for the TreeViewer. Depends on global state from `Settings`
 -- to see if it should use the built-in theme or the script editors theme.
 
@@ -28,6 +26,7 @@ export type Colors = {
 	buffer: Color3,
 
 	disabled: Color3,
+	error: Color3,
 
 	selectText: Colors,
 }
@@ -55,10 +54,10 @@ local textColors = {
 	"key3",
 }
 
-return function(theme)
+return function(theme, forceDefault: "forceDefault"?)
 	local highlightColors = Settings.get("highlightColors")
 	local colors
-	if highlightColors == "Default" then
+	if forceDefault or highlightColors == "Default" then
 		colors = table.clone(theme.colors.syntaxHighlight)
 		colors.plain = theme.colors.text
 		colors.background = theme.colors.background
@@ -72,6 +71,7 @@ return function(theme)
 		)
 		colors.mainAccent = theme.colors.mainAccent
 		colors.disabled = theme.colors.disabledText
+		colors.error = theme.colors.error
 		colors.scrollbar = theme.colors.scrollbar
 	elseif highlightColors == "Script Editor" then
 		local studio = settings().Studio
@@ -101,6 +101,7 @@ return function(theme)
 			buffer = studio["Comment Color"],
 
 			disabled = theme.colors.disabledText,
+			error = studio["Error Color"],
 
 			scrollbar = Color3.new(1, 1, 1),
 		}

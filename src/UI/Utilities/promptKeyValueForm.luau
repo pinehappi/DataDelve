@@ -8,7 +8,7 @@ local StyleState = script.Parent.Parent.StyleState
 
 local StyleStateWrapper = require(StyleState.StyleStateWrapper)
 local TextBoxStyleState = require(StyleState.Input.TextBoxStyleState)
-local ShortcutsTextBoxStyleState = require(StyleState.Input.ShortcutsTextBoxStyleState)
+local JsonTextBoxStyleState = require(StyleState.Input.JsonTextBoxStyleState)
 local ButtonStyleState = require(StyleState.ButtonStyleState)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
 local LabelStyleState = require(StyleState.LabelStyleState)
@@ -34,7 +34,7 @@ export type OnExpandResult = {
 } | {
 	operation: "cancel",
 }
-export type FormConstraint = "userId" | "orderedDataStore" | "rename" | "renameAllScopes"
+export type FormConstraint = "userId" | "orderedDataStore"
 export type Options = {
 	position: Vector2?,
 	anchorPoint: Vector2?,
@@ -65,12 +65,12 @@ return function(theme, gui, options: Options): FormResult?
 		}),
 
 		keyLabel = LabelStyleState.from(theme, frame.Form.Key.Title),
-		keyTextBox = if options.constraint == "rename" or options.constraint == "renameAllScopes"
-			then ShortcutsTextBoxStyleState.from(theme, frame.Form.Key.TextBox)
-			else TextBoxStyleState.from(theme, frame.Form.Key.TextBox),
+		keyTextBox = TextBoxStyleState.from(theme, frame.Form.Key.TextBox),
 
 		valueLabel = LabelStyleState.from(theme, frame.Form.Value.Title),
-		valueTextBox = TextBoxStyleState.from(theme, frame.Form.Value.TextBox),
+		valueTextBox = JsonTextBoxStyleState.from(theme, frame.Form.Value.TextBox, {
+			useDefaultTheme = true,
+		}),
 
 		insert = ButtonStyleState.from(theme, frame.Form.Buttons.Insert, {
 			style = "primary",
@@ -112,14 +112,15 @@ return function(theme, gui, options: Options): FormResult?
 	end
 
 	local function getResult(): FormResult
-		local type, value = JSONHelper.parseInputString(valueTextBoxStyleState.textBox.Text)
+		local value, isArray = valueTextBoxStyleState:getJson()
 		return {
-			key = keyTextBoxStyleState:getText(function(err)
-				-- TODO: have the error display in the plugin gui!!! need to pass in uimessages
-				warn(err)
-			end),
+			key = keyTextBoxStyleState:getText(),
 			value = value,
-			type = type,
+			type = if isArray
+				then "array"
+				elseif typeof(value) == "table" then "object"
+				elseif value == nil then "null"
+				else typeof(value),
 		}
 	end
 
@@ -140,11 +141,7 @@ return function(theme, gui, options: Options): FormResult?
 			return
 		end
 
-		local validator = if options.constraint == "orderedDataStore"
-			then Validators.dataStoreKey
-			elseif options.constraint == "renameAllScopes" then Validators.allScopesKey
-			elseif options.constraint == "rename" then Validators.dataStoreKey
-			else Validators.empty
+		local validator = if options.constraint == "orderedDataStore" then Validators.dataStoreKey else Validators.empty
 		local valid, err = validator(keyTextBoxStyleState.textBox.Text)
 		if valid and options.extraKeyValidator then
 			valid, err = options.extraKeyValidator(keyTextBoxStyleState.textBox.Text)
@@ -159,10 +156,6 @@ return function(theme, gui, options: Options): FormResult?
 		updateDisabled()
 	end)
 	valueTextBoxStyleState.textBox:GetPropertyChangedSignal("Text"):Connect(function()
-		-- Syntax highlighting
-		local valueType = JSONHelper.parseInputString(valueTextBoxStyleState.textBox.Text)
-		valueTextBoxStyleState:overrideTextColor(theme.colors.syntaxHighlight[valueType]):update("veryFast")
-
 		-- Validate
 		if valueTextBoxStyleState.textBox.Text == "" then
 			valueTextBoxStyleState:setError(nil):update("veryFast")
@@ -207,8 +200,10 @@ return function(theme, gui, options: Options): FormResult?
 			local onExpandResult = options.onExpand(getResult())
 			if onExpandResult.operation == "unexpand" then
 				keyTextBoxStyleState.textBox.Text = onExpandResult.current.key
-				valueTextBoxStyleState.textBox.Text =
-					JSONHelper.toInputString(onExpandResult.current.value, onExpandResult.current.type)
+				valueTextBoxStyleState.textBox.Text = if onExpandResult.current.type == "array"
+						or onExpandResult.current.type == "object"
+					then JSONHelper.encode(onExpandResult.current.value)
+					else JSONHelper.toInputString(onExpandResult.current.value, onExpandResult.current.type)
 				modal:reveal()
 				autoFocus()
 			elseif onExpandResult.operation == "submit" then
