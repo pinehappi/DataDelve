@@ -194,6 +194,13 @@ function UI.new(theme: Theme.Theme, uiMessages)
 			versions = ButtonStyleState.from(theme, gui.EditKey.Versions, {
 				style = "secondary",
 			}),
+
+			undo = ButtonStyleState.from(theme, gui.EditKey.Undo, {
+				style = "dormant",
+			}),
+			redo = ButtonStyleState.from(theme, gui.EditKey.Redo, {
+				style = "dormant",
+			}),
 		},
 	}
 
@@ -358,6 +365,7 @@ function UI:updateSettingsButtonPosition()
 	end
 end
 
+local BODY_FRAMES = { "BrowseKeys", "ConnectDataStore", "EditKey", "EditOrderedDataStore" }
 function UI:showBreadcrumbs()
 	if self.gui.Breadcrumbs.Visible then
 		return
@@ -369,7 +377,7 @@ function UI:showBreadcrumbs()
 
 	self:updateSettingsButtonPosition()
 
-	for _, frame in { "BrowseKeys", "ConnectDataStore", "EditKey", "EditOrderedDataStore" } do
+	for _, frame in BODY_FRAMES do
 		self.gui[frame].Size = UDim2.new(1, 0, 1, -34)
 		self.gui[frame].Position = UDim2.fromOffset(0, 34)
 	end
@@ -386,7 +394,7 @@ function UI:hideBreadcrumbs()
 
 	self:updateSettingsButtonPosition()
 
-	for _, frame in { "BrowseKeys", "ConnectDataStore", "EditKey" } do
+	for _, frame in BODY_FRAMES do
 		self.gui[frame].Size = UDim2.new(1, 0, 1, 0)
 		self.gui[frame].Position = UDim2.fromOffset(0, 0)
 	end

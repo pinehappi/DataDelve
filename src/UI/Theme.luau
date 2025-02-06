@@ -214,11 +214,11 @@ function Theme.generatePreset(preset: string, accent: string)
 					press = 0.6,
 				},
 				dormant = {
-					select = Color3.fromRGB(230, 230, 230),
-					disable = Color3.fromRGB(40, 40, 40),
-					default = Color3.fromRGB(140, 140, 140),
-					hover = Color3.fromRGB(180, 180, 180),
-					press = Color3.fromRGB(200, 200, 200),
+					select = Color3.fromRGB(240, 240, 240),
+					disable = Color3.fromRGB(85, 85, 85),
+					default = Color3.fromRGB(170, 170, 170),
+					hover = Color3.fromRGB(200, 200, 200),
+					press = Color3.fromRGB(220, 220, 220),
 				},
 			},
 
@@ -367,11 +367,11 @@ function Theme.generatePreset(preset: string, accent: string)
 					press = 0.6,
 				},
 				dormant = {
-					select = Color3.fromRGB(20, 20, 20),
-					disable = Color3.fromRGB(220, 220, 220),
-					default = Color3.fromRGB(120, 120, 120),
-					hover = Color3.fromRGB(100, 100, 100),
-					press = Color3.fromRGB(60, 60, 60),
+					select = Color3.fromRGB(15, 15, 15),
+					disable = Color3.fromRGB(200, 200, 200),
+					default = Color3.fromRGB(110, 110, 110),
+					hover = Color3.fromRGB(85, 85, 85),
+					press = Color3.fromRGB(65, 65, 65),
 				},
 			},
 
@@ -665,17 +665,17 @@ function Theme.generatePreset(preset: string, accent: string)
 				dormant = if isDark
 					then {
 						select = Color3.new(1, 1, 1),
-						disable = Color3.new(0.2, 0.2, 0.2),
-						default = Color3.new(0.4, 0.4, 0.4),
-						hover = Color3.new(0.5, 0.5, 0.5),
-						press = Color3.new(0.6, 0.6, 0.6),
+						disable = Color3.new(0.35, 0.35, 0.35),
+						default = Color3.new(0.6, 0.6, 0.6),
+						hover = Color3.new(0.7, 0.7, 0.7),
+						press = Color3.new(0.8, 0.8, 0.8),
 					}
 					else {
 						select = Color3.new(0, 0, 0),
-						disable = Color3.new(0.8, 0.8, 0.8),
-						default = Color3.new(0.6, 0.6, 0.6),
-						hover = Color3.new(0.5, 0.5, 0.5),
-						press = Color3.new(0.4, 0.4, 0.4),
+						disable = Color3.new(0.75, 0.75, 0.75),
+						default = Color3.new(0.4, 0.4, 0.4),
+						hover = Color3.new(0.3, 0.3, 0.3),
+						press = Color3.new(0.2, 0.2, 0.2),
 					},
 			},
 

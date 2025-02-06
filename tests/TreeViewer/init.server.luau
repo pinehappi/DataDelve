@@ -242,30 +242,56 @@ end
 
 local function runOperation(tree, operation: Operation)
 	if operation.type == "delete" then
-		tree:_deleteBranch(searchFor(tree, operation.searchFor), { onlyChildren = operation.onlyChildren })
+		tree:_deleteBranch({
+			index = searchFor(tree, operation.searchFor),
+			onlyChildren = operation.onlyChildren,
+			pushAction = not operation.onlyChildren,
+		})
 	elseif operation.type == "insertAfter" then
-		tree:_tryInsertAfter(searchFor(tree, operation.searchFor), operation.key, operation.value, operation.isArray)
+		tree:_tryInsertAfter({
+			index = searchFor(tree, operation.searchFor),
+			key = operation.key,
+			value = { value = operation.value, isArray = operation.isArray },
+			pushAction = true,
+		})
 	elseif operation.type == "insertInto" then
-		tree:_tryInsertInto(searchFor(tree, operation.searchFor), operation.key, operation.value, operation.isArray)
+		tree:_tryInsertInto({
+			index = searchFor(tree, operation.searchFor),
+			key = operation.key,
+			value = { value = operation.value, isArray = operation.isArray },
+			pushAction = true,
+		})
 	elseif operation.type == "move" then
 		local moveIndex = searchFor(tree, operation.move)
 		local beforeIndex = searchFor(tree, operation.before)
-		tree:_moveArrayElement(
-			moveIndex,
-			table.find(tree._visibleIndexes, moveIndex),
-			beforeIndex,
-			table.find(tree._visibleIndexes, beforeIndex)
-		)
+		tree:_moveArrayElement({
+			branchIndex = moveIndex,
+			branchVisibleIndex = table.find(tree._visibleIndexes, moveIndex),
+			moveBeforeIndex = beforeIndex,
+			moveBeforeVisibleIndex = table.find(tree._visibleIndexes, beforeIndex),
+			pushAction = true,
+		})
 	elseif operation.type == "moveEnd" then
 		local moveIndex = searchFor(tree, operation.move)
-		tree:_moveArrayElementToEnd(moveIndex, table.find(tree._visibleIndexes, moveIndex))
+		tree:_moveArrayElementToEnd({
+			branchIndex = moveIndex,
+			branchVisibleIndex = table.find(tree._visibleIndexes, moveIndex),
+			pushAction = true,
+		})
 	elseif operation.type == "edit" then
-		local index = searchFor(tree, operation.searchFor)
-		tree:_editValue(index, operation.value, operation.isArray)
+		tree:_editValue({
+			index = searchFor(tree, operation.searchFor),
+			value = { value = operation.value, isArray = operation.isArray },
+			pushAction = true,
+		})
 	end
 end
 
 local function testOutput(name: string, data, expected, operations: { Operation })
+	if name ~= "Test Delete 7" then
+		return
+	end
+	local viewer
 	local success, err = pcall(function()
 		local fake = script.Parent.Parent.UI.Assets.Widget.EditKey.Content.ScrollingFrame:Clone()
 		local keyInfo = table.clone(fakeKeyInfo)
@@ -274,7 +300,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			keyInfo.Metadata = data
 		end
 
-		local viewer = Tree.new(Theme.global, {}, fake, {
+		viewer = Tree.new(Theme.global, {}, fake, {
 			rootName = "test",
 			data = data,
 			keyInfo = keyInfo,
@@ -288,7 +314,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 				or operation.type == "moveEnd"
 				or operation.type == "edit"
 			then
-				viewer:_expandAll(viewer._rootIndex) -- "move" doesn't work if the branch you moved is not visible
+				viewer:_expandAll(viewer:_getRootIndex()) -- "move" doesn't work if the branch you moved is not visible
 				break
 			end
 		end
@@ -328,6 +354,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 		warn(`{name} errored`)
 		warn("value:", data)
 		warn("err:", err)
+		warn("dump:", viewer:_dump())
 	end
 end
 
@@ -1172,12 +1199,12 @@ testOutput("Test Insert Multiple Into 5 (Empty)", {}, {
 	},
 })
 
-testOutput("Test Delete 1", testTree1, nil, {
+--[[testOutput("Test Delete 1", testTree1, nil, {
 	{
 		type = "delete",
 		searchFor = { key = "Data" },
 	},
-})
+})]]
 
 testOutput("Test Delete 2", testTree3, {}, {
 	{

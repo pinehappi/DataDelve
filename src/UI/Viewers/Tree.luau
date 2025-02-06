@@ -15,18 +15,6 @@
 -- _redrawBranches which iterates over visibleIndexes which can be constructed from the tree as needed instead of flattening the tree in the beginning
 -- so there shouldn't be a major performance gain from using an array over a tree (probably)
 
--- Branch metadata tags:
--- TODO: Extract this into bit flag to save precious memory???
---		 Only if necessary
---	ISROOT: for the root of the data
---	ISKEYROOT: for the root of key info
---	ISUSERID: if it is a user id
---	ISUSERIDS: if iti s the array that contains user ids
---	ISMETADATA: if its the metadata dictionary
---	LOCKKEY: if key cannot be edited
---	LOCKVALUE: if value cannot be edited
---	ISTIME: if it should display as time (can either be timestamp or universal time table)
-
 -- NOTE: right now `Display as Time` for objects is disabled because it requires the children to update the parent when they change
 -- NOTE: right now hierarchy bars are disabled because they're ugly
 
@@ -60,6 +48,7 @@ local SIZE_PER_BRANCH = script.Branch.AbsoluteSize.Y
 local DRAG_AND_DROP_REGION_SIZE = 10
 
 local FRAME_POOL_SIZE_LIMIT = 256
+local UNDO_LIMIT = 64
 
 -- For inconsolata
 local CHAR_WIDTH = 7.2
@@ -69,6 +58,17 @@ local ITALIC_BOLD_FONT = Font.new(script.Branch.Key.FontFace.Family, Enum.FontWe
 
 local Tree = {}
 Tree.__index = Tree
+
+local FLAGS = {
+	"ISROOT", -- for the root of the data
+	"ISKEYROOT", -- for the root of key info
+	"ISUSERID", -- if it is a user id
+	"ISUSERIDS", -- if iti s the array that contains user ids
+	"ISMETADATA", -- if its the metadata dictionary
+	"LOCKKEY", -- if key cannot be edited
+	"LOCKVALUE", -- if value cannot be edited
+	"ISTIME", -- if it should display as time (can either be timestamp or universal time table)
+}
 
 export type KeyInfo = {
 	CreatedTime: number,
@@ -86,6 +86,7 @@ export type TreeOptions = {
 
 	isTesting: boolean?,
 }
+
 function Tree.new(
 	theme,
 	uiMessages,
@@ -112,7 +113,6 @@ function Tree.new(
 
 		_flatDepths = {},
 		_flatBranches = {}, -- tuple { KEY, VALUE, IS_OPENED }
-		_rootIndex = nil, -- Index of the root branch
 		_userIdsIndex = nil, -- Index of UserIds array
 
 		_visibleIndexes = {}, -- Array of all visible indexes
@@ -130,6 +130,9 @@ function Tree.new(
 		_hierarchyBarFolder = Instance.new("Folder", frame),
 		_hierarchyBars = {},
 
+		_undoStack = {},
+		_undoStackPosition = 0,
+
 		_isTesting = options.isTesting,
 	}, Tree)
 
@@ -137,6 +140,10 @@ function Tree.new(
 	self._dirtyChanged = Instance.new("BindableEvent")
 	self.dirtyChanged = self._dirtyChanged.Event
 	self.isDirty = options.dirty or false
+	self._initialDirty = options.dirty or false
+
+	self._historyChanged = Instance.new("BindableEvent")
+	self.historyChanged = self._historyChanged.Event
 
 	self._idLookedUp = Instance.new("BindableEvent")
 	self.idLookedUp = self._idLookedUp.Event
@@ -145,14 +152,15 @@ function Tree.new(
 	self.frame.BackgroundColor3 = self._colors.background
 	self.frame.ScrollBarImageColor3 = self._colors.scrollbar
 
-	self:_initializeBranchesFromData(options.data, options.keyInfo or {
+	local rootIndex = self:_initializeBranchesFromData(options.data, options.keyInfo or {
 		CreatedTime = nil,
 		UpdatedTime = nil,
 		Version = nil,
 		UserIds = {},
 		Metadata = nil,
 	})
-	self:_updateAllVisible()
+	self:_updateBranchVisible(1)
+	self:_updateBranchVisible(rootIndex)
 	self:_redrawBranches()
 
 	local lastCanvasPosition = self.frame.CanvasPosition.Y
@@ -285,15 +293,17 @@ function Tree:_initializeBranchesFromData(data: JSONHelper.JSONValue, keyInfo: K
 	table.move(metadataDepths, 1, #metadataDepths, #depths + 1, depths)
 	table.move(metadataBranches, 1, #metadataBranches, #branches + 1, branches)
 
-	self._rootIndex = #branches + 1
+	local rootIndex = #branches + 1
 	table.move(dataDepths, 1, #dataDepths, #depths + 1, depths)
 	table.move(dataBranches, 1, #dataBranches, #branches + 1, branches)
 
 	-- Final touches
-	self._visibleIndexes = { 1, self._rootIndex }
+	self._visibleIndexes = { 1, rootIndex }
 
 	self._flatDepths = depths
 	self._flatBranches = branches
+
+	return rootIndex
 end
 
 type FlattenOptions = {
@@ -383,7 +393,45 @@ function Tree:_flatten(options: FlattenOptions)
 	return depths, branches
 end
 
+-- For debugging
+function Tree:_dump(): string
+	local builder = {}
+	for i = 1, #self._flatBranches do
+		local value = self._flatBranches[i][2]
+		if value == ARRAY_SENTINEL then
+			value = "[]"
+		elseif value == OBJECT_SENTINEL then
+			value = "{}"
+		end
+		table.insert(builder, `[{i}] {self._flatDepths[i]}: {self._flatBranches[i][1]} = {value}`)
+	end
+	return table.concat(builder, "\n")
+end
+
 -- Utilities for analyzing branches
+
+function Tree:_getRootIndex(): number
+	local didKeyInfo = false
+	for i, depth in self._flatDepths do
+		if depth == 0 then
+			if didKeyInfo then
+				return i
+			else
+				didKeyInfo = true
+			end
+		end
+	end
+end
+
+-- Gets the index of the parent of the branch at the given index, or nil if it does not exist for whatever reason
+function Tree:_getParentIndex(index: number): number?
+	local depth = self._flatDepths[index]
+	for i = index, 1, -1 do
+		if self._flatDepths[i] == depth - 1 then
+			return i
+		end
+	end
+end
 
 function Tree:_doesBranchHaveChildren(index: number)
 	return self._flatDepths[index + 1] == self._flatDepths[index] + 1
@@ -576,14 +624,92 @@ local function spliceReplace(destination: { unknown }, destinationIndex: number,
 	table.move(array, 1, #array, destinationIndex, destination)
 end
 
--- This assumes that the index to insert into is visible!
--- Returns the branch if it was successful and the index of it
-function Tree:_tryInsertInto(
+--[[ ACTIONS ]]
+type ActionValue = {
+	value: JSONHelper.JSONValue,
+	isArray: boolean,
+}
+
+type InsertAction = {
+	kind: "insert",
 	index: number,
 	key: string | number,
-	value: unknown,
-	valueIsArray: boolean | "isArray"?
-): (any, any)
+	value: ActionValue,
+	depth: number,
+}
+type DeleteAction = {
+	kind: "delete",
+	index: number,
+	key: string | number,
+	value: ActionValue,
+	depth: number,
+}
+type EditKeyAction = {
+	kind: "editKey",
+	index: number,
+	from: string,
+	to: string,
+}
+type EditValueAction = {
+	kind: "editValue",
+	index: number,
+	from: ActionValue,
+	to: ActionValue,
+}
+type EditBothAction = {
+	kind: "editBoth",
+	index: number,
+
+	fromKey: string,
+	toKey: string,
+	fromValue: ActionValue,
+	toValue: ActionValue,
+}
+type MoveAction = {
+	kind: "move",
+	startIndex: number,
+	branchSize: number, -- The reason this is stored is so that it does not have to be recalculated for undo/redo
+	endIndex: index,
+}
+type Action = InsertAction | DeleteAction | EditKeyAction | EditValueAction | MoveAction
+
+function Tree:_pushAction(action: Action)
+	for i = self._undoStackPosition + 1, #self._undoStack do
+		table.remove(self._undoStack)
+	end
+
+	if #self._undoStack + 1 > UNDO_LIMIT then
+		table.remove(self._undoStack, 1)
+	end
+
+	table.insert(self._undoStack, action)
+	self._undoStackPosition = #self._undoStack
+
+	self._historyChanged:Fire()
+end
+
+function Tree:_informBug(options: { message: string, dumpExtra: any })
+	local betterMessage = `{options.message}. Please report this bug.`
+	self.uiMessages:error(betterMessage)
+	warn(`{options.message}\nextra:{JSONHelper.encode(options.dumpExtra)}\ndump:{self:_dump()}`)
+end
+
+type InsertResult = | { kind: "error", message: string } | { kind: "success", branch: any, index: number }
+
+-- This assumes that the index to insert into is visible!
+-- Returns the branch if it was successful and the index of it
+-- Make sure to redrawBranches after
+function Tree:_tryInsertInto(options: {
+	index: number,
+	key: string | number,
+	value: ActionValue,
+	pushAction: boolean?,
+}): InsertResult
+	local index = options.index
+	local key = options.key
+	local value = options.value
+	local pushAction = options.pushAction
+
 	self:_makeDirty()
 
 	local branch = self._flatBranches[index]
@@ -591,7 +717,10 @@ function Tree:_tryInsertInto(
 	assert(branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL)
 
 	if self:_doesChildHaveKey(index, key) then
-		return nil, `Already contains key: {key}.`
+		return {
+			kind = "error",
+			message = `Already contains key: {key}.`,
+		}
 	end
 
 	local insertAt = index + 1
@@ -609,14 +738,14 @@ function Tree:_tryInsertInto(
 
 	local insertingDepths, insertingBranches = self:_flatten({
 		key = key,
-		value = value,
+		value = value.value,
 		initialDepth = depth + 1,
 		expectLarge = false,
 		allOpen = true,
 	})
 	local totalInserted = #insertingDepths
 
-	if valueIsArray then
+	if value.isArray then
 		insertingBranches[1][2] = ARRAY_SENTINEL
 	end
 
@@ -644,17 +773,37 @@ function Tree:_tryInsertInto(
 	self:_clearFrames()
 	self:_updateCanvasSize()
 
-	return insertingBranches[1], insertAt
+	if pushAction then
+		self:_pushAction({
+			kind = "insert",
+			index = insertAt,
+			key = key,
+			depth = depth + 1,
+			value = value,
+		} :: InsertAction)
+	end
+
+	return {
+		kind = "success",
+		branch = insertingBranches[1],
+		index = insertAt,
+	}
 end
 
 -- This assumes that the index to insert after is visible!
 -- Returns the branch if successful and the index of it.
-function Tree:_tryInsertAfter(
+-- Make sure to redrawBranches after
+function Tree:_tryInsertAfter(options: {
 	index: number,
 	key: string,
-	value: unknown,
-	valueIsArray: boolean | "isArray"?
-): (any, any)
+	value: ActionValue,
+	pushAction: boolean,
+}): (any, any)
+	local index = options.index
+	local key = options.key
+	local value = options.value
+	local pushAction = options.pushAction
+
 	self:_makeDirty()
 
 	local depth = self._flatDepths[index]
@@ -662,7 +811,10 @@ function Tree:_tryInsertAfter(
 	assert(depth >= 1, "Cannot insert after root node.")
 
 	if self:_doesSiblingOrSelfHaveKey(index, key) then
-		return false, `Sibling already has key: {key}.`
+		return {
+			kind = "error",
+			message = `Sibling already has key: {key}.`,
+		}
 	end
 
 	local insertAt = index
@@ -684,14 +836,14 @@ function Tree:_tryInsertAfter(
 
 	local insertingDepths, insertingBranches = self:_flatten({
 		key = key,
-		value = value,
+		value = value.value,
 		initialDepth = depth,
 		expectLarge = false,
 		allOpen = true,
 	})
 	local totalInserted = #insertingDepths
 
-	if valueIsArray then
+	if value.isArray then
 		insertingBranches[1][2] = ARRAY_SENTINEL
 	end
 
@@ -709,10 +861,10 @@ function Tree:_tryInsertAfter(
 	elseif insertAt > len then
 		spliceIn(self._visibleIndexes, #self._visibleIndexes + 1, insertingVisibleIndexes)
 	else
-		warn(
-			"`tryInsertAfter` failed. Please report this bug. In the meantime, open and close the parent branch to reset things."
-		)
-		print("dump:", insertAt, len, self._visibleIndexes)
+		self:_informBug({
+			message = "`tryInsertAfter` failed because visible index not found",
+			dumpExtra = { options },
+		})
 	end
 
 	-- This has to be done after updating the visible indexes because it will mess it up
@@ -722,18 +874,45 @@ function Tree:_tryInsertAfter(
 	self:_clearFrames()
 	self:_updateCanvasSize()
 
-	return insertingBranches[1], insertAt
+	if pushAction then
+		self:_pushAction({
+			kind = "insert",
+			index = insertAt,
+			key = key,
+			depth = depth,
+			value = value,
+		} :: InsertAction)
+	end
+
+	return {
+		kind = "success",
+		branch = insertingBranches[1],
+		index = insertAt,
+	}
 end
 
-function Tree:_deleteBranch(index: number, options: { onlyChildren: boolean? }?)
+-- ASSUMES the branch is visible
+function Tree:_deleteBranch(options: { index: number, onlyChildren: boolean?, pushAction: boolean })
+	local index = options.index
 	self:_makeDirty()
-
-	options = options or {}
-	assert(options)
 
 	local branch = self._flatBranches[index]
 
 	local deleteSelf = not options.onlyChildren
+
+	local pushAction = (options.pushAction == true)
+	local deleting = nil
+	local deletingIndex = nil
+	local deletingDepth = nil
+	local deletingKey = nil
+
+	if pushAction then
+		assert(deleteSelf, "cannot push delete action where only children are deleted")
+		deleting = self:_unflatten(index).value
+		deletingIndex = index
+		deletingKey = branch[1]
+		deletingDepth = self._flatDepths[index]
+	end
 
 	if deleteSelf then
 		-- Special-case for array elements, have to do it before anything to preserve the indexes
@@ -816,17 +995,33 @@ function Tree:_deleteBranch(index: number, options: { onlyChildren: boolean? }?)
 		end
 	end
 
+	if options.pushAction then
+		self:_pushAction({
+			kind = "delete",
+			index = deletingIndex,
+			key = deletingKey,
+			depth = deletingDepth,
+			value = deleting,
+		} :: DeleteAction)
+	end
+
 	self:_clearFrames()
 	self:_updateCanvasSize()
 end
 
 -- Index is the index in _flatBranches
-function Tree:_moveArrayElement(
+function Tree:_moveArrayElement(options: {
 	branchIndex: number,
 	branchVisibleIndex: number,
 	moveBeforeIndex: number,
-	moveBeforeVisibleIndex: number
-)
+	moveBeforeVisibleIndex: number,
+	pushAction: boolean,
+})
+	local branchIndex = options.branchIndex
+	local branchVisibleIndex = options.branchVisibleIndex
+	local moveBeforeIndex = options.moveBeforeIndex
+	local moveBeforeVisibleIndex = options.moveBeforeVisibleIndex
+
 	local branch = self._flatBranches[branchIndex]
 	local depth = self._flatDepths[branchIndex]
 
@@ -1036,21 +1231,34 @@ function Tree:_moveArrayElement(
 		end
 	end
 
+	local rootBranchIndex = if moveBeforeIndex < branchIndex then moveBeforeIndex else moveBeforeIndex - branchSize - 1
+
+	if options.pushAction then
+		self:_pushAction({
+			kind = "move",
+			startIndex = branchIndex,
+			branchSize = branchSize + 1,
+			endIndex = rootBranchIndex,
+		} :: MoveAction)
+	end
+
 	self:_clearFrames()
 	self:_redrawBranches()
 
 	if self._selectingBranchIndex == branchIndex then
-		self:_selectBranch(if moveBeforeIndex < branchIndex then moveBeforeIndex else moveBeforeIndex - branchSize - 1)
+		self:_selectBranch(rootBranchIndex)
 	end
 
 	self:_makeDirty()
 end
 
--- TODO: left off here
 -- Special case when dragging and dropping to the end of the tree
 -- ASSUMES that the end is a valid dropping point
 -- ASSUMES that the entire tree is open so you can see the end
-function Tree:_moveArrayElementToEnd(branchIndex: number, branchVisibleIndex: number)
+function Tree:_moveArrayElementToEnd(options: { branchIndex: number, branchVisibleIndex: number, pushAction: boolean })
+	local branchIndex = options.branchIndex
+	local branchVisibleIndex = options.branchVisibleIndex
+
 	assert(typeof(self._flatBranches[branchIndex][1]) == "number")
 
 	local moveToIndex = #self._flatBranches
@@ -1123,14 +1331,378 @@ function Tree:_moveArrayElementToEnd(branchIndex: number, branchVisibleIndex: nu
 		self._visibleIndexes[branchStartVisibleIndex + visibleRemaining + i] = visibleTemp[1 + i] + remaining
 	end
 
+	local rootBranchIndex = #self._flatBranches - (branchSize - 1)
+	if options.pushAction then
+		self:_pushAction({
+			kind = "move",
+			startIndex = branchIndex,
+			branchSize = branchSize,
+			endIndex = rootBranchIndex,
+		} :: MoveAction)
+	end
+
 	self:_clearFrames()
 	self:_redrawBranches()
 
 	if self._selectingBranchIndex == branchIndex then
-		self:_selectBranch(#self._flatBranches - (branchSize - 1))
+		self:_selectBranch(rootBranchIndex)
 	end
 
 	self:_makeDirty()
+end
+
+type EditResult = | { kind: "error", message: string } | { kind: "success" }
+
+-- Returns if the value was edited
+function Tree:_editValue(options: {
+	index: number,
+	value: ActionValue,
+	pushAction: boolean,
+}): EditResult
+	local index = options.index
+	local value = options.value
+	local branch = self._flatBranches[index]
+
+	if branch.ISUSERID and (not Validators.userId(value.value)) then
+		return {
+			kind = "error",
+			message = "UserId must be a positive integer.",
+		}
+	end
+
+	local editing = nil
+	if options.pushAction then
+		editing = self:_unflatten(index).value
+	end
+
+	local deletedChildren = false
+	if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
+		if self:_doesBranchHaveChildren(index) then
+			self:_deleteBranch({ index = index, onlyChildren = true })
+			deletedChildren = true
+		end
+	end
+
+	-- Default path
+	self:_makeDirty()
+
+	local insertingDepths, insertingBranches = self:_flatten({
+		key = branch[1],
+		value = value.value,
+		initialDepth = self._flatDepths[index],
+		expectLarge = false,
+		allOpen = true,
+	})
+
+	local totalInserting = #insertingBranches
+
+	if value.isArray then
+		insertingBranches[1][2] = ARRAY_SENTINEL
+	end
+
+	if totalInserting > 1 then
+		for _, flag in FLAGS do
+			if branch[flag] then
+				insertingBranches[1][flag] = branch[flag]
+			end
+		end
+
+		local visibleIndex = table.find(self._visibleIndexes, index)
+		if visibleIndex then
+			local insertingVisibleIndexes = table.create(totalInserting)
+			for i = 1, totalInserting do
+				table.insert(insertingVisibleIndexes, index + i - 1)
+			end
+			self:_bumpVisibleIndexesAfter(index, totalInserting - 1, visibleIndex)
+			spliceReplace(self._visibleIndexes, visibleIndex, insertingVisibleIndexes)
+		end
+
+		spliceReplace(self._flatDepths, index, insertingDepths)
+		spliceReplace(self._flatBranches, index, insertingBranches)
+
+		self:_clearFrames()
+		self:_updateCanvasSize()
+		self:_redrawBranches()
+	else
+		branch[2] = insertingBranches[1][2]
+
+		if deletedChildren then
+			self:_updateCanvasSize()
+			self:_redrawBranches()
+		else
+			local frame = self._frames[index]
+			if frame then
+				self:_updateBranchFrame(self._frames[index], branch, index)
+			end
+		end
+	end
+
+	if options.pushAction then
+		self:_pushAction({
+			kind = "editValue",
+			index = index,
+			from = editing,
+			to = value,
+		} :: EditValueAction)
+	end
+
+	return {
+		kind = "success",
+	}
+end
+
+-- Returns true if was edited
+function Tree:_editKey(options: {
+	index: number,
+	key: string,
+	pushAction: boolean,
+	skipSiblingCheck: boolean?,
+}): EditResult
+	local index = options.index
+	local key = options.key
+
+	if (not options.skipSiblingCheck) and self:_doesSiblingOrSelfHaveKey(index, key) then
+		return {
+			kind = "error",
+			message = `Duplicate key: {key}.`,
+		}
+	end
+
+	local frame = self._frames[index]
+	local branch = self._flatBranches[index]
+	local originalKey = branch[1]
+	self:_makeDirty()
+	branch[1] = key
+	self:_updateBranchFrame(frame, branch, index)
+
+	if options.pushAction then
+		self:_pushAction({
+			kind = "editKey",
+			index = index,
+			from = originalKey,
+			to = key,
+		} :: EditKeyAction)
+	end
+
+	return {
+		kind = "success",
+	}
+end
+
+function Tree:_processResult(result: EditResult | InsertResult): boolean
+	if result.kind == "success" then
+		return true
+	else
+		self.uiMessages:error(result.message)
+		return false
+	end
+end
+
+function Tree:_insertForUndoRedo(
+	options: { index: number, depth: number, key: string | number, value: ActionValue }
+): InsertResult
+	local insertAt = options.index
+	local insertAtDepth = nil
+	repeat
+		insertAt = insertAt - 1
+		insertAtDepth = self._flatDepths[insertAt]
+	until insertAtDepth == options.depth or insertAtDepth == options.depth - 1 or insertAt <= 0
+
+	if insertAt <= 0 then
+		self:_informBug({
+			message = "Couldn't find spot to insert for undo/redo.",
+			dumpExtra = options,
+		})
+		return
+	end
+
+	local result: InsertResult
+	local key = if typeof(options.key) == "number" then nil else options.key
+	if insertAtDepth == options.depth then
+		self:_digExpand(insertAt)
+		result = self:_tryInsertAfter({
+			index = insertAt,
+			key = key,
+			value = options.value,
+		})
+	elseif insertAtDepth == options.depth - 1 then
+		self:_digExpand(insertAt)
+		result = self:_tryInsertInto({
+			index = insertAt,
+			key = key,
+			value = options.value,
+		})
+	else
+		self:_informBug({
+			message = `Unable to insert for undo/redo.`,
+			dumpExtra = options,
+		})
+		return nil
+	end
+
+	if result.kind == "error" then
+		self:_informBug({
+			message = `Failed to insert for undo/redo. {result.message}.`,
+			dumpExtra = options,
+		})
+	else
+		local parentIndex = self:_getParentIndex(options.index)
+		if parentIndex and self._userIdsIndex == parentIndex then
+			result.branch.ISUSERID = true
+		end
+
+		self:_selectBranch(result.index, true)
+
+		self:_redrawBranches()
+	end
+
+	return result
+end
+
+function Tree:_deleteBranchForUndoRedo(index: number)
+	local parentIndex = self:_getParentIndex(index)
+	self:_digExpand(index)
+	self:_deleteBranch({ index = index })
+
+	if parentIndex then
+		self:_selectBranch(parentIndex, true)
+	end
+
+	self:_redrawBranches()
+end
+
+function Tree:_moveArrayElementForUndoRedo(fromIndex: number, toIndex: number)
+	local branchIndex = fromIndex
+	local branchVisibleIndex = table.find(self._visibleIndexes, branchIndex)
+	if branchVisibleIndex then
+		if toIndex > #self._flatBranches then
+			self:_moveArrayElementToEnd({
+				branchIndex = branchIndex,
+				branchVisibleIndex = branchVisibleIndex,
+			})
+		else
+			local moveBeforeIndex = toIndex
+			local moveBeforeVisibleIndex = table.find(self._visibleIndexes, moveBeforeIndex)
+			if moveBeforeVisibleIndex then
+				self:_moveArrayElement({
+					branchIndex = branchIndex,
+					branchVisibleIndex = branchVisibleIndex,
+					moveBeforeIndex = moveBeforeIndex,
+					moveBeforeVisibleIndex = moveBeforeVisibleIndex,
+				})
+			end
+		end
+	end
+end
+
+function Tree:_focusBranch(index: number)
+	self:_digExpand(index)
+	self:_selectBranch(index, true)
+
+	local visibleIndex = table.find(self._visibleIndexes, index)
+	if visibleIndex then
+		local scrollTo = SIZE_PER_BRANCH * (visibleIndex - 1)
+		if self._selectingBranchVisibleIndex and self._selectingBranchVisibleIndex > visibleIndex then
+			scrollTo += self._selectingBranchOffset
+		end
+		if self.frame.CanvasPosition.Y < scrollTo then
+			self.frame.CanvasPosition = Vector2.new(0, scrollTo)
+		elseif self.frame.CanvasPosition.Y + self.frame.AbsoluteSize.Y > scrollTo then
+			self.frame.CanvasPosition = Vector2.new(0, scrollTo + SIZE_PER_BRANCH - self.frame.AbsoluteSize.Y)
+		end
+	end
+end
+
+-- Make sure you can actually undo before calling this with `:canUndo()`
+function Tree:_undo()
+	local action = self._undoStack[self._undoStackPosition] :: Action
+	self._undoStackPosition -= 1
+
+	if action.kind == "insert" then
+		self:_deleteBranchForUndoRedo(action.index)
+	elseif action.kind == "delete" then
+		self:_insertForUndoRedo({
+			index = action.index,
+			key = action.key,
+			value = action.value,
+			depth = action.depth,
+		})
+	elseif action.kind == "editKey" then
+		self:_focusBranch(action.index)
+		self:_editKey({
+			index = action.index,
+			key = action.from,
+		})
+	elseif action.kind == "editValue" then
+		self:_focusBranch(action.index)
+		self:_editValue({
+			index = action.index,
+			value = action.from,
+		})
+	elseif action.kind == "editBoth" then
+		self:_focusBranch(action.index)
+		self:_editKey({
+			index = action.index,
+			key = action.fromKey,
+		})
+		self:_editValue({
+			index = action.index,
+			value = action.fromValue,
+		})
+	elseif action.kind == "move" then
+		self:_moveArrayElementForUndoRedo(
+			action.endIndex,
+			if action.endIndex < action.startIndex then action.startIndex + action.branchSize else action.startIndex
+		)
+	end
+
+	self._historyChanged:Fire()
+end
+
+-- Make sure you can actually redo before calling this with `:canRedo()`
+function Tree:_redo()
+	self._undoStackPosition += 1
+	local action = self._undoStack[self._undoStackPosition] :: Action
+
+	if action.kind == "insert" then
+		self:_insertForUndoRedo({
+			index = action.index,
+			key = action.key,
+			value = action.value,
+			depth = action.depth,
+		})
+	elseif action.kind == "delete" then
+		self:_deleteBranchForUndoRedo(action.index)
+	elseif action.kind == "editKey" then
+		self:_focusBranch(action.index)
+		self:_editKey({
+			index = action.index,
+			key = action.to,
+		})
+	elseif action.kind == "editValue" then
+		self:_focusBranch(action.index)
+		self:_editValue({
+			index = action.index,
+			value = action.to,
+		})
+	elseif action.kind == "editBoth" then
+		self:_focusBranch(action.index)
+		self:_editKey({
+			index = action.index,
+			key = action.toKey,
+		})
+		self:_editValue({
+			index = action.index,
+			value = action.toValue,
+		})
+	elseif action.kind == "move" then
+		self:_moveArrayElementForUndoRedo(
+			action.startIndex,
+			if action.endIndex > action.startIndex then action.endIndex + action.branchSize else action.endIndex
+		)
+	end
+
+	self._historyChanged:Fire()
 end
 
 function Tree:_expandAll(index: number)
@@ -1180,6 +1752,31 @@ function Tree:_collapseAll(index: number)
 	self:_updateBranchVisible(index)
 	self:_redrawBranches()
 	self:_clearNonVisibleBranches()
+end
+
+-- Expands the tree so that the branch at the given index is visible
+-- DOES NOT _redrawBranches! You must do that after. The reason is that this is used for undo which sequences multiple operations so it
+-- would be wasteful to _redrawBranches multiple times.
+function Tree:_digExpand(index: number)
+	local currentDepth = self._flatDepths[index]
+	for i = index, 1, -1 do
+		local depth = self._flatDepths[i]
+		if depth < currentDepth then
+			local branch = self._flatBranches[i]
+			if branch[3] ~= nil then
+				branch[3] = true
+				local frame = self._frames[i]
+				if frame then
+					frame.Arrow.Image = self.theme.icons.downArrow
+				end
+			end
+		end
+
+		if depth == 0 then
+			self:_updateBranchVisible(i)
+			break
+		end
+	end
 end
 
 function Tree:_updateCanvasSize()
@@ -1334,105 +1931,6 @@ function Tree:_updateBranchFrame(frame, branch, index)
 	end
 
 	self:_updateBranchFrameSize(frame, branch)
-end
-
--- Returns true if was edited
-function Tree:_editKey(index: number, key: any, options: { skipSiblingCheck: boolean? }?): boolean
-	options = options or {}
-	assert(options)
-
-	if (not options.skipSiblingCheck) and self:_doesSiblingOrSelfHaveKey(index, key) then
-		self.uiMessages:error(`Duplicate key: {key}.`)
-		return false
-	end
-
-	local frame = self._frames[index]
-	local branch = self._flatBranches[index]
-	self:_makeDirty()
-	branch[1] = key
-	self:_updateBranchFrame(frame, branch, index)
-
-	return true
-end
-
--- Returns if the value was edited
-function Tree:_editValue(index: number, value: any, valueIsArray: boolean | "isArray"?): boolean
-	local branch = self._flatBranches[index]
-
-	if branch.ISUSERID and (not Validators.userId(value)) then
-		self.uiMessages:error("UserId must be a positive integer.")
-		return false
-	end
-
-	local deletedChildren = false
-	if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
-		if self:_doesBranchHaveChildren(index) then
-			self:_setInModal(true)
-
-			local confirmed = self._isTesting
-				or ConfirmDialogStyleState.confirm(self.theme, self.gui, self.gui:GetRelativeMousePosition(), {
-					title = `Are you sure you want to change this value?`,
-					message = "This will delete any children as well.",
-				})
-
-			self:_setInModal(false)
-			if confirmed then
-				self:_deleteBranch(index, { onlyChildren = true })
-				deletedChildren = true
-			else
-				return false
-			end
-		end
-	end
-
-	-- Default path
-	self:_makeDirty()
-
-	local insertingDepths, insertingBranches = self:_flatten({
-		key = branch[1],
-		value = value,
-		initialDepth = self._flatDepths[index],
-		expectLarge = false,
-		allOpen = true,
-	})
-
-	local totalInserting = #insertingBranches
-
-	if valueIsArray then
-		insertingBranches[1][2] = ARRAY_SENTINEL
-	end
-
-	if totalInserting > 1 then
-		local visibleIndex = table.find(self._visibleIndexes, index)
-		if visibleIndex then
-			local insertingVisibleIndexes = table.create(totalInserting)
-			for i = 1, totalInserting do
-				table.insert(insertingVisibleIndexes, index + i - 1)
-			end
-			self:_bumpVisibleIndexesAfter(index, totalInserting - 1, visibleIndex)
-			spliceReplace(self._visibleIndexes, visibleIndex, insertingVisibleIndexes)
-		end
-
-		spliceReplace(self._flatDepths, index, insertingDepths)
-		spliceReplace(self._flatBranches, index, insertingBranches)
-
-		self:_clearFrames()
-		self:_updateCanvasSize()
-		self:_redrawBranches()
-	else
-		branch[2] = insertingBranches[1][2]
-		if deletedChildren then
-			self:_updateCanvasSize()
-			self:_redrawBranches()
-		else
-			local frame = self._frames[index]
-			if frame then
-				self:_updateBranchFrame(self._frames[index], branch, index)
-			end
-		end
-	end
-
-	return true
 end
 
 type ExtraSecretTypes = "UserId" | "empty array" | "empty object"
@@ -1841,7 +2339,11 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 					if start.key == newKey then
 						-- Don't do anything becaues no change
 						return true
-					elseif self:_editKey(index, newKey, { skipSiblingCheck = true }) then
+					elseif
+						self:_processResult(
+							self:_editKey({ index = index, key = newKey, skipSiblingCheck = true, pushAction = true })
+						)
+					then
 						return true
 					else
 						return false
@@ -1858,8 +2360,40 @@ function Tree:_promptEditKey(index: number, options: { captureValueTextBox: bool
 					newValue = nil
 				end
 
-				if self:_editValue(index, newValue, newValueIsArray) then
-					self:_editKey(index, newKey, { skipSiblingCheck = true })
+				if
+					self:_processResult(self:_editValue({
+						index = index,
+						value = { value = newValue, isArray = newValueIsArray },
+						pushAction = true,
+					}))
+				then
+					if
+						(newKey ~= start.key)
+						and self:_processResult(self:_editKey({
+							index = index,
+							key = newKey,
+							pushAction = true,
+							skipSiblingCheck = true,
+						}))
+					then
+						if
+							self._undoStack[#self._undoStack - 1].kind == "editValue"
+							and self._undoStack[#self._undoStack].kind == "editKey"
+						then
+							-- NOTE: if you're last action is an "edit both" the undo stack limit will be one less
+							local editKey = table.remove(self._undoStack)
+							local editValue = table.remove(self._undoStack)
+							self._undoStackPosition -= 2
+							self:_pushAction({
+								kind = "editBoth",
+								index = index,
+								fromKey = editKey.from,
+								toKey = editKey.to,
+								fromValue = editValue.from,
+								toValue = editValue.to,
+							} :: EditBothAction)
+						end
+					end
 					return true
 				else
 					return false
@@ -2321,14 +2855,19 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 		if dropBeforeIndex > 0 then
 			if dropBeforeIndex == #self._visibleIndexes + 1 then
-				self:_moveArrayElementToEnd(index, self._selectingBranchVisibleIndex)
+				self:_moveArrayElementToEnd({
+					branchIndex = index,
+					branchVisibleIndex = self._selectingBranchVisibleIndex,
+					pushAction = true,
+				})
 			else
-				self:_moveArrayElement(
-					index,
-					self._selectingBranchVisibleIndex,
-					self._visibleIndexes[dropBeforeIndex],
-					dropBeforeIndex
-				)
+				self:_moveArrayElement({
+					branchIndex = index,
+					branchVisibleIndex = self._selectingBranchVisibleIndex,
+					moveBeforeIndex = self._visibleIndexes[dropBeforeIndex],
+					moveBeforeVisibleIndex = dropBeforeIndex,
+					pushAction = true,
+				})
 			end
 		end
 	end
@@ -2421,32 +2960,8 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		if option == "Edit" then
 			self:_promptEditKey(index, { position = position })
 		elseif option == "Delete" then
-			local shouldDelete = true
-
-			if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
-				if self:_doesBranchHaveChildren(index) then
-					self:_setInModal(true)
-					shouldDelete = ConfirmDialogStyleState.confirm(self.theme, self.gui, position, {
-						title = `Delete <i>{branch[1]}</i>?`,
-						message = "This will delete any children as well.",
-					})
-					self:_setInModal(false)
-				end
-			else
-				self:_setInModal(true)
-				shouldDelete = ConfirmDialogStyleState.confirm(self.theme, self.gui, position, {
-					title = "Confirm deletion",
-					message = `You will be deleting <i>{branch[1]}</i>.`,
-					yesText = "Confirm",
-					noText = "Cancel",
-				})
-				self:_setInModal(false)
-			end
-
-			if shouldDelete then
-				self:_deleteBranch(index)
-				self:_redrawBranches()
-			end
+			self:_deleteBranch({ index = index, pushAction = true })
+			self:_redrawBranches()
 		elseif option == "Insert Into" then
 			local isArray = (branch[2] == ARRAY_SENTINEL)
 			if isArray and branch.ISUSERIDS then
@@ -2482,18 +2997,23 @@ function Tree:_initializeBranchFrame(frame, index: number)
 					result.key = nil
 				end
 
-				local insertedBranch, err = self:_tryInsertInto(index, result.key, result.value, valueIsArray)
-				if not insertedBranch then
-					self.uiMessages:error(err)
+				local insertResult = self:_tryInsertInto({
+					index = index,
+					key = result.key,
+					value = { value = result.value, isArray = valueIsArray },
+					pushAction = true,
+				})
+				if insertResult.kind == "error" then
+					self.uiMessages:error(insertResult.message)
 				else
 					if branch.ISUSERIDS then
-						insertedBranch.ISUSERID = true
+						insertResult.branch.ISUSERID = true
 					end
 
 					self:_redrawBranches()
 
 					-- When it is successful, the err is actually the index of the branch inserted
-					self:_selectBranch(err)
+					self:_selectBranch(insertResult.index)
 				end
 			end
 		elseif option == "Insert After" then
@@ -2534,18 +3054,23 @@ function Tree:_initializeBranchFrame(frame, index: number)
 						result.key = nil
 					end
 
-					local insertedBranch, err = self:_tryInsertAfter(index, result.key, result.value, valueIsArray)
-					if not insertedBranch then
-						self.uiMessages:error(err)
+					local insertResult = self:_tryInsertAfter({
+						index = index,
+						key = result.key,
+						value = { value = result.value, isArray = valueIsArray },
+						pushAction = true,
+					})
+					if insertResult.kind == "error" then
+						self.uiMessages:error(insertResult.message)
 					else
 						if branch.ISUSERID then
-							insertedBranch.ISUSERID = true
+							insertResult.branch.ISUSERID = true
 						end
 
 						self:_redrawBranches()
 
 						-- When it is successful, the err is actually the index of the branch inserted
-						self:_selectBranch(err)
+						self:_selectBranch(insertResult.index)
 					end
 				end
 			end
@@ -2654,7 +3179,11 @@ function Tree:_initializeBranchFrame(frame, index: number)
 						return
 					end
 
-					self:_editKey(index, newKey)
+					self:_processResult(self:_editKey({
+						index = index,
+						key = newKey,
+						pushAction = true,
+					}))
 				end
 			end
 		end),
@@ -2717,7 +3246,11 @@ function Tree:_initializeBranchFrame(frame, index: number)
 				if userResponse == "empty" then
 					self.uiMessages:error("Value was empty.")
 				elseif userResponse == "submit" then
-					self:_editValue(index, newValue, newValueIsArray)
+					self:_processResult(self:_editValue({
+						index = index,
+						value = { value = newValue, isArray = newValueIsArray },
+						pushAction = true,
+					}))
 				end
 			end
 		end),
@@ -2774,11 +3307,6 @@ function Tree:_clearFrames()
 	end
 	self._frames = {}
 	self._frameConnections = {}
-end
-
-function Tree:_updateAllVisible()
-	self:_updateBranchVisible(1)
-	self:_updateBranchVisible(self._rootIndex)
 end
 
 -- This actually updates if it is open, not if it is visible...
@@ -3131,67 +3659,92 @@ function Tree:undirty()
 	self._dirtyChanged:Fire(false)
 end
 
--- Recreates the tree from the flat internal representation
--- The second return value is if there were any nil values
-function Tree:getValue(): (any, boolean)
-	local result = nil
+function Tree:canUndo()
+	return (#self._undoStack > 0) and (self._undoStackPosition > 0)
+end
+
+function Tree:canRedo()
+	return (#self._undoStack > 0) and (self._undoStackPosition < #self._undoStack)
+end
+
+function Tree:undo()
+	if self:canUndo() then
+		self:_undo()
+	end
+end
+
+function Tree:redo()
+	if self:canRedo() then
+		self:_redo()
+	end
+end
+
+type UnflattenResult = {
+	value: ActionValue,
+	hasNil: boolean,
+}
+
+function Tree:_unflatten(index: number): UnflattenResult
+	local firstBranch = self._flatBranches[index]
+	if not (firstBranch[2] == ARRAY_SENTINEL or firstBranch[2] == OBJECT_SENTINEL) then
+		return {
+			value = { value = firstBranch[2], isArray = firstBranch[2] == ARRAY_SENTINEL },
+			hasNil = false,
+		}
+	end
+
+	local result = {}
+	local branchStack = table.create(8)
+	table.insert(branchStack, result)
+
+	local initialDepth = self._flatDepths[index]
+	local lastDepth = initialDepth + 1
 	local hasNil = false
 
-	local branchStack = table.create(16)
+	for i = index + 1, #self._flatBranches do
+		local branch = self._flatBranches[i]
+		local depth = self._flatDepths[i]
 
-	local start = false
-
-	local lastDepth = nil
-
-	for i, branch in self._flatBranches do
-		if not start then
-			if branch.ISROOT then
-				start = true
-			else
-				continue
+		if depth < lastDepth then
+			for i = lastDepth - 1, depth, -1 do
+				table.remove(branchStack)
 			end
 		end
 
-		local depth = self._flatDepths[i]
+		if depth <= initialDepth then
+			break
+		end
 
-		-- First branch
-		if not lastDepth then
-			local value = branch[2]
-			if value == ARRAY_SENTINEL or value == OBJECT_SENTINEL then
-				result = {}
-				table.insert(branchStack, result)
-				depth += 1
-			else
-				result = value
-			end
+		local key = branch[1]
+		local value = branch[2]
+		local currentBranch = branchStack[#branchStack]
+
+		if value == ARRAY_SENTINEL or value == OBJECT_SENTINEL then
+			value = {}
+			currentBranch[key] = value
+			table.insert(branchStack, value)
+			depth += 1
 		else
-			if depth < lastDepth then
-				for i = lastDepth - 1, depth, -1 do
-					table.remove(branchStack)
-				end
+			if value == nil then
+				hasNil = true
 			end
-
-			local key = branch[1]
-			local value = branch[2]
-			local currentBranch = branchStack[#branchStack]
-
-			if value == ARRAY_SENTINEL or value == OBJECT_SENTINEL then
-				value = {}
-				currentBranch[key] = value
-				table.insert(branchStack, value)
-				depth += 1
-			else
-				if value == nil then
-					hasNil = true
-				end
-				currentBranch[key] = value
-			end
+			currentBranch[key] = value
 		end
 
 		lastDepth = depth
 	end
 
-	return result, hasNil
+	return {
+		value = { value = result, isArray = firstBranch[2] == ARRAY_SENTINEL },
+		hasNil = hasNil,
+	}
+end
+
+-- Recreates the tree from the flat internal representation
+-- The second return value is if there were any nil values
+function Tree:getValue(): (any, boolean)
+	local result = self:_unflatten(self:_getRootIndex())
+	return result.value.value, result.hasNil
 end
 
 -- Returns UserId and Metadata

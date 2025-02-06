@@ -501,6 +501,22 @@ function App.new(id: string)
 		end
 	end)
 
+	self.ui.styleStates.edit.undo.button.Activated:Connect(function()
+		if not self:_canEditCurrentKey() then
+			return
+		end
+
+		self.viewer:undo()
+	end)
+
+	self.ui.styleStates.edit.redo.button.Activated:Connect(function()
+		if not self:_canEditCurrentKey() then
+			return
+		end
+
+		self.viewer:redo()
+	end)
+
 	self.ui.styleStates.edit.more.button.Activated:Connect(function()
 		if not self:_canEditCurrentKey() then
 			return
@@ -1063,6 +1079,11 @@ function App.tryListDataStores(self: App)
 	self:listDataStores(prefix)
 end
 
+function App._updateUndoRedoButtons(self: App, speed: StyleStateHelper.TransitionSpeed)
+	self.ui.styleStates.edit.undo:setDisabled(not self.viewer:canUndo()):update(speed)
+	self.ui.styleStates.edit.redo:setDisabled(not self.viewer:canRedo()):update(speed)
+end
+
 function App._setViewer(self: App, data: any, dirty: boolean)
 	if self.viewer then
 		self.viewer:destroy()
@@ -1080,6 +1101,11 @@ function App._setViewer(self: App, data: any, dirty: boolean)
 		dirty = dirty,
 		readOnly = false,
 	})
+
+	self:_updateUndoRedoButtons("instant")
+	self.viewer.historyChanged:Connect(function()
+		self:_updateUndoRedoButtons()
+	end)
 
 	self.ui.styleStates.edit.save:setDisabled((not self.viewer.isDirty) or self._isUpdatingKey):update("instant")
 
