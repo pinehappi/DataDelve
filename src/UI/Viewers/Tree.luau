@@ -1610,10 +1610,10 @@ function Tree:_focusBranch(index: number)
 		if self._selectingBranchVisibleIndex and self._selectingBranchVisibleIndex > visibleIndex then
 			scrollTo += self._selectingBranchOffset
 		end
-		if self.frame.CanvasPosition.Y < scrollTo then
-			self.frame.CanvasPosition = Vector2.new(0, scrollTo)
-		elseif self.frame.CanvasPosition.Y + self.frame.AbsoluteSize.Y > scrollTo then
+		if self.frame.CanvasPosition.Y + self.frame.AbsoluteSize.Y < scrollTo + SIZE_PER_BRANCH then
 			self.frame.CanvasPosition = Vector2.new(0, scrollTo + SIZE_PER_BRANCH - self.frame.AbsoluteSize.Y)
+		elseif self.frame.CanvasPosition.Y > scrollTo then
+			self.frame.CanvasPosition = Vector2.new(0, scrollTo)
 		end
 	end
 end

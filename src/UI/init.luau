@@ -34,6 +34,7 @@ local SettingsView = require(script.SettingsView)
 local VersionsView = require(script.VersionsView)
 
 local createTabSwitchGroup = require(script.Utilities.createTabSwitchGroup)
+local showShadowOnScroll = require(script.Utilities.showShadowOnScroll)
 
 local UI = {}
 UI.__index = UI
@@ -209,6 +210,9 @@ function UI.new(theme: Theme.Theme, uiMessages)
 	self.orderedDataStoreView = OrderedDataStoreView.from(theme, uiMessages, gui.EditOrderedDataStore)
 	self.settingsView = SettingsView.from(theme, uiMessages, gui.Settings)
 	self.versionsView = VersionsView.from(theme, uiMessages, gui.Versions)
+
+	showShadowOnScroll(gui.EditKey.Content.ScrollingFrame, gui.EditKey.Content.Shadow)
+	showShadowOnScroll(gui.BrowseKeys.Keys, gui.BrowseKeys.ScrollShadow)
 
 	-- Extra setting up
 	self.styleStates.edit.save:setDisabled(true):update()

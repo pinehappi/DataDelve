@@ -31,6 +31,7 @@ local constrainTextBoxStyleState = require(script.Parent.Utilities.constrainText
 local createTabSwitchGroup = require(script.Parent.Utilities.createTabSwitchGroup)
 local getHighlightColors = require(script.Parent.Utilities.getHighlightColors)
 local promptKeyValueForm = require(script.Parent.Utilities.promptKeyValueForm)
+local showShadowOnScroll = require(script.Parent.Utilities.showShadowOnScroll)
 
 local OrderedDataStoreView = {}
 OrderedDataStoreView.__index = OrderedDataStoreView
@@ -194,6 +195,7 @@ function OrderedDataStoreView.from(
 	self:_updateHighlightColors({ tween = false })
 	self.styleStates.tableLabels.Empty:update("instant")
 	self.styleStates.tableLabels.Instructions:update("instant")
+	showShadowOnScroll(frame.Keys, frame.ScrollShadow)
 
 	-- Tooltip
 	Tooltip.bindButtonGeneric(
