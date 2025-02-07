@@ -94,6 +94,14 @@ function HexEditorWidget.new(id: string, theme: Theme.Theme, b: buffer)
 
 	-- UI Events
 
+	do
+		local selfAny = self :: any
+		selfAny:_updateUndoRedoButtons()
+		selfAny.editor.historyChanged:Connect(function()
+			selfAny:_updateUndoRedoButtons()
+		end)
+	end
+
 	self.wrapper.styleStates.undo.button.Activated:Connect(function()
 		self.editor:undo()
 	end)
@@ -212,6 +220,11 @@ function HexEditorWidget.generateThemes(theme: Theme.Theme): (HexEditor.ThemeDat
 	}
 
 	return hexEditorTheme, dataInspectorTheme
+end
+
+function HexEditorWidget:_updateUndoRedoButtons(speed: string?)
+	self.wrapper.styleStates.undo:setDisabled(not self.editor:canUndo()):update(speed)
+	self.wrapper.styleStates.redo:setDisabled(not self.editor:canRedo()):update(speed)
 end
 
 function HexEditorWidget:destroy()

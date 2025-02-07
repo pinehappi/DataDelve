@@ -142,6 +142,8 @@ export type HexEditorImplementation = {
 	setTheme: (HexEditor, ThemeData) -> (),
 	setLayout: (HexEditor, LayoutData) -> (),
 
+	canUndo: (HexEditor) -> boolean,
+	canRedo: (HexEditor) -> boolean,
 	undo: (HexEditor) -> (),
 	redo: (HexEditor) -> (),
 
@@ -235,6 +237,9 @@ export type HexEditorFields = {
 	--	horizontalSpaceUsed: number
 	sizeChanged: RBXScriptSignal,
 	_sizeChanged: BindableEvent,
+
+	historyChanged: RBXScriptSignal,
+	_historyChanged: BindableEvent,
 
 	--[[ Private ]]
 
@@ -375,6 +380,9 @@ function HexEditor.new(b: buffer, params: HexEditorNewParams, dependencies: HexE
 	self._sizeChanged = Instance.new("BindableEvent")
 	self.sizeChanged = self._sizeChanged.Event
 
+	self._historyChanged = Instance.new("BindableEvent")
+	self.historyChanged = self._historyChanged.Event
+
 	-- Fields
 
 	self._dependencies = table.freeze(dependencies)
@@ -485,8 +493,12 @@ function HexEditor:setLayout(layout)
 	self:_buildUi()
 end
 
+function HexEditor:canUndo()
+	return self._undoPosition ~= 0
+end
+
 function HexEditor:undo()
-	if self._undoPosition == 0 then
+	if not self:canUndo() then
 		return
 	end
 
@@ -528,10 +540,16 @@ function HexEditor:undo()
 	if (action :: any).wasBehind then
 		self:_incrementCursor()
 	end
+
+	self._historyChanged:Fire()
+end
+
+function HexEditor:canRedo()
+	return self._undoPosition < #self._undoList
 end
 
 function HexEditor:redo()
-	if self._undoPosition >= #self._undoList then
+	if not self:canRedo() then
 		return
 	end
 
@@ -567,6 +585,8 @@ function HexEditor:redo()
 	if action.type == "insert" then
 		self:_incrementCursor()
 	end
+
+	self._historyChanged:Fire()
 end
 
 function HexEditor:destroy()
@@ -1314,6 +1334,8 @@ function HexEditor:_pushAction(action)
 
 	table.insert(self._undoList, action)
 	self._undoPosition += 1
+
+	self._historyChanged:Fire()
 end
 
 --[[ Selection ]]
