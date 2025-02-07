@@ -1597,6 +1597,11 @@ end
 
 function Tree:_focusBranch(index: number)
 	self:_digExpand(index)
+
+	if self._isTesting then
+		return
+	end
+
 	self:_selectBranch(index, true)
 
 	local visibleIndex = table.find(self._visibleIndexes, index)
@@ -3584,6 +3589,9 @@ end
 
 function Tree:_selectBranch(index: number, dontDeselect: boolean)
 	if self._selectingIsDragging then
+		return
+	end
+	if self._isTesting then
 		return
 	end
 

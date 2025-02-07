@@ -221,6 +221,18 @@ local function tablesEqual(a, b): boolean
 	return true
 end
 
+local function equals(a, b): boolean
+	if typeof(a) ~= typeof(b) then
+		return false
+	elseif typeof(a) == "table" then
+		return tablesEqual(a, b)
+	elseif typeof(a) == "buffer" then
+		return buffersEqual(a, b)
+	else
+		return a == b
+	end
+end
+
 local function searchFor(tree, query: SearchForQuery)
 	local atData = false
 	for i, branch in tree._flatBranches do
@@ -288,10 +300,8 @@ local function runOperation(tree, operation: Operation)
 end
 
 local function testOutput(name: string, data, expected, operations: { Operation })
-	if name ~= "Test Delete 7" then
-		return
-	end
 	local viewer
+	local passed = false
 	local success, err = pcall(function()
 		local fake = script.Parent.Parent.UI.Assets.Widget.EditKey.Content.ScrollingFrame:Clone()
 		local keyInfo = table.clone(fakeKeyInfo)
@@ -307,6 +317,10 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			isTesting = true,
 		})
 		for _, operation in operations do
+			if typeof(operation) ~= "table" then
+				continue
+			end
+
 			if
 				operation.type == "insertInto"
 				or operation.type == "insertAfter"
@@ -319,25 +333,21 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			end
 		end
 		for _, operation in operations do
+			if typeof(operation) ~= "table" then
+				continue
+			end
+
 			runOperation(viewer, operation)
 		end
 
 		local value = viewer:getValue()
 		local userIds, metadata = viewer:getKeyInfo()
-		if typeof(expected) == "table" then
-			if not tablesEqual(value, expected) then
-				warn(`data {name} failed. See above for where not equal.`)
-				--warn("got:", value)
-				--warn("expected:", expected)
-				return
-			end
-		elseif if typeof(expected) == "buffer" then not buffersEqual(value, expected) else (value ~= expected) then
+		if not equals(expected, value) then
 			warn(`{name} failed`)
 			warn("got:", value)
 			warn("expected:", expected)
 			return
 		end
-
 		if not tablesEqual(userIds, keyInfo.UserIds) then
 			warn(`userIds {name} failed`)
 			warn("got:", userIds)
@@ -348,13 +358,35 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			warn(`metadata {name} failed`)
 			warn("got:", userIds)
 			warn("expected:", expected)
+			return
 		end
+
+		passed = true
 	end)
+
 	if not success then
 		warn(`{name} errored`)
 		warn("value:", data)
 		warn("err:", err)
 		warn("dump:", viewer:_dump())
+	elseif passed and #operations == 1 and not operations.skipUndoRedo then
+		viewer:undo()
+		local undoed = viewer:getValue()
+		if not equals(undoed, data) then
+			warn({ `{name} Undo failed` })
+			warn("value:", undoed)
+			warn("expected:", data)
+			return
+		end
+
+		viewer:redo()
+		local redoed = viewer:getValue()
+		if not equals(redoed, expected) then
+			warn({ `{name} Redo failed` })
+			warn("value:", redoed)
+			warn("expected:", redoed)
+			return
+		end
 	end
 end
 
@@ -1207,6 +1239,7 @@ testOutput("Test Insert Multiple Into 5 (Empty)", {}, {
 })]]
 
 testOutput("Test Delete 2", testTree3, {}, {
+	skipUndoRedo = true,
 	{
 		type = "delete",
 		searchFor = { key = "Data" },
@@ -1239,6 +1272,7 @@ testOutput("Test Delete 4", testTree1, {
 	city = false,
 	abc = true,
 }, {
+	skipUndoRedo = true,
 	{
 		type = "delete",
 		searchFor = { key = "nested" },
@@ -1298,6 +1332,7 @@ testOutput("Test Delete 6", testTree1, {
 	city = false,
 	abc = true,
 }, {
+	skipUndoRedo = true,
 	{
 		type = "delete",
 		searchFor = { key = 7 },
@@ -1620,5 +1655,19 @@ testOutput("Test Edit 6 Empty Replace Many", {
 		type = "edit",
 		searchFor = { key = 1 },
 		value = testTree2,
+	},
+})
+
+testOutput("Test Edit 7 Root", 1234, {
+	a = 1,
+	b = 2,
+}, {
+	{
+		type = "edit",
+		searchFor = { key = "Data" },
+		value = {
+			a = 1,
+			b = 2,
+		},
 	},
 })
