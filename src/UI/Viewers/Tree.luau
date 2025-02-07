@@ -82,7 +82,9 @@ export type TreeOptions = {
 	data: JSONHelper.JSONValue,
 	keyInfo: KeyInfo?,
 	dirty: boolean?, -- If it's dirty by default
+
 	readOnly: boolean,
+	allOpen: boolean?, -- If all the branches start out open
 
 	isTesting: boolean?,
 }
@@ -158,7 +160,7 @@ function Tree.new(
 		Version = nil,
 		UserIds = {},
 		Metadata = nil,
-	})
+	}, options.allOpen)
 	self:_updateBranchVisible(1)
 	self:_updateBranchVisible(rootIndex)
 	self:_redrawBranches()
@@ -225,12 +227,13 @@ local ARRAY_SENTINEL = newproxy()
 local OBJECT_SENTINEL = newproxy()
 local DECREMENT_DEPTH_SENTINEL = newproxy()
 
-function Tree:_initializeBranchesFromData(data: JSONHelper.JSONValue, keyInfo: KeyInfo)
+function Tree:_initializeBranchesFromData(data: JSONHelper.JSONValue, keyInfo: KeyInfo, allOpen: boolean?)
 	local dataDepths, dataBranches = self:_flatten({
 		key = "Data",
 		value = data,
 		initialDepth = 0,
 		expectLarge = true,
+		allOpen = allOpen,
 	})
 	dataBranches[1].ISROOT = true
 	dataBranches[1].LOCKKEY = true

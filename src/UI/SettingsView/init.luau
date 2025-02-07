@@ -317,6 +317,7 @@ function SettingsView:beforeOpen()
 			number = 100,
 			string = "preview",
 			bool = true,
+			buffer = buffer.create(2),
 			null = nil,
 			object = {
 				number = 100,
@@ -339,6 +340,7 @@ function SettingsView:beforeOpen()
 			},
 		},
 		readOnly = true,
+		allOpen = true,
 	})
 end
 
