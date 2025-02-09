@@ -76,10 +76,7 @@ function SingleKeyWidget.new(params)
 	self._id = HttpService:GenerateGUID()
 	self._widget = plugin:CreateDockWidgetPluginGui(self._id, WIDGET_INFO)
 	self._widget.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	self._widget.Title = if self._session.connection.scope and (self._session.connection.scope ~= "")
-		then `{self._session.connection.name}/{self._session.connection.scope}/{params.keyName}`
-		else `{self._session.connection.name}/{params.keyName}`
-	self._widget.Name = "DataDelve HexEditor"
+	self._widget.Name = `Single Key Widget {self._id}`
 	self._widget.Enabled = false
 
 	self._frame = Assets.SingleKeyWidget:Clone()
@@ -169,6 +166,10 @@ function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?)
 	end)
 
 	self._editKeyView = editKeyView
+
+	self._widget.Title = if self._session.connection.scope and (self._session.connection.scope ~= "")
+		then `{self._session.connection.name}/{self._session.connection.scope}/{keyName}`
+		else `{self._session.connection.name}/{keyName}`
 
 	return true, nil
 end
