@@ -44,9 +44,9 @@ end
 
 function Session:fork()
 	local forked = setmetatable(table.clone(self), Session)
-	self.dataStorePages = nil
-	self.keyPages = nil
-	self.versionPages = nil
+	forked.dataStorePages = nil
+	forked.keyPages = nil
+	forked.versionPages = nil
 	return forked
 end
 
