@@ -227,7 +227,7 @@ function DatePickerStyleState:destroy(completely: boolean)
 	for _, connection in self._datePickerConnections do
 		connection:Disconnect()
 	end
-	self:destroy(completely)
+	TextBoxStyleState.destroy(self, completely)
 end
 
 return DatePickerStyleState

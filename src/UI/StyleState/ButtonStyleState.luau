@@ -6,6 +6,7 @@ ButtonStyleState.__index = ButtonStyleState
 export type ButtonStyle = "primary" | "secondary" | "transparent" | "dormant" | "input"
 export type ButtonStyleStateFromOptions = {
 	style: ButtonStyle | nil,
+	disabled: boolean?,
 }
 function ButtonStyleState.from(theme, button: TextButton, options: ButtonStyleStateFromOptions?)
 	options = options or {}
@@ -16,7 +17,7 @@ function ButtonStyleState.from(theme, button: TextButton, options: ButtonStyleSt
 		button = button,
 		style = options.style or "secondary",
 
-		disabled = false,
+		disabled = options.disabled or false,
 		selecting = false,
 		_pressing = false,
 		_hovering = false,

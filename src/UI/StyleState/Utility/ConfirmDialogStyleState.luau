@@ -21,7 +21,7 @@ export type ContextMenuOptions = {
 -- For convenience
 function ConfirmDialogStyleState.confirm(
 	theme,
-	container: GuiObject,
+	container: GuiBase2d,
 	position: Vector2,
 	options: ContextMenuOptions
 ): boolean
@@ -37,7 +37,7 @@ end
 
 function ConfirmDialogStyleState.createDialog(
 	theme,
-	container: GuiObject,
+	container: GuiBase2d,
 	position: Vector2,
 	options: ContextMenuOptions
 )

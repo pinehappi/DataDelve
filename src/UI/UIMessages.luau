@@ -306,5 +306,9 @@ function UIMessages:reportDataStoreError(message: string)
 	end
 end
 
+function UIMessages:destroy()
+	self.gui:Destroy()
+end
+
 export type UIMessages = typeof(UIMessages.new())
 return UIMessages

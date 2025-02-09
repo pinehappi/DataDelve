@@ -7,8 +7,6 @@ local DataStoreService = game:GetService("DataStoreService")
 
 local Settings = require(script.Parent.Settings)
 
-type Session = any
-
 local Session = {}
 Session.__index = Session
 
@@ -16,24 +14,32 @@ Session.__index = Session
 
 function Session.new()
 	local self = setmetatable({
-		datastore = nil,
+		datastore = nil :: DataStore?,
 		connection = nil :: Types.DataStoreConnection?,
 
-		dataStorePages = nil,
+		dataStorePages = nil :: Pages.Pages?,
+		keyPages = nil :: Pages.Pages?,
 
-		keyPages = nil,
-
-		currentKey = nil,
-		currentValue = nil,
-		currentKeyInfo = nil,
-		currentVersion = nil,
-		versionPages = nil,
+		currentKey = nil :: string?,
+		currentValue = nil :: any,
+		currentKeyInfo = nil :: DataStoreKeyInfo?,
+		currentVersion = nil :: string?,
+		isLoadedVersion = false :: boolean,
+		versionPages = nil :: Pages.Pages?,
 	}, Session)
 
 	return self
 end
 
 -- Methods
+
+function Session:fork()
+	local forked = setmetatable(table.clone(self), Session)
+	self.dataStorePages = nil
+	self.keyPages = nil
+	self.versionPages = nil
+	return forked
+end
 
 local actionRequestBudgets = {
 	list = { [Enum.DataStoreRequestType.ListAsync] = 1 },
@@ -106,6 +112,8 @@ function Session:tryLoadKey(key: string): (boolean, string?)
 	self.currentKey = key
 	self.currentValue = value
 	self.currentKeyInfo = keyInfo
+	self.currentVersion = keyInfo and keyInfo.Version
+	self.isLoadedVersion = false
 
 	return true
 end
@@ -126,6 +134,7 @@ function Session:tryLoadVersion(key: string, version: string): (boolean, string?
 	self.currentValue = value
 	self.currentKeyInfo = keyInfo
 	self.currentVersion = version
+	self.isLoadedVersion = true
 
 	return true
 end
@@ -141,7 +150,7 @@ end
 function Session:trySeeKeyChanged(): "changed" | "failed" | "unchanged"
 	assert(not self.connection.isOrdered)
 
-	if self.currentVersion then
+	if self.isLoadedVersion then
 		-- Loading a version will always have the UpdatedTime before the latest UpdatedTime,
 		-- so just ignore this check
 		return "failed"
@@ -188,7 +197,8 @@ function Session:trySaveCurrentKey(value: any, userIds: { number }, metadata: { 
 	if success then
 		self.currentValue = newValue
 		self.currentKeyInfo = newKeyInfo
-		self.currentVersion = nil
+		self.currentVersion = newKeyInfo.Version
+		self.isLoadedVersion = false
 	end
 
 	return success, err
@@ -379,5 +389,7 @@ function Session:tryGetOrderedKey(key: string): (number?, string?)
 end
 
 function Session:destroy() end
+
+export type Session = typeof(Session.new())
 
 return Session

@@ -126,4 +126,6 @@ function Pages:syncWithLoadMoreListStyleState(styleState)
 	self._loadMoreListStyleState:setLoadMoreVisible(not self.isFinished)
 end
 
+export type Pages = typeof(Pages.new({} :: any))
+
 return Pages

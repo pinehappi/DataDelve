@@ -17,7 +17,7 @@ export type ContextMenuOptions = {
 }
 
 -- For convenience
-function ContextMenuStyleState.prompt(theme, container: GuiObject, position: Vector2, options: ContextMenuOptions)
+function ContextMenuStyleState.prompt(theme, container: GuiBase2d, position: Vector2, options: ContextMenuOptions)
 	local contextMenu, modal = ContextMenuStyleState.createMenu(theme, container, options)
 	contextMenu.frame.Position = UDim2.fromOffset(position.X, position.Y)
 	PopupHelper.clamp(contextMenu.frame, container, {
@@ -32,7 +32,7 @@ function ContextMenuStyleState.prompt(theme, container: GuiObject, position: Vec
 	return option
 end
 
-function ContextMenuStyleState.createMenu(theme, container: GuiObject, options: ContextMenuOptions)
+function ContextMenuStyleState.createMenu(theme, container: GuiBase2d, options: ContextMenuOptions)
 	local frame = script.ContextMenu:Clone()
 	frame.Parent = container
 

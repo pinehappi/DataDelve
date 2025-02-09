@@ -27,11 +27,10 @@ local ShortcutsTextBoxStyleState = require(StyleState.Input.ShortcutsTextBoxStyl
 
 local SkeletonStyleState = require(StyleState.Utility.SkeletonStyleState)
 local ContextMenuStyleState = require(StyleState.Utility.ContextMenuStyleState)
-local PopupFormStyleState = require(StyleState.Utility.PopupFormStyleState)
 
 local OrderedDataStoreView = require(script.OrderedDataStoreView)
 local SettingsView = require(script.SettingsView)
-local VersionsView = require(script.VersionsView)
+local EditKeyView = require(script.EditKeyView)
 
 local createTabSwitchGroup = require(script.Utilities.createTabSwitchGroup)
 local showShadowOnScroll = require(script.Utilities.showShadowOnScroll)
@@ -155,6 +154,8 @@ function UI.new(theme: Theme.Theme, uiMessages)
 									{ icon = self.theme.icons.import, text = "Load" },
 									{ icon = self.theme.icons.lookup, text = "Lookup Id" },
 									{ icon = self.theme.icons.delete, text = "Delete" },
+									ContextMenuStyleState.SEPARATOR,
+									{ icon = self.theme.icons.externalLink, text = "Open in New Widget" },
 								},
 							}
 						)
@@ -167,6 +168,8 @@ function UI.new(theme: Theme.Theme, uiMessages)
 							self._idLookedUp:Fire(info)
 						elseif option == "Delete" then
 							self._keyDeleted:Fire(info)
+						elseif option == "Open in New Widget" then
+							self._keySelected:Fire(info, true)
 						end
 					end)
 
@@ -178,45 +181,18 @@ function UI.new(theme: Theme.Theme, uiMessages)
 
 			datastoreTableLabels = LabelStyleState.fromDescendants(theme, gui.BrowseKeys.Keys),
 		},
-		edit = {
-			delete = ButtonStyleState.from(theme, gui.EditKey.Delete, {
-				style = "secondary",
-			}),
-			save = ButtonStyleState.from(theme, gui.EditKey.Save, {
-				style = "primary",
-			}),
-			refresh = ButtonStyleState.from(theme, gui.EditKey.Refresh, {
-				style = "secondary",
-			}),
-			more = ButtonStyleState.from(theme, gui.EditKey.More, {
-				style = "transparent",
-			}),
-
-			versions = ButtonStyleState.from(theme, gui.EditKey.Versions, {
-				style = "secondary",
-			}),
-
-			undo = ButtonStyleState.from(theme, gui.EditKey.Undo, {
-				style = "dormant",
-			}),
-			redo = ButtonStyleState.from(theme, gui.EditKey.Redo, {
-				style = "dormant",
-			}),
-		},
 	}
 
 	-- Views
 
+	Assets.Views.EditKey:Clone().Parent = gui
+
 	self.orderedDataStoreView = OrderedDataStoreView.from(theme, uiMessages, gui.EditOrderedDataStore)
 	self.settingsView = SettingsView.from(theme, uiMessages, gui.Settings)
-	self.versionsView = VersionsView.from(theme, uiMessages, gui.Versions)
 
-	showShadowOnScroll(gui.EditKey.Content.ScrollingFrame, gui.EditKey.Content.Shadow)
 	showShadowOnScroll(gui.BrowseKeys.Keys, gui.BrowseKeys.ScrollShadow)
 
 	-- Extra setting up
-	self.styleStates.edit.save:setDisabled(true):update()
-
 	self.styleStates.connect.tabs:select("Connect")
 	self:switchConnectTab("connect")
 
@@ -266,11 +242,6 @@ function UI.new(theme: Theme.Theme, uiMessages)
 		`List all keys in the DataStore. Equivalent to a call to {rfmt.code("ListKeysAsync")}.`
 	)
 
-	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Versions, `Equivalent to {rfmt.code("ListVersionsAsync")}.`)
-	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Save, `Save\nEquivalent to {rfmt.code("UpdateAsync")}.`)
-	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Refresh, `Refresh\nEquivalent to {rfmt.code("GetAsync")}.`)
-	Tooltip.bindButtonGeneric(self.theme, self.gui.EditKey.Delete, `Delete\nEquivalent to {rfmt.code("RemoveAsync")}.`)
-
 	-- Events
 
 	self._dataStoreInfoSelected = Instance.new("BindableEvent")
@@ -315,6 +286,15 @@ end
 function UI:setParent(parent: LayerCollector)
 	self.gui.Parent = parent
 	self.parent = parent
+end
+
+function UI:setEditKeyView(editKeyView: EditKeyView.EditKeyView)
+	local previousEditKeyView = self.editKeyView
+	if previousEditKeyView then
+		previousEditKeyView:destroy()
+	end
+
+	self.editKeyView = editKeyView
 end
 
 function UI:setActiveView(view: "game" | "datastore" | "key" | "orderedDatastore" | "settings")
@@ -590,196 +570,6 @@ function UI:createUserCard()
 	end
 
 	return styleState
-end
-
-local KEY_MAX_SIZE = 4_194_304
-local METADATA_MAX_SIZE = 299
-function UI:createDataUsageCard(keyUsage: number, metadataUsage: number)
-	local card = Assets.DataUsageCard:Clone()
-
-	local function updateBarColor(speed: StyleStateHelper.TransitionSpeed)
-		StyleStateHelper.tween(card.KeyBar, StyleStateHelper.getTweenInfoForSpeed(speed), {
-			BackgroundColor3 = self.theme.colors.button.secondary.body.default,
-		})
-		StyleStateHelper.tween(card.KeyBar.UIStroke, StyleStateHelper.getTweenInfoForSpeed(speed), {
-			Color = self.theme.colors.button.secondary.outline.default,
-		})
-		StyleStateHelper.tween(card.KeyBar.Clipper.Fill, StyleStateHelper.getTweenInfoForSpeed(speed), {
-			BackgroundColor3 = self.theme.colors.mainAccent,
-		})
-
-		StyleStateHelper.tween(card.MetadataBar, StyleStateHelper.getTweenInfoForSpeed(speed), {
-			BackgroundColor3 = self.theme.colors.button.secondary.body.default,
-		})
-		StyleStateHelper.tween(card.MetadataBar.UIStroke, StyleStateHelper.getTweenInfoForSpeed(speed), {
-			Color = self.theme.colors.button.secondary.outline.default,
-		})
-		StyleStateHelper.tween(card.MetadataBar.Clipper.Fill, StyleStateHelper.getTweenInfoForSpeed(speed), {
-			BackgroundColor3 = self.theme.colors.mainAccent,
-		})
-	end
-
-	updateBarColor("instant")
-
-	local wrapper = StyleStateWrapper.new(self.theme, {
-		background = BackgroundStyleState.from(self.theme, card, { style = "popup" }),
-		mainTitle = LabelStyleState.from(self.theme, card.MainTitle),
-		dataLabel = LabelStyleState.from(
-			self.theme,
-			card.KeyLabel,
-			{ style = if keyUsage > KEY_MAX_SIZE then "error" else "text" }
-		),
-		metadataTitle = LabelStyleState.from(self.theme, card.MetadataTitle),
-		metadataLabel = LabelStyleState.from(
-			self.theme,
-			card.MetadataLabel,
-			{ style = if metadataUsage > METADATA_MAX_SIZE then "error" else "text" }
-		),
-	}, {
-		onThemeChange = function()
-			updateBarColor("slow")
-		end,
-	})
-
-	local function updateBar(usage: number, max: number, label, bar)
-		if usage == 0 then
-			bar.Clipper.Size = UDim2.fromScale(0, 1)
-		else
-			local percentage = math.min(1, usage / max)
-			local tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Quart)
-			bar.Clipper.Size = UDim2.fromScale(0, 1)
-			bar.Clipper.Fill.Size = UDim2.fromScale(0, 1)
-			StyleStateHelper.tween(bar.Clipper, tweenInfo, {
-				Size = UDim2.fromScale(percentage, 1),
-			})
-			StyleStateHelper.tween(bar.Clipper.Fill, tweenInfo, {
-				Size = UDim2.fromScale(1 / percentage, 1),
-			})
-		end
-
-		label.Text = `{tostring(usage):reverse():gsub("(%d%d%d)", "%1,"):gsub(",$", ""):reverse()}/{tostring(max)
-			:reverse()
-			:gsub("(%d%d%d)", "%1,")
-			:gsub(",$", "")
-			:reverse()} bytes`
-	end
-
-	updateBar(keyUsage, KEY_MAX_SIZE, wrapper.styleStates.dataLabel.label, card.KeyBar)
-	updateBar(metadataUsage, METADATA_MAX_SIZE, wrapper.styleStates.metadataLabel.label, card.MetadataBar)
-
-	local modal = PopupHelper.modal(card, self.gui.Parent)
-
-	local function cleanup()
-		modal:destroy()
-		wrapper:destroy()
-		card:Destroy()
-	end
-
-	modal.cancelled:Once(cleanup)
-
-	return card
-end
-
-function UI:promptDuplicateMoveKey(position: Vector2, isAllScopes: boolean): { key: string, shouldDelete: boolean }?
-	local popup, modal = PopupFormStyleState.createPopup(self.theme, self.gui.Parent, Vector2.zero, {
-		title = "Duplicate/Move Key",
-		buttons = { { text = "Duplicate", options = { style = "primary" } }, { text = "Cancel" } },
-		addContents = function(parent)
-			local message = Assets.Forms.Message:Clone()
-			message.Text = `This will call {rfmt.code("SetAsync")} on the new key with the contents of this key.`
-			message.Parent = parent
-
-			local textRow = Assets.Forms.TextRow:Clone()
-			textRow.Title.Text = "Key"
-			textRow.Parent = parent
-
-			local confirm = Assets.Forms.ConfirmActionCheckboxRow:Clone()
-			confirm.Message.Text = "Delete this key after (will effectively move the key)"
-			confirm.Parent = parent
-
-			return {
-				message = LabelStyleState.from(self.theme, message),
-
-				keyLabel = LabelStyleState.from(self.theme, textRow.Title),
-				keyTextBox = ShortcutsTextBoxStyleState.from(self.theme, textRow.TextBox),
-
-				confirmLabel = LabelStyleState.from(self.theme, confirm.Message),
-				confirmCheckbox = CheckboxStyleState.from(self.theme, confirm.Check, {
-					inputPair = confirm,
-				}),
-			}
-		end,
-	})
-
-	popup.frame.AutomaticSize = Enum.AutomaticSize.Y
-
-	local styleStates = popup.wrapper.styleStates
-
-	local validator = if isAllScopes then Validators.allScopesKey else Validators.dataStoreKey
-
-	popup.frame.Position = UDim2.fromOffset(position.X, position.Y)
-	popup.frame.AnchorPoint = Vector2.new(1, 0)
-
-	PopupHelper.clamp(popup.frame, self.gui.Parent, {
-		boundaryDistance = 5,
-	})
-
-	local resultEvent = Instance.new("BindableEvent")
-
-	local function updateDisabled(instant: boolean)
-		if styleStates.contents.keyTextBox.textBox.Text == "" then
-			styleStates.contents.keyTextBox:setError(nil):update("vertFast")
-			styleStates.buttons.Duplicate:setDisabled(true):update(if instant then "instant" else nil)
-		else
-			local valid, err = validator(styleStates.contents.keyTextBox.textBox.Text)
-			if valid then
-				styleStates.contents.keyTextBox:setError(nil):update("vertFast")
-				styleStates.buttons.Duplicate:setDisabled(false):update(if instant then "instant" else nil)
-			else
-				styleStates.contents.keyTextBox:setError(err):update("vertFast")
-				styleStates.buttons.Duplicate:setDisabled(true):update(if instant then "instant" else nil)
-			end
-		end
-	end
-
-	styleStates.contents.keyTextBox.textBox.FocusLost:Connect(function(entered, input)
-		if input and entered and not styleStates.buttons.Duplicate.disabled then
-			popup:interact("Duplicate")
-		end
-	end)
-	styleStates.contents.keyTextBox.textBox:GetPropertyChangedSignal("Text"):Connect(updateDisabled)
-	updateDisabled(true)
-	styleStates.contents.confirmCheckbox.toggled:Connect(function(value)
-		if value then
-			styleStates.buttons.Duplicate.button.TextLabel.Text = "Move"
-		else
-			styleStates.buttons.Duplicate.button.TextLabel.Text = "Duplicate"
-		end
-	end)
-
-	popup.interacted:Connect(function(action)
-		if action == "Duplicate" then
-			resultEvent:Fire(true)
-		else
-			resultEvent:Fire(false)
-		end
-	end)
-
-	local shouldSubmit = resultEvent.Event:Wait()
-
-	popup:destroy(true)
-	modal:destroy()
-
-	if shouldSubmit then
-		return {
-			key = styleStates.contents.keyTextBox:getText(function(err: string)
-				self.uiMessages:error(err)
-			end),
-			shouldDelete = styleStates.contents.confirmCheckbox.value,
-		}
-	else
-		return nil
-	end
 end
 
 function UI:destroy()

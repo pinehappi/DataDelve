@@ -40,6 +40,7 @@ local defaultIcons = {
 	downArrow = "rbxassetid://17650880752",
 	rightArrow = "rbxassetid://17650877462",
 	upArrow = "rbxassetid://18557565597",
+	externalLink = "rbxassetid://107795554941527",
 }
 
 -- Reference: https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color

@@ -24,11 +24,15 @@ local Tree = require(script.Parent.UI.Viewers.Tree)
 
 local Validators = require(script.Parent.Validators)
 local PopupHelper = require(script.Parent.UI.PopupHelper)
+local Transactor = require(script.Parent.Transactor)
 
 local StyleStateHelper = require(script.Parent.UI.StyleState.StyleStateHelper)
 local LoadingBarStyleState = require(script.Parent.UI.StyleState.Utility.LoadingBarStyleState)
 local ConfirmDialogStyleState = require(script.Parent.UI.StyleState.Utility.ConfirmDialogStyleState)
 local ContextMenuStyleState = require(script.Parent.UI.StyleState.Utility.ContextMenuStyleState)
+
+local SingleKeyWidget = require(script.Parent.UI.SingleKeyWidget)
+local EditKeyView = require(script.Parent.UI.EditKeyView)
 
 local Theme = require(script.Parent.UI.Theme).global
 local UI = require(script.Parent.UI)
@@ -72,9 +76,12 @@ function App.new(id: string)
 		ui = UI.new(Theme, uiMessages),
 		uiMessages = uiMessages,
 
+		editKeyView = nil,
 		viewer = nil,
 
 		connections = {},
+
+		_keyTransactor = Transactor.new(),
 
 		_isListingKey = false,
 		_isGettingKey = false,
@@ -253,6 +260,7 @@ function App.new(id: string)
 		if self.ui.styleStates.browse.key.textBox.Text == "" then
 			return
 		end
+
 		local loadingBar = LoadingBarStyleState.from(Theme, self.ui.styleStates.browse.key.textBox.LoadingBar)
 		loadingBar.container.Visible = true
 		self.ui.styleStates.browse.key:setDisabled(true):update()
@@ -262,7 +270,7 @@ function App.new(id: string)
 			self.uiMessages:error(err)
 		end)
 
-		local success, err = self:tryGetKey(keyName)
+		local success, err = self:_trySwapEditKeyView(keyName)
 
 		loadingBar.container.Visible = false
 		loadingBar:destroy()
@@ -314,11 +322,28 @@ function App.new(id: string)
 		end
 	end)
 
-	self.ui.keySelected:Connect(function(key: DataStoreKey)
-		local success, err = self:tryGetKey(key.KeyName)
-		if not success then
-			self.uiMessages:reportDataStoreError(err)
-			return
+	self.ui.keySelected:Connect(function(key: DataStoreKey, openInNewWidget: boolean)
+		if openInNewWidget then
+			local forkedSession = self.session:fork()
+			local widget, err = SingleKeyWidget.new({
+				session = forkedSession,
+				theme = Theme,
+				keyName = key.KeyName,
+			})
+
+			if widget then
+				widget.deleted:Connect(function()
+					self:_onKeyDeleted(key.KeyName, forkedSession)
+				end)
+			else
+				self.uiMessages:reportDataStoreError(err)
+			end
+		else
+			local success, err = self:_trySwapEditKeyView(key.KeyName)
+			if not success then
+				self.uiMessages:reportDataStoreError(err)
+				return
+			end
 		end
 	end)
 
@@ -333,7 +358,7 @@ function App.new(id: string)
 	end)
 
 	self.ui.keyDeleted:Connect(function(key: DataStoreKey)
-		if self.session.currentKey == key.KeyName and not self:_canEditCurrentKey() then
+		if self.session.currentKey == key.KeyName or self._keyTransactor.locked then
 			return
 		end
 
@@ -344,7 +369,7 @@ function App.new(id: string)
 		})
 
 		if confirmed then
-			if self.session.currentKey == key.KeyName and not self:_canEditCurrentKey() then
+			if self.session.currentKey == key.KeyName and self._keyTransactor.locked then
 				return
 			end
 
@@ -364,430 +389,22 @@ function App.new(id: string)
 					styleState:setDisabled(false):update()
 					return
 				else
-					self.ui.styleStates.browse.loadMore:tryRemove(key.KeyName)
+					self:_onKeyDeleted(key.KeyName, self.session)
 
 					local lastCrumb = self.ui.styleStates.breadcrumbs.crumbs[#self.ui.styleStates.breadcrumbs.crumbs]
 					-- NOTE: This will not work if the user quickly switches to AllScopes, reconnects to the DataStore, then gets the key (since the name will be different because AllScopes required the scope)
 					if lastCrumb.category == "key" and lastCrumb.name == key.KeyName then
+						if self.editKeyView then
+							self.editKeyView:destroy()
+							self.editKeyView = nil
+						end
+
 						self.ui.styleStates.breadcrumbs:popCrumb()
 						self.session:resetKey()
 					end
 
 					self.uiMessages:success(`Deleted <b>{key.KeyName}</b>.`)
 				end
-			end
-		end
-	end)
-
-	-- Saving
-
-	self.ui.styleStates.edit.save.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then
-			return
-		end
-
-		local value, hasNil = self.viewer:getValue()
-		if hasNil then
-			if
-				not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-					title = "Contains nil value",
-					message = "Nil values will not be saved because of how Lua tables are. Nil gaps within arrays may delete any values after the gap.",
-					yesText = "Ok",
-					noText = "Cancel",
-				})
-			then
-				return
-			end
-		end
-
-		if self.session:trySeeKeyChanged() == "changed" then
-			if
-				not ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-					title = "Key written to while editing",
-					message = "This key was written to somewhere else while you were editing it. You may be overwritting this new data.",
-					yesText = "Continue",
-					noText = "Abort",
-				})
-			then
-				return
-			end
-		end
-
-		local userIds, metadata = self.viewer:getKeyInfo()
-
-		self:_wrapEditKeyOperation(function()
-			local success, err = self.session:trySaveCurrentKey(value, userIds, metadata)
-			if not success then
-				self.uiMessages:reportDataStoreError(err)
-			else
-				self.viewer:undirty()
-				self.uiMessages:success("Save successful!")
-			end
-		end)
-	end)
-
-	self.ui.styleStates.edit.refresh.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then
-			return
-		end
-
-		if self.viewer.isDirty then
-			local confirmed =
-				ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-					title = "Refresh key?",
-					message = if self.session.currentVersion
-						then "This will delete any changes made. It will also reset to the latest version"
-						else "This will delete any changes made.",
-				})
-
-			if not confirmed then
-				return
-			end
-		end
-
-		self:_wrapEditKeyOperation(function()
-			local success, err = self:tryGetKey(self.session.currentKey, { popCurrentCrumb = true })
-			if not success then
-				self.uiMessages:reportDataStoreError(err)
-			else
-				self.uiMessages:success("Refreshed key.")
-			end
-		end)
-	end)
-
-	self.ui.styleStates.edit.delete.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then
-			return
-		end
-
-		local popupPosition = self.widget:GetRelativeMousePosition()
-		local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
-			title = "Delete key?",
-			message = "Are you sure you want to do this?",
-		})
-
-		if confirmed then
-			if not self:_canEditCurrentKey() then
-				return
-			end
-
-			local confirmedAgain = ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
-				title = "Confirm again",
-				message = `You are going to delete the key <b>{self.session.currentKey}</b>.`,
-			})
-
-			if confirmedAgain then
-				if not self:_canEditCurrentKey() then
-					return
-				end
-
-				self:_wrapEditKeyOperation(function()
-					local keyName = self.session.currentKey
-					local success, err = self.session:tryDeleteCurrentKey()
-
-					if success then
-						self.ui.styleStates.breadcrumbs:popCrumb()
-
-						if not Settings.get("listDeletedKeys") then
-							self.ui.styleStates.browse.loadMore:tryRemove(keyName)
-						end
-
-						self.uiMessages:success(`Deleted <b>{keyName}</b>.`)
-					else
-						self.uiMessages:reportDataStoreError(err)
-					end
-				end)
-			end
-		end
-	end)
-
-	self.ui.styleStates.edit.undo.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then
-			return
-		end
-
-		self.viewer:undo()
-	end)
-
-	self.ui.styleStates.edit.redo.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then
-			return
-		end
-
-		self.viewer:redo()
-	end)
-
-	self.ui.styleStates.edit.more.button.Activated:Connect(function()
-		if not self:_canEditCurrentKey() then
-			return
-		end
-		if self.widget:FindFirstChild("More Menu") then
-			return
-		end
-
-		-- Prompt
-		local position = self.ui.styleStates.edit.more.button.AbsolutePosition
-			+ self.ui.styleStates.edit.more.button.AbsoluteSize
-			+ Vector2.new(0, 6)
-
-		local contextMenuStyleState, contextMenuModal = ContextMenuStyleState.createMenu(Theme, self.widget, {
-			options = {
-				{ icon = Theme.icons.export, text = "Export to JSON" },
-				{ icon = Theme.icons.import, text = "Import from JSON" },
-				ContextMenuStyleState.SEPARATOR,
-				{ icon = Theme.icons.rename, text = "Duplicate/Move Key" },
-				{ icon = Theme.icons.storage, text = "View Data Usage" },
-			},
-		})
-
-		contextMenuStyleState.frame.Name = "More Menu"
-		contextMenuStyleState.frame.Position = UDim2.fromOffset(position.X, position.Y)
-		contextMenuStyleState.frame.AnchorPoint = Vector2.new(1, 0)
-		task.spawn(contextMenuStyleState.animate, contextMenuStyleState)
-
-		self.ui.styleStates.edit.more:setSelecting(true):update()
-		local result = contextMenuStyleState.selected:Wait()
-
-		contextMenuModal:destroy()
-		contextMenuStyleState:destroy(true)
-
-		-- Respond
-		if self:_canEditCurrentKey() then
-			if result == "Export to JSON" then
-				local confirmDialogStyleState, confirmDialogModal =
-					ConfirmDialogStyleState.createDialog(Theme, self.widget, position, {
-						title = "Usage notice",
-						message = `The file will be saved with the file extension {rfmt.code(".lua")}. You must change it to {rfmt.code(
-							".json"
-						)} after exporting it. This is a limitation of Roblox. Script injection permissions are also required to create a script for export.`,
-						yesText = "Understood",
-						noText = "Cancel",
-					})
-
-				local confirmed = confirmDialogStyleState.interacted:Wait()
-				confirmDialogModal:destroy()
-				confirmDialogStyleState:destroy(true)
-
-				if confirmed then
-					local value = self.viewer:getValue()
-					local name = if self.session.connection.scope
-						then `{self.session.connection.scope}_{self.session.connection.name}_{self.session.currentKey}`
-						else `{self.session.connection.name}_{self.session.currentKey}`
-					local exported, err = ExportImportHelper.export(name, value)
-
-					if exported then
-						uiMessages:success("Exported to JSON.")
-					else
-						uiMessages:error(err or "Export cancelled.")
-					end
-				end
-			elseif result == "Import from JSON" then
-				local passed = true
-				if self.viewer.isDirty then
-					local confirmed = ConfirmDialogStyleState.confirm(Theme, self.widget, position, {
-						title = "Import from JSON?",
-						message = "This will override any changes made.",
-					})
-
-					if not confirmed then
-						passed = false
-					end
-				end
-
-				if passed then
-					local success, result = ExportImportHelper.import()
-					if not success then
-						if result then
-							uiMessages:error(result)
-						else
-							uiMessages:error("Import failed.")
-						end
-					else
-						self:_wrapEditKeyOperation(function()
-							self:_setViewer(result, true)
-							task.wait(0) -- prevent race conditions with tweens for buttons
-						end)
-					end
-				end
-			elseif result == "Duplicate/Move Key" then
-				if not self.session:hasBudgetFor("move") then
-					self.uiMessages:warn(
-						"You are unable to duplicate/move the key at this moment because the requests will be throttled. "
-							.. "Wait and make fewer requests so that there can be budget for this."
-					)
-				else
-					local duplicateAction = self.ui:promptDuplicateMoveKey(position, self.session.connection.allScopes)
-					if duplicateAction then
-						if duplicateAction.key == self.session.currentKey then
-							self.uiMessages:error(`The key is already named <b>{self.session.currentKey}</b>`)
-						else
-							local data = self.viewer:getValue()
-							if data == nil then
-								self.uiMessages:error("Cannot duplicate empty key.")
-							else
-								local userIds, metadata = self.viewer:getKeyInfo()
-
-								self:_wrapEditKeyOperation(function()
-									local success, err = self.session:tryDuplicateKey({
-										data = data,
-										metadata = metadata,
-										userIds = userIds,
-
-										newKey = duplicateAction.key,
-										deleteKey = duplicateAction.shouldDelete,
-									})
-
-									if success then
-										local success, err =
-											self:tryGetKey(duplicateAction.key, { popCurrentCrumb = true })
-
-										if not success then
-											self.uiMessages:reportDataStoreError(err)
-										else
-											self.uiMessages:success(
-												if duplicateAction.shouldDelete
-													then `Moved key to <b>{duplicateAction.key}</b>.`
-													else `Duplicated key to <b>{duplicateAction.key}</b>.`
-											)
-										end
-									else
-										self.uiMessages:reportDataStoreError(err)
-									end
-								end)
-							end
-						end
-					end
-				end
-			elseif result == "View Data Usage" then
-				local keyUsage: number
-				local metadataUsage: number
-				self:_wrapEditKeyOperation(function()
-					keyUsage = #(HttpService:JSONEncode(self.viewer:getValue()))
-					local _, metadata = self.viewer:getKeyInfo()
-					metadataUsage = #(HttpService:JSONEncode(metadata))
-				end)
-
-				self.ui:createDataUsageCard(keyUsage, metadataUsage)
-			end
-		end
-
-		self.ui.styleStates.edit.more:setSelecting(false):update()
-	end)
-
-	-- Versions
-
-	local versionSuccessfullyLoaded = Instance.new("BindableEvent")
-	self.ui.styleStates.edit.versions.button.Activated:Connect(function()
-		self.ui.versionsView:reset()
-
-		if self.session.currentKeyInfo then
-			self.ui.versionsView:setCurrentVersion(self.session.currentKeyInfo.Version)
-		end
-
-		local modal = PopupHelper.modal(self.ui.versionsView.frame, self.widget, {
-			scrimTransparency = 0.5,
-		})
-		self.ui.versionsView.frame.Visible = true
-
-		local loadedConnection: RBXScriptConnection
-		local closeConnection: RBXScriptConnection
-		local function cleanup()
-			if self.ui.versionsView.locked then
-				return
-			end
-			loadedConnection:Disconnect()
-			closeConnection:Disconnect()
-
-			modal:destroy()
-			self.ui.versionsView.frame.Visible = false
-		end
-
-		modal.cancelled:Connect(cleanup)
-		loadedConnection = versionSuccessfullyLoaded.Event:Connect(cleanup)
-		closeConnection = self.ui.versionsView.styleStates.close.button.Activated:Connect(cleanup)
-
-		-- try load
-
-		self:_tryListVersions()
-	end)
-
-	self.ui.versionsView.reloaded:Connect(function()
-		if not self.ui.versionsView.styleStates.list.button.Active then
-			return
-		end
-		self:_tryListVersions()
-	end)
-
-	-- Same code as refresh, but pass version as param
-	self.ui.versionsView.versionLoaded:Connect(function(version: string)
-		if not self:_canEditCurrentKey() then
-			return
-		end
-
-		if self.viewer.isDirty then
-			local confirmed =
-				ConfirmDialogStyleState.confirm(Theme, self.widget, self.widget:GetRelativeMousePosition(), {
-					title = "Load version?",
-					message = "This will delete any changes made.",
-				})
-
-			if not confirmed then
-				return
-			end
-		end
-
-		self:_wrapVersionsOperation(function()
-			local success, err = self:tryGetKey(self.session.currentKey, { version = version, popCurrentCrumb = true })
-			if not success then
-				self.uiMessages:reportDataStoreError(err)
-			else
-				self.uiMessages:success(`Loaded version {version}.`)
-
-				self.ui.versionsView:setLocked(false) -- So that the cleanup function goes through
-				versionSuccessfullyLoaded:Fire()
-			end
-		end)
-	end)
-
-	self.ui.versionsView.versionDeleted:Connect(function(version: string)
-		local popupPosition = self.widget:GetRelativeMousePosition()
-		if
-			not ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
-				title = "Delete version?",
-				message = "This is PERMANENT. You cannot undo this.",
-			})
-		then
-			return
-		end
-
-		if
-			not ConfirmDialogStyleState.confirm(Theme, self.widget, popupPosition, {
-				title = "Are you sure?",
-				message = 'Deleting this version is <font color="#ff0000"><b>PERMANENT</b></font>. You cannot undo this!',
-			})
-		then
-			return
-		end
-
-		self:_wrapVersionsOperation(function()
-			local success, err = self.session:tryDeleteCurrentKeyVersion(version)
-			if not success then
-				self.uiMessages:reportDataStoreError(err)
-			else
-				self.ui.versionsView:deleteVersion(version)
-			end
-		end)
-	end)
-
-	self.ui.versionsView.styleStates.loadMore.buttonStyleState.button.Activated:Connect(function()
-		if self.session.versionPages then
-			if not self.session.versionPages.isFinished then
-				self:_wrapVersionsOperation(function()
-					local _, err = self.session.versionPages:increment()
-					if err then
-						self.uiMessages:reportDataStoreError(err)
-					end
-				end)
 			end
 		end
 	end)
@@ -921,6 +538,13 @@ function App.new(id: string)
 		self.connections,
 		gameNameDiscovered.Event:Connect(function()
 			self.ui.styleStates.breadcrumbs:renameCrumbSafe(1, gameName)
+		end)
+	)
+
+	table.insert(
+		self.connections,
+		self._keyTransactor.lockedChanged:Connect(function(locked: boolean)
+			self.ui.styleStates.breadcrumbs:setDisabled(locked):update()
 		end)
 	)
 
@@ -1079,46 +703,7 @@ function App.tryListDataStores(self: App)
 	self:listDataStores(prefix)
 end
 
-function App._updateUndoRedoButtons(self: App, speed: StyleStateHelper.TransitionSpeed)
-	self.ui.styleStates.edit.undo:setDisabled(not self.viewer:canUndo()):update(speed)
-	self.ui.styleStates.edit.redo:setDisabled(not self.viewer:canRedo()):update(speed)
-end
-
-function App._setViewer(self: App, data: any, dirty: boolean)
-	if self.viewer then
-		self.viewer:destroy()
-	end
-	self.viewer = Tree.new(Theme, self.uiMessages, self.ui.gui.EditKey.Content.ScrollingFrame, {
-		data = data,
-		keyInfo = self.session.currentKeyInfo and {
-			CreatedTime = self.session.currentKeyInfo.CreatedTime,
-			UpdatedTime = self.session.currentKeyInfo.UpdatedTime,
-			Version = self.session.currentKeyInfo.Version,
-			UserIds = self.session.currentKeyInfo:GetUserIds(),
-			Metadata = self.session.currentKeyInfo:GetMetadata(),
-		},
-
-		dirty = dirty,
-		readOnly = false,
-	})
-
-	self:_updateUndoRedoButtons("instant")
-	self.viewer.historyChanged:Connect(function()
-		self:_updateUndoRedoButtons()
-	end)
-
-	self.ui.styleStates.edit.save:setDisabled((not self.viewer.isDirty) or self._isUpdatingKey):update("instant")
-
-	self.viewer.dirtyChanged:Connect(function(dirty)
-		self.ui.styleStates.edit.save:setDisabled(self._isUpdatingKey or not dirty):update()
-	end)
-
-	self.viewer.idLookedUp:Connect(function(key)
-		self:_tryLookupId(key)
-	end)
-end
-
-function App.tryGetKey(
+function App._trySwapEditKeyView(
 	self: App,
 	keyName: string,
 	options: { version: string?, popCurrentCrumb: boolean? }
@@ -1128,15 +713,17 @@ function App.tryGetKey(
 	end
 
 	self._isGettingKey = true
+
 	self.ui.styleStates.breadcrumbs:setDisabled(true):update()
 
 	options = options or {}
 
 	local success: boolean, err: string?
+	local forkedSession = self.session:fork()
 	if options.version then
-		success, err = self.session:tryLoadVersion(keyName, options.version)
+		success, err = forkedSession:tryLoadVersion(keyName, options.version)
 	else
-		success, err = self.session:tryLoadKey(keyName)
+		success, err = forkedSession:tryLoadKey(keyName)
 	end
 
 	task.wait()
@@ -1148,16 +735,52 @@ function App.tryGetKey(
 		return false, err
 	end
 
-	self:_setViewer(self.session.currentValue, not not options.version) -- Version always dirty so it can override
+	if self.editKeyView then
+		self.editKeyView:destroy()
+	end
+
+	local editKeyView = EditKeyView.from({
+		theme = Theme,
+		uiMessages = self.uiMessages,
+		frame = self.ui.gui.EditKey,
+		session = forkedSession,
+		transactor = self._keyTransactor,
+		swapCallback = function(keyName, version)
+			return self:_trySwapEditKeyView(keyName, {
+				popCurrentCrumb = true,
+				version = version,
+			})
+		end,
+		isVersionLoaded = not not options.version,
+	})
+
+	editKeyView.deleted:Connect(function()
+		self.ui.styleStates.breadcrumbs:popCrumb()
+		self:_onKeyDeleted(keyName, self.session)
+	end)
+
+	editKeyView.idLookedUp:Connect(function(id)
+		self:_tryLookupId(id)
+	end)
+
+	self.editKeyView = editKeyView
 
 	if options.popCurrentCrumb then
 		self.ui.styleStates.breadcrumbs:popCrumb({ silently = true })
 	end
 	self.ui.styleStates.breadcrumbs:addCrumb(KEY_ICON, "key", keyName)
 
-	self:_setEditActionsDisabled(false)
-
 	return true
+end
+
+function App._onKeyDeleted(self: App, keyName: string, connection: Types.DataStoreConnection)
+	if not Settings.get("listDeletedKeys") then
+		if
+			(self.session.connection.name == connection.name) and (self.session.connection.scope == connection.scope)
+		then
+			self.ui.styleStates.browse.loadMore:tryRemove(keyName)
+		end
+	end
 end
 
 function App.listKeys(self: App, prefix: string?)
@@ -1208,58 +831,6 @@ function App.tryListKeys(self: App)
 	self:listKeys(prefix)
 end
 
-function App._canEditCurrentKey(self: App): boolean
-	if not self.viewer then
-		self.uiMessages:error("No viewer.")
-		return false
-	end
-	if not self.session.datastore then
-		self.uiMessages:error("No DataStore.")
-		return false
-	end
-	if not self.session.currentKey then
-		self.uiMessages:error("No key.")
-		return false
-	end
-	if self._isUpdatingKey then
-		self.uiMessages:error("Key currently updating.")
-		return false
-	end
-	return true
-end
-
-function App._setUpdatingKey(self: App, locked: boolean)
-	if locked then
-		self._isUpdatingKey = true
-		self.viewer:setDisabled(true)
-		self.ui.styleStates.breadcrumbs:setDisabled(true):update()
-		self:_setEditActionsDisabled(true)
-	else
-		self._isUpdatingKey = false
-		self.viewer:setDisabled(false)
-		self.ui.styleStates.breadcrumbs:setDisabled(false):update()
-		self:_setEditActionsDisabled(false)
-	end
-end
-
-function App._wrapEditKeyOperation(self: App, func: () -> ())
-	self:_setUpdatingKey(true)
-
-	local endLoadingBar = LoadingBarStyleState.show(Theme, self.ui.gui.EditKey.LoadingBar)
-
-	-- Main
-	func()
-	--
-
-	endLoadingBar()
-	task.delay(
-		0,
-		function() -- Delay in-case the function fails immediately, does not cause race condition for style states
-			self:_setUpdatingKey(false)
-		end
-	)
-end
-
 function App._wrapOrderedDataStoreOperation(self: App, func: () -> ())
 	if self.ui.orderedDataStoreView.locked then
 		return
@@ -1292,76 +863,13 @@ function App._tryListOrderedKeys(self: App)
 
 		if not success then
 			self.uiMessages:reportDataStoreError(err)
-			task.wait() -- Wait for tweens so they don't clash with each other when updating... TODO: max this not necessary
+			task.wait() -- Wait for tweens so they don't clash with each other when updating... TODO: make this not necessary
 		else
 			self.ui.orderedDataStoreView:setActiveKey(nil)
 			self.ui.orderedDataStoreView.styleStates.loadMore:clear()
 			self.session.keyPages:syncWithLoadMoreListStyleState(self.ui.orderedDataStoreView.styleStates.loadMore)
 
 			self.ui.orderedDataStoreView:setKeysState(if self.session.keyPages:isEmpty() then "empty" else "notEmpty")
-		end
-	end)
-end
-
-function App._setEditActionsDisabled(self: App, disabled: boolean)
-	if disabled then
-		self.ui.styleStates.edit.save:setDisabled(true):update()
-		self.ui.styleStates.edit.refresh:setDisabled(true):update()
-		self.ui.styleStates.edit.delete:setDisabled(true):update()
-		self.ui.styleStates.edit.more:setDisabled(true):update()
-	else
-		self.ui.styleStates.edit.save:setDisabled(if self.viewer then not self.viewer.isDirty else false):update()
-		self.ui.styleStates.edit.refresh:setDisabled(false):update()
-		self.ui.styleStates.edit.delete:setDisabled(not self.session.currentKeyInfo):update()
-		self.ui.styleStates.edit.more:setDisabled(false):update()
-	end
-end
-
-function App._wrapVersionsOperation(self: App, func: () -> ())
-	if self.ui.versionsView.locked then
-		return
-	end
-
-	self.ui.versionsView:setLocked(true)
-	self:_setUpdatingKey(true)
-
-	local loadingBar = LoadingBarStyleState.from(Theme, self.ui.versionsView.frame["Escape Layout"].LoadingBar)
-	loadingBar.container.Visible = true
-	task.spawn(loadingBar.animate, loadingBar)
-
-	-- Main
-	func()
-	--
-
-	task.delay(0, function()
-		self.ui.versionsView:setLocked(false)
-		self:_setUpdatingKey(false)
-	end)
-
-	loadingBar.container.Visible = false
-	loadingBar:destroy()
-end
-
-function App._tryListVersions(self: App)
-	self.ui.versionsView.styleStates.loadMore:clear()
-	self.ui.versionsView.styleStates.loadMore:setLoadMoreVisible(false)
-
-	self:_wrapVersionsOperation(function()
-		local success, err = self.session:tryCreateVersionPages(
-			self.ui.versionsView.order,
-			self.ui.versionsView.minDate,
-			self.ui.versionsView.maxDate
-		)
-
-		if not success then
-			self.uiMessages:reportDataStoreError(err)
-		else
-			self.ui.versionsView.frame.List.Visible = true
-
-			self.ui.versionsView.frame.List.Table.Visible = not self.session.versionPages:isEmpty()
-			self.ui.versionsView.frame.List.Empty.Visible = self.session.versionPages:isEmpty()
-
-			self.session.versionPages:syncWithLoadMoreListStyleState(self.ui.versionsView.styleStates.loadMore)
 		end
 	end)
 end
@@ -1423,6 +931,8 @@ function App:destroy()
 	for _, connection in self.connections do
 		connection:Disconnect()
 	end
+	self._keyTransactor:destroy()
+	self.ui:destroy()
 end
 
 export type App = typeof(App.new("DataDelve"))

@@ -1,6 +1,7 @@
 --!strict
+
 export type Validator = (any) -> (boolean, string?) -- return 1: success, return 2: reason
-local Validators = {}
+local Validators: { [string]: Validator } = {}
 
 local function isValidInteger(str: unknown): boolean
 	local number = tonumber(str)

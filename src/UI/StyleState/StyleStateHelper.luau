@@ -45,6 +45,16 @@ function StyleStateHelper.update(t: StyleStateTable, speed: TransitionSpeed)
 	end
 end
 
+function StyleStateHelper.destroy(t: StyleStateTable, completely: boolean?)
+	for _, styleState in t do
+		if styleState.update then
+			styleState:destroy(completely)
+		else
+			StyleStateHelper.destroy(styleState)
+		end
+	end
+end
+
 -- TODO: handle race conditions
 function StyleStateHelper.tween(object: Instance, info: TweenInfo, props: { [string]: unknown })
 	if info.Time == 0 then

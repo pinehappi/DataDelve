@@ -20,7 +20,7 @@ export type PopupFormFromOptions = {
 }
 
 -- For convenience
-function PopupFormStyleState.createPopup(theme, container: GuiObject, position: Vector2, options: PopupFormFromOptions)
+function PopupFormStyleState.createPopup(theme, container: GuiBase2d, position: Vector2, options: PopupFormFromOptions)
 	local frame = script.PopupForm:Clone()
 	frame.Parent = container
 	frame.Position = UDim2.fromOffset(position.X, position.Y)

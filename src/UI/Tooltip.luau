@@ -27,9 +27,11 @@ local SHADOW_OFFSET_Y = -9
 
 --[[ Main Tooltip Interface ]]
 
+export type TooltipDestructor = () -> ()
+
 -- Bind tooltip to button, placing it right below.
-function Tooltip.bindButtonGeneric(theme: any, button: GuiObject, message: string)
-	Tooltip.bind(theme, button, message, {
+function Tooltip.bindButtonGeneric(theme: any, button: GuiObject, message: string): TooltipDestructor
+	return Tooltip.bind(theme, button, message, {
 		on = button,
 		offsetAnchor = Vector2.new(0.5, 1),
 		tooltipAnchor = Vector2.new(0.5, 0),
@@ -45,7 +47,12 @@ local function isHovering(object: GuiObject, position: Vector2): boolean
 end
 
 -- Bind tooltip to button with extra options
-function Tooltip.bind(theme: any, interactObject: GuiObject, message: string, showOptions: ShowOptions)
+function Tooltip.bind(
+	theme: any,
+	interactObject: GuiObject,
+	message: string,
+	showOptions: ShowOptions
+): TooltipDestructor
 	local tooltip = Tooltip.new(theme, message)
 	local hover = nil
 
@@ -53,7 +60,7 @@ function Tooltip.bind(theme: any, interactObject: GuiObject, message: string, sh
 	-- still on the object manually
 	local positionConnection: RBXScriptConnection?
 
-	interactObject.InputBegan:Connect(function(input)
+	local inputBeganConnection = interactObject.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			local myHover = newproxy()
 			hover = myHover
@@ -92,7 +99,7 @@ function Tooltip.bind(theme: any, interactObject: GuiObject, message: string, sh
 		end
 	end)
 
-	interactObject.InputEnded:Connect(function(input)
+	local inputEndedConnection = interactObject.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			hover = nil
 			tooltip:clear()
@@ -103,6 +110,12 @@ function Tooltip.bind(theme: any, interactObject: GuiObject, message: string, sh
 			end
 		end
 	end)
+
+	return function()
+		tooltip:clear()
+		inputBeganConnection:Disconnect()
+		inputEndedConnection:Disconnect()
+	end
 end
 
 --[[ Internal Tooltip Stuff ]]
