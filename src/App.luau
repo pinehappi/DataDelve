@@ -333,7 +333,7 @@ function App.new(id: string)
 
 			if widget then
 				widget.deleted:Connect(function()
-					self:_onKeyDeleted(key.KeyName, forkedSession)
+					self:_onKeyDeleted(key.KeyName, forkedSession.connection)
 				end)
 			else
 				self.uiMessages:reportDataStoreError(err)
@@ -389,20 +389,7 @@ function App.new(id: string)
 					styleState:setDisabled(false):update()
 					return
 				else
-					self:_onKeyDeleted(key.KeyName, self.session)
-
-					local lastCrumb = self.ui.styleStates.breadcrumbs.crumbs[#self.ui.styleStates.breadcrumbs.crumbs]
-					-- NOTE: This will not work if the user quickly switches to AllScopes, reconnects to the DataStore, then gets the key (since the name will be different because AllScopes required the scope)
-					if lastCrumb.category == "key" and lastCrumb.name == key.KeyName then
-						if self.editKeyView then
-							self.editKeyView:destroy()
-							self.editKeyView = nil
-						end
-
-						self.ui.styleStates.breadcrumbs:popCrumb()
-						self.session:resetKey()
-					end
-
+					self:_onKeyDeleted(key.KeyName, self.session.connection)
 					self.uiMessages:success(`Deleted <b>{key.KeyName}</b>.`)
 				end
 			end
@@ -756,7 +743,7 @@ function App._trySwapEditKeyView(
 
 	editKeyView.deleted:Connect(function()
 		self.ui.styleStates.breadcrumbs:popCrumb()
-		self:_onKeyDeleted(keyName, self.session)
+		self:_onKeyDeleted(keyName, self.session.connection)
 	end)
 
 	editKeyView.idLookedUp:Connect(function(id)
@@ -774,12 +761,23 @@ function App._trySwapEditKeyView(
 end
 
 function App._onKeyDeleted(self: App, keyName: string, connection: Types.DataStoreConnection)
+	local isSameConnection = Session.areConnectionsSame(self.session.connection, connection)
 	if not Settings.get("listDeletedKeys") then
-		if
-			(self.session.connection.name == connection.name) and (self.session.connection.scope == connection.scope)
-		then
+		if isSameConnection then
 			self.ui.styleStates.browse.loadMore:tryRemove(keyName)
 		end
+	end
+
+	local lastCrumb = self.ui.styleStates.breadcrumbs.crumbs[#self.ui.styleStates.breadcrumbs.crumbs]
+	-- NOTE: This will not work if the user quickly switches to AllScopes, reconnects to the DataStore, then gets the key (since the name will be different because AllScopes required the scope)
+	if lastCrumb.category == "key" and (lastCrumb.name == keyName) and isSameConnection then
+		if self.editKeyView then
+			self.editKeyView:destroy()
+			self.editKeyView = nil
+		end
+
+		self.ui.styleStates.breadcrumbs:popCrumb()
+		self.session:resetKey()
 	end
 end
 

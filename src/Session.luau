@@ -31,6 +31,15 @@ function Session.new()
 	return self
 end
 
+function Session.areConnectionsSame(a: Types.DataStoreConnection, b: Types.DataStoreConnection): boolean
+	for i, v in a do
+		if b[i] ~= v then
+			return false
+		end
+	end
+	return true
+end
+
 -- Methods
 
 function Session:fork()

@@ -158,9 +158,8 @@ function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?)
 	})
 
 	editKeyView.deleted:Connect(function()
-		self:destroy()
-
 		self._deleted:Fire()
+		self:destroy()
 	end)
 
 	editKeyView.idLookedUp:Connect(function(id)
