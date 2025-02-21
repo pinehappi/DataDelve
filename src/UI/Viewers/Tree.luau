@@ -1554,7 +1554,7 @@ function Tree:_insertForUndoRedo(
 			result.branch.ISUSERID = true
 		end
 
-		self:_selectBranch(result.index, true)
+		self:_focusBranch(result.index, true)
 
 		self:_redrawBranches()
 	end
@@ -1568,7 +1568,7 @@ function Tree:_deleteBranchForUndoRedo(index: number)
 	self:_deleteBranch({ index = index })
 
 	if parentIndex then
-		self:_selectBranch(parentIndex, true)
+		self:_focusBranch(parentIndex)
 	end
 
 	self:_redrawBranches()
@@ -1583,6 +1583,7 @@ function Tree:_moveArrayElementForUndoRedo(fromIndex: number, toIndex: number)
 				branchIndex = branchIndex,
 				branchVisibleIndex = branchVisibleIndex,
 			})
+			self:_focusBranch(#self._flatBranches)
 		else
 			local moveBeforeIndex = toIndex
 			local moveBeforeVisibleIndex = table.find(self._visibleIndexes, moveBeforeIndex)
@@ -1593,6 +1594,11 @@ function Tree:_moveArrayElementForUndoRedo(fromIndex: number, toIndex: number)
 					moveBeforeIndex = moveBeforeIndex,
 					moveBeforeVisibleIndex = moveBeforeVisibleIndex,
 				})
+				if moveBeforeIndex < branchIndex then
+					self:_focusBranch(moveBeforeIndex)
+				else
+					self:_focusBranch(moveBeforeIndex - 1)
+				end
 			end
 		end
 	end
@@ -1769,7 +1775,9 @@ function Tree:_digExpand(index: number)
 	local currentDepth = self._flatDepths[index]
 	for i = index, 1, -1 do
 		local depth = self._flatDepths[i]
-		if depth < currentDepth then
+		if depth == currentDepth - 1 then
+			currentDepth = depth
+
 			local branch = self._flatBranches[i]
 			if branch[3] ~= nil then
 				branch[3] = true
