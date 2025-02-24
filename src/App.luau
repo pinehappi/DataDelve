@@ -31,8 +31,8 @@ local LoadingBarStyleState = require(script.Parent.UI.StyleState.Utility.Loading
 local ConfirmDialogStyleState = require(script.Parent.UI.StyleState.Utility.ConfirmDialogStyleState)
 local ContextMenuStyleState = require(script.Parent.UI.StyleState.Utility.ContextMenuStyleState)
 
-local SingleKeyWidget = require(script.Parent.UI.SingleKeyWidget)
-local EditKeyView = require(script.Parent.UI.EditKeyView)
+local SingleKeyWidget = require(script.Parent.UI.Widgets.SingleKeyWidget)
+local EditKeyView = require(script.Parent.UI.Views.EditKeyView)
 
 local Theme = require(script.Parent.UI.Theme).global
 local UI = require(script.Parent.UI)

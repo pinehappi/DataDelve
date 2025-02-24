@@ -3,18 +3,18 @@
 local DESCENDING_ICON = "rbxassetid://17650920474"
 local ASCENDING_ICON = "rbxassetid://17650919434"
 
-local rfmt = require(script.Parent.Parent.rfmt)
+local rfmt = require(script.Parent.Parent.Parent.rfmt)
 
-local StyleState = script.Parent.StyleState
-local Assets = script.Parent.Assets
+local StyleState = script.Parent.Parent.StyleState
+local Assets = script.Parent.Parent.Assets
 
-local Session = require(script.Parent.Parent.Session)
-local Transactor = require(script.Parent.Parent.Transactor)
+local Session = require(script.Parent.Parent.Parent.Session)
+local Transactor = require(script.Parent.Parent.Parent.Transactor)
 
-local Theme = require(script.Parent.Theme)
-local UIMessages = require(script.Parent.UIMessages)
-local Tooltip = require(script.Parent.Tooltip)
-local PopupHelper = require(script.Parent.PopupHelper)
+local Theme = require(script.Parent.Parent.Theme)
+local UIMessages = require(script.Parent.Parent.UIMessages)
+local Tooltip = require(script.Parent.Parent.Tooltip)
+local PopupHelper = require(script.Parent.Parent.PopupHelper)
 local StyleStateHelper = require(StyleState.StyleStateHelper)
 
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
@@ -29,7 +29,7 @@ local ContextMenuStyleState = require(StyleState.Utility.ContextMenuStyleState)
 local ConfirmDialogStyleState = require(StyleState.Utility.ConfirmDialogStyleState)
 local LoadingBarStyleState = require(StyleState.Utility.LoadingBarStyleState)
 
-local createTabSwitchGroup = require(script.Parent.Utilities.createTabSwitchGroup)
+local createTabSwitchGroup = require(script.Parent.Parent.Utilities.createTabSwitchGroup)
 
 local VersionsView = {}
 VersionsView.__index = VersionsView

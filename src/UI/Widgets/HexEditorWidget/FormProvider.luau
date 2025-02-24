@@ -2,10 +2,10 @@
 
 local HexEditor = require(script.Parent.HexEditor)
 
-local Validators = require(script.Parent.Parent.Parent.Validators)
-local constrainTextBoxStyleState = require(script.Parent.Parent.Utilities.constrainTextBoxStyleState)
+local Validators = require(script.Parent.Parent.Parent.Parent.Validators)
+local constrainTextBoxStyleState = require(script.Parent.Parent.Parent.Utilities.constrainTextBoxStyleState)
 
-local StyleState = script.Parent.Parent.StyleState
+local StyleState = script.Parent.Parent.Parent.StyleState
 local LabelStyleState = require(StyleState.LabelStyleState)
 local TextBoxStyleState = require(StyleState.Input.TextBoxStyleState)
 local ContextMenuStyleState = require(StyleState.Utility.ContextMenuStyleState)

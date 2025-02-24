@@ -1,18 +1,18 @@
 --!strict
 
-local Theme = require(script.Parent.Theme)
-local UIMessages = require(script.Parent.UIMessages)
-local Session = require(script.Parent.Parent.Session)
-local Transactor = require(script.Parent.Parent.Transactor)
+local Theme = require(script.Parent.Parent.Theme)
+local UIMessages = require(script.Parent.Parent.UIMessages)
+local Session = require(script.Parent.Parent.Parent.Session)
+local Transactor = require(script.Parent.Parent.Parent.Transactor)
 
-local ExportImportHelper = require(script.Parent.Parent.ExportImportHelper)
-local PopupHelper = require(script.Parent.PopupHelper)
-local JSONHelper = require(script.Parent.Parent.JSONHelper)
-local Validators = require(script.Parent.Parent.Validators)
-local Tooltip = require(script.Parent.Tooltip)
+local ExportImportHelper = require(script.Parent.Parent.Parent.ExportImportHelper)
+local PopupHelper = require(script.Parent.Parent.PopupHelper)
+local JSONHelper = require(script.Parent.Parent.Parent.JSONHelper)
+local Validators = require(script.Parent.Parent.Parent.Validators)
+local Tooltip = require(script.Parent.Parent.Tooltip)
 
-local StyleState = script.Parent.StyleState
-local Assets = script.Parent.Assets
+local StyleState = script.Parent.Parent.StyleState
+local Assets = script.Parent.Parent.Assets
 
 local VersionsView = require(script.Parent.VersionsView)
 
@@ -30,10 +30,10 @@ local LoadingBarStyleState = require(StyleState.Utility.LoadingBarStyleState)
 local ContextMenuStyleState = require(StyleState.Utility.ContextMenuStyleState)
 local PopupFormStyleState = require(StyleState.Utility.PopupFormStyleState)
 
-local Tree = require(script.Parent.Viewers.Tree)
+local Tree = require(script.Parent.Parent.Viewers.Tree)
 
-local rfmt = require(script.Parent.Parent.rfmt)
-local showShadowOnScroll = require(script.Parent.Utilities.showShadowOnScroll)
+local rfmt = require(script.Parent.Parent.Parent.rfmt)
+local showShadowOnScroll = require(script.Parent.Parent.Utilities.showShadowOnScroll)
 
 --[==[ THINGS THAT HAVE TO COME FIRST SO THEY CAN BE USED LATER ]==]
 
@@ -640,7 +640,7 @@ end
 local KEY_MAX_SIZE = 4_194_304
 local METADATA_MAX_SIZE = 299
 function EditKeyView:_createDataUsageCard(keyUsage, metadataUsage)
-	local card = Assets.DataUsageCard:Clone()
+	local card = Assets.Cards.DataUsageCard:Clone()
 
 	local function updateBarColor(speed: StyleStateHelper.TransitionSpeed)
 		StyleStateHelper.tween(card.KeyBar, StyleStateHelper.getTweenInfoForSpeed(speed), {

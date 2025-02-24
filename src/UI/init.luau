@@ -28,9 +28,9 @@ local ShortcutsTextBoxStyleState = require(StyleState.Input.ShortcutsTextBoxStyl
 local SkeletonStyleState = require(StyleState.Utility.SkeletonStyleState)
 local ContextMenuStyleState = require(StyleState.Utility.ContextMenuStyleState)
 
-local OrderedDataStoreView = require(script.OrderedDataStoreView)
-local SettingsView = require(script.SettingsView)
-local EditKeyView = require(script.EditKeyView)
+local OrderedDataStoreView = require(script.Views.OrderedDataStoreView)
+local SettingsView = require(script.Views.SettingsView)
+local EditKeyView = require(script.Views.EditKeyView)
 
 local createTabSwitchGroup = require(script.Utilities.createTabSwitchGroup)
 local showShadowOnScroll = require(script.Utilities.showShadowOnScroll)
@@ -39,7 +39,7 @@ local UI = {}
 UI.__index = UI
 
 function UI.new(theme: Theme.Theme, uiMessages)
-	local gui = Assets.Widget:Clone()
+	local gui = Assets.Widgets.MainApp:Clone()
 	local self = setmetatable({
 		theme = theme,
 		parent = nil,
@@ -512,7 +512,7 @@ end
 -- Call :abort to delete the styleState
 -- Automatically handles destruction on the UI side
 function UI:createUserCard()
-	local card = Assets.UserCard:Clone()
+	local card = Assets.Cards.UserCard:Clone()
 	local skeletonStyleState = SkeletonStyleState.from(self.theme, card)
 	local styleState = StyleStateWrapper.new(self.theme, {
 		background = BackgroundStyleState.from(self.theme, card, {

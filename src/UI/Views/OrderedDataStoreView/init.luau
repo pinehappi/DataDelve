@@ -3,17 +3,17 @@
 local DESCENDING_ICON = "rbxassetid://17650920474"
 local ASCENDING_ICON = "rbxassetid://17650919434"
 
-local rfmt = require(script.Parent.Parent.rfmt)
+local rfmt = require(script.Parent.Parent.Parent.rfmt)
 
-local StyleState = script.Parent.StyleState
-local Assets = script.Parent.Assets
+local StyleState = script.Parent.Parent.StyleState
+local Assets = script.Parent.Parent.Assets
 
-local Settings = require(script.Parent.Parent.Settings)
-local Theme = require(script.Parent.Theme)
-local UIMessages = require(script.Parent.UIMessages)
-local PopupHelper = require(script.Parent.PopupHelper)
-local Validators = require(script.Parent.Parent.Validators)
-local Tooltip = require(script.Parent.Tooltip)
+local Settings = require(script.Parent.Parent.Parent.Settings)
+local Theme = require(script.Parent.Parent.Theme)
+local UIMessages = require(script.Parent.Parent.UIMessages)
+local PopupHelper = require(script.Parent.Parent.PopupHelper)
+local Validators = require(script.Parent.Parent.Parent.Validators)
+local Tooltip = require(script.Parent.Parent.Tooltip)
 
 local StyleStateHelper = require(StyleState.StyleStateHelper)
 local TextBoxStyleState = require(StyleState.Input.TextBoxStyleState)
@@ -27,11 +27,11 @@ local ConfirmDialogStyleState = require(StyleState.Utility.ConfirmDialogStyleSta
 
 local OrderedDataStoreKeyStyleState = require(script.OrderedDataStoreKeyStyleState)
 
-local constrainTextBoxStyleState = require(script.Parent.Utilities.constrainTextBoxStyleState)
-local createTabSwitchGroup = require(script.Parent.Utilities.createTabSwitchGroup)
-local getHighlightColors = require(script.Parent.Utilities.getHighlightColors)
-local promptKeyValueForm = require(script.Parent.Utilities.promptKeyValueForm)
-local showShadowOnScroll = require(script.Parent.Utilities.showShadowOnScroll)
+local constrainTextBoxStyleState = require(script.Parent.Parent.Utilities.constrainTextBoxStyleState)
+local createTabSwitchGroup = require(script.Parent.Parent.Utilities.createTabSwitchGroup)
+local getHighlightColors = require(script.Parent.Parent.Utilities.getHighlightColors)
+local promptKeyValueForm = require(script.Parent.Parent.Utilities.promptKeyValueForm)
+local showShadowOnScroll = require(script.Parent.Parent.Utilities.showShadowOnScroll)
 
 local OrderedDataStoreView = {}
 OrderedDataStoreView.__index = OrderedDataStoreView
@@ -91,7 +91,7 @@ function OrderedDataStoreView.from(
 
 		loadMore = LoadMoreListStyleState.from(theme, frame.Keys.Table, {
 			createItemStyleState = function(loadMoreListStyleState, info)
-				local key = Assets.OrderedDataStoreKey:Clone()
+				local key = script.OrderedDataStoreKey:Clone()
 				local styleState = OrderedDataStoreKeyStyleState.from(theme, self._highlightColors, key)
 
 				key.Name = info.key

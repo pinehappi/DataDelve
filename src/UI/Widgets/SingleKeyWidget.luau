@@ -5,15 +5,15 @@ local plugin = script:FindFirstAncestorOfClass("Plugin")
 
 local HttpService = game:GetService("HttpService")
 
-local Theme = require(script.Parent.Theme)
-local Session = require(script.Parent.Parent.Session)
-local Transactor = require(script.Parent.Parent.Transactor)
-local UIMessages = require(script.Parent.UIMessages)
+local Theme = require(script.Parent.Parent.Theme)
+local Session = require(script.Parent.Parent.Parent.Session)
+local Transactor = require(script.Parent.Parent.Parent.Transactor)
+local UIMessages = require(script.Parent.Parent.UIMessages)
 
-local Assets = script.Parent.Assets
-local StyleState = script.Parent.StyleState
+local Assets = script.Parent.Parent.Assets
+local StyleState = script.Parent.Parent.StyleState
 
-local EditKeyView = require(script.Parent.EditKeyView)
+local EditKeyView = require(script.Parent.Parent.Views.EditKeyView)
 
 local StyleStateHelper = require(StyleState.StyleStateHelper)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
@@ -54,7 +54,7 @@ export type SingleKeyWidgetFields = {
 
 	_id: string,
 	_widget: DockWidgetPluginGui,
-	_frame: typeof(Assets.SingleKeyWidget),
+	_frame: typeof(Assets.Widgets.SingleKeyWidget),
 	_styleStates: { StyleStateHelper.StyleState },
 	_editKeyView: EditKeyView.EditKeyView,
 	_editKeyFrame: EditKeyView.EditFrame,
@@ -79,7 +79,7 @@ function SingleKeyWidget.new(params)
 	self._widget.Name = `Single Key Widget {self._id}`
 	self._widget.Enabled = false
 
-	self._frame = Assets.SingleKeyWidget:Clone()
+	self._frame = Assets.Widgets.SingleKeyWidget:Clone()
 	self._frame.Parent = self._widget
 
 	self._uiMessages = UIMessages.new(self._theme)

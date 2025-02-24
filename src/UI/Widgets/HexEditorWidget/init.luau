@@ -6,10 +6,10 @@ local HexEditor = require(script.HexEditor)
 local DataInspector = require(script.DataInspector)
 local FormProvider = require(script.FormProvider)
 
-local Theme = require(script.Parent.Theme)
+local Theme = require(script.Parent.Parent.Theme)
 
-local Assets = script.Parent.Assets
-local StyleState = script.Parent.StyleState
+local Assets = script.Parent.Parent.Assets
+local StyleState = script.Parent.Parent.StyleState
 local StyleStateWrapper = require(StyleState.StyleStateWrapper)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
 local ButtonStyleState = require(StyleState.ButtonStyleState)
@@ -48,7 +48,7 @@ function HexEditorWidget.new(id: string, theme: Theme.Theme, b: buffer)
 
 	-- Set up UI
 
-	for _, item in Assets.HexEditorWidget:GetChildren() do
+	for _, item in Assets.Widgets.HexEditorWidget:GetChildren() do
 		item:Clone().Parent = self.widget
 	end
 	self.wrapper = StyleStateWrapper.new(theme, {

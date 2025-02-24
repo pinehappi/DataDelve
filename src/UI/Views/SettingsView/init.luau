@@ -1,17 +1,17 @@
 --!strict
 
-local rfmt = require(script.Parent.Parent.rfmt)
+local rfmt = require(script.Parent.Parent.Parent.rfmt)
 
-local StyleState = script.Parent.StyleState
-local Assets = script.Parent.Assets
+local StyleState = script.Parent.Parent.StyleState
+local Assets = script.Parent.Parent.Assets
 
-local Settings = require(script.Parent.Parent.Settings)
+local Settings = require(script.Parent.Parent.Parent.Settings)
 
-local Theme = require(script.Parent.Theme)
-local UIMessages = require(script.Parent.UIMessages)
-local Tooltip = require(script.Parent.Tooltip)
+local Theme = require(script.Parent.Parent.Theme)
+local UIMessages = require(script.Parent.Parent.UIMessages)
+local Tooltip = require(script.Parent.Parent.Tooltip)
 
-local Tree = require(script.Parent.Viewers.Tree)
+local Tree = require(script.Parent.Parent.Viewers.Tree)
 
 local StyleStateHelper = require(StyleState.StyleStateHelper)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)

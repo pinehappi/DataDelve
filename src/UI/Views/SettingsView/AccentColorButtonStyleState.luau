@@ -1,9 +1,9 @@
 local TweenService = game:GetService("TweenService")
 
-local Theme = require(script.Parent.Parent.Theme)
+local Theme = require(script.Parent.Parent.Parent.Theme)
 
-local StyleStateHelper = require(script.Parent.Parent.StyleState.StyleStateHelper)
-local ButtonStyleState = require(script.Parent.Parent.StyleState.ButtonStyleState)
+local StyleStateHelper = require(script.Parent.Parent.Parent.StyleState.StyleStateHelper)
+local ButtonStyleState = require(script.Parent.Parent.Parent.StyleState.ButtonStyleState)
 
 local AccentColorButtonStyleState = setmetatable({}, { __index = ButtonStyleState })
 AccentColorButtonStyleState.__index = AccentColorButtonStyleState
