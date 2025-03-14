@@ -27,4 +27,6 @@ See the [contributing guide](./CONTRIBUTING.md) for more on how to contribute.
 
 # Gallery
 
-<img src="https://github.com/user-attachments/assets/c499a67a-5b30-4132-b457-65d23a611255" width="400">
+<img src="https://github.com/user-attachments/assets/7399c5db-ecde-40bc-9b7b-bb5fc58221b1" width="400">
+
+https://github.com/user-attachments/assets/02a70ebb-2200-4206-a410-272f6ee3b351
