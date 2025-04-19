@@ -146,6 +146,7 @@ function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?)
 		theme = self._theme,
 		uiMessages = self._uiMessages,
 		frame = self._editKeyFrame,
+		inputReceiver = self._frame.HotkeyInputReceiver,
 		session = forkedSession,
 		transactor = self._transactor,
 		swapCallback = function(keyName, version)

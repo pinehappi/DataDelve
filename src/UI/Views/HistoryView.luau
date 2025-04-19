@@ -187,7 +187,7 @@ function HistoryView:destroy(completely)
 	end
 
 	for _, v in self :: any do
-		if v:IsA("BindableEvent") then
+		if typeof(v) == "Instance" and v:IsA("BindableEvent") then
 			v:Destroy()
 		end
 	end

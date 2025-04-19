@@ -1,5 +1,7 @@
 --!strict
 
+local SelectionService = game:GetService("Selection")
+
 local Theme = require(script.Parent.Parent.Theme)
 local UIMessages = require(script.Parent.Parent.UIMessages)
 local Session = require(script.Parent.Parent.Parent.Session)
@@ -82,6 +84,7 @@ export type EditKeyViewFromParams = {
 	theme: Theme.Theme,
 	uiMessages: UIMessages.UIMessages,
 	frame: EditFrame,
+	inputReceiver: Frame,
 	session: Session.Session,
 	transactor: Transactor.Transactor,
 	swapCallback: SwapCallback,
@@ -131,6 +134,7 @@ export type EditKeyViewFields = {
 	_tooltipDestructors: { Tooltip.TooltipDestructor },
 
 	_frame: EditFrame,
+	_inputReceiver: Frame,
 	_widget: PluginGui,
 
 	_connections: { RBXScriptConnection },
@@ -169,6 +173,7 @@ function EditKeyView.from(params)
 	self._theme = params.theme
 	self._uiMessages = params.uiMessages
 	self._frame = params.frame
+	self._inputReceiver = params.inputReceiver
 	self._styleStates = getStyleStates(params.theme, params.frame, (self :: any):_shouldDeleteBeDisabled())
 	self._widget = params.frame:FindFirstAncestorWhichIsA("PluginGui")
 
@@ -851,7 +856,12 @@ function EditKeyView:_setViewer(data: any, isDirty: boolean?)
 
 		dirty = isDirty,
 		readOnly = false,
+		inputReceiver = self._inputReceiver,
 	})
+
+	self._viewer.selectionChanged:Connect(function()
+		SelectionService:Set({})
+	end)
 
 	self:_updateUndoRedoButtons("instant")
 	self._viewer.historyChanged:Connect(function()

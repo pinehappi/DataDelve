@@ -2,22 +2,7 @@
 
 -- Makes it so when you press tab, it switches between the TextBoxes.
 
-local function checkTrulyVisible(object: GuiObject): boolean
-	local current: any = object
-	while current do
-		if (not current) or not current.Visible then
-			return false
-		end
-
-		current = current.Parent
-		if current:IsA("LayerCollector") then
-			break
-		elseif not current:IsA("GuiObject") then
-			return false
-		end
-	end
-	return true
-end
+local checkTrulyVisible = require(script.Parent.checkTrulyVisible)
 
 return function(textBoxes: { TextBox })
 	local currentSelected = nil

@@ -741,6 +741,7 @@ function App._trySwapEditKeyView(
 		theme = Theme,
 		uiMessages = self.uiMessages,
 		frame = self.ui.gui.EditKey,
+		inputReceiver = self.ui.gui.HotkeyInputReciver,
 		session = forkedSession,
 		transactor = self._keyTransactor,
 		swapCallback = function(keyName, version)

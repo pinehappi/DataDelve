@@ -43,6 +43,7 @@ local TimestampHelper = require(script.Parent.Parent.Utilities.TimestampHelper)
 local promptKeyValueForm = require(script.Parent.Parent.Utilities.promptKeyValueForm)
 local getHighlightColors = require(script.Parent.Parent.Utilities.getHighlightColors)
 local lockObjectWithoutResize = require(script.Parent.Parent.Utilities.lockObjectWithoutResize)
+local checkTrulyVisible = require(script.Parent.Parent.Utilities.checkTrulyVisible)
 
 local SIZE_PER_BRANCH = script.Branch.AbsoluteSize.Y
 local DRAG_AND_DROP_REGION_SIZE = 10
@@ -55,6 +56,23 @@ local CHAR_WIDTH = 7.2
 local DEFAULT_FONT = Font.new(script.Branch.Key.FontFace.Family)
 local ITALIC_FONT = Font.new(script.Branch.Key.FontFace.Family, Enum.FontWeight.Regular, Enum.FontStyle.Italic)
 local ITALIC_BOLD_FONT = Font.new(script.Branch.Key.FontFace.Family, Enum.FontWeight.Bold, Enum.FontStyle.Italic)
+
+type HotkeyAction = | "DELETE" | "OPEN" | "CLOSE" | "NEXT" | "PREVIOUS" | "RENAME"
+local HOTKEYS: { [Enum.KeyCode]: HotkeyAction } = table.freeze({
+	[Enum.KeyCode.Delete] = "DELETE",
+	[Enum.KeyCode.Backspace] = "DELETE",
+	[Enum.KeyCode.Right] = "OPEN",
+	[Enum.KeyCode.L] = "OPEN",
+	[Enum.KeyCode.Left] = "CLOSE",
+	[Enum.KeyCode.H] = "CLOSE",
+	[Enum.KeyCode.Down] = "NEXT",
+	[Enum.KeyCode.J] = "NEXT",
+	[Enum.KeyCode.Up] = "PREVIOUS",
+	[Enum.KeyCode.K] = "PREVIOUS",
+	[Enum.KeyCode.F2] = "RENAME",
+	[Enum.KeyCode.Return] = "RENAME",
+	[Enum.KeyCode.Insert] = "INSERT",
+})
 
 local Tree = {}
 Tree.__index = Tree
@@ -87,6 +105,8 @@ export type TreeOptions = {
 	allOpen: boolean?, -- If all the branches start out open
 
 	isTesting: boolean?,
+
+	inputReceiver: Frame | UserInputService | nil,
 }
 
 function Tree.new(
@@ -149,6 +169,9 @@ function Tree.new(
 
 	self._idLookedUp = Instance.new("BindableEvent")
 	self.idLookedUp = self._idLookedUp.Event
+
+	self._selectionChanged = Instance.new("BindableEvent")
+	self.selectionChanged = self._selectionChanged.Event
 
 	self.frame.CanvasPosition = Vector2.new(0, 0)
 	self.frame.BackgroundColor3 = self._colors.background
@@ -219,6 +242,37 @@ function Tree.new(
 			end
 		end),
 	}
+
+	if options.inputReceiver then
+		table.insert(
+			self._connections,
+			options.inputReceiver.InputBegan:Connect(function(input: InputObject, gpe: boolean?)
+				if gpe then
+					return
+				end
+				if not checkTrulyVisible(self.frame) then
+					return
+				end
+
+				local action: HotkeyAction? = HOTKEYS[input.KeyCode]
+				if action == "DELETE" then
+					self:tryDeleteSelected()
+				elseif action == "OPEN" then
+					self:tryOpenSelected()
+				elseif action == "CLOSE" then
+					self:tryCloseSelected()
+				elseif action == "NEXT" then
+					self:trySelectNext()
+				elseif action == "PREVIOUS" then
+					self:trySelectPrevious()
+				elseif action == "RENAME" then
+					self:tryEditKeySelected()
+				elseif action == "INSERT" then
+					self:tryInsertSelected()
+				end
+			end)
+		)
+	end
 
 	return self
 end
@@ -1598,6 +1652,18 @@ function Tree:_moveArrayElementForUndoRedo(fromIndex: number, toIndex: number)
 	end
 end
 
+function Tree:_scrollTo(visibleIndex: number)
+	local scrollTo = SIZE_PER_BRANCH * (visibleIndex - 1)
+	if self._selectingBranchVisibleIndex and self._selectingBranchVisibleIndex > visibleIndex then
+		scrollTo += self._selectingBranchOffset
+	end
+	if self.frame.CanvasPosition.Y + self.frame.AbsoluteSize.Y < scrollTo + SIZE_PER_BRANCH then
+		self.frame.CanvasPosition = Vector2.new(0, scrollTo + SIZE_PER_BRANCH - self.frame.AbsoluteSize.Y)
+	elseif self.frame.CanvasPosition.Y > scrollTo then
+		self.frame.CanvasPosition = Vector2.new(0, scrollTo)
+	end
+end
+
 function Tree:_focusBranch(index: number)
 	self:_digExpand(index)
 
@@ -1609,15 +1675,7 @@ function Tree:_focusBranch(index: number)
 
 	local visibleIndex = table.find(self._visibleIndexes, index)
 	if visibleIndex then
-		local scrollTo = SIZE_PER_BRANCH * (visibleIndex - 1)
-		if self._selectingBranchVisibleIndex and self._selectingBranchVisibleIndex > visibleIndex then
-			scrollTo += self._selectingBranchOffset
-		end
-		if self.frame.CanvasPosition.Y + self.frame.AbsoluteSize.Y < scrollTo + SIZE_PER_BRANCH then
-			self.frame.CanvasPosition = Vector2.new(0, scrollTo + SIZE_PER_BRANCH - self.frame.AbsoluteSize.Y)
-		elseif self.frame.CanvasPosition.Y > scrollTo then
-			self.frame.CanvasPosition = Vector2.new(0, scrollTo)
-		end
+		self:_scrollTo(visibleIndex)
 	end
 end
 
@@ -1784,6 +1842,27 @@ function Tree:_digExpand(index: number)
 			self:_updateBranchVisible(i)
 			break
 		end
+	end
+end
+
+function Tree:_toggleOpen(index: number)
+	-- DONT REMEMBER WHAT THIS CHECK WAS FOR, KEEPING IT BECAUSE IT DOESN'T SEEM LIKE IT WOULD BREAK ANYTHING
+	if self._selectingIsDragging then
+		return
+	end
+
+	local branch = self._flatBranches[index]
+	local frame = self._frames[index]
+
+	branch[3] = not branch[3]
+	self:_updateBranchVisible(index)
+	self:_redrawBranches()
+
+	if not branch[3] then
+		frame.Arrow.Image = self.theme.icons.rightArrow
+		self:_clearNonVisibleBranches()
+	else
+		frame.Arrow.Image = self.theme.icons.downArrow
 	end
 end
 
@@ -2287,7 +2366,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 	return result
 end
 
-function Tree:_promptEditKey(index: number, options: { captureValueTextBox: boolean?, position: Vector2 })
+function Tree:_promptEditMenu(index: number, options: { captureValueTextBox: boolean?, position: Vector2 })
 	self:_setInModal(true)
 
 	local branch = self._flatBranches[index]
@@ -2597,6 +2676,234 @@ function Tree:_promptModalTextBox(
 	return "cancel", nil, false
 end
 
+function Tree:_promptEditKey(index: number)
+	if self.readOnly then
+		return
+	end
+
+	local branch = self._flatBranches[index]
+	local frame = self._frames[index]
+	local locked = false
+
+	if branch.ISROOT or branch.LOCKKEY then
+		if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
+			self:_toggleOpen(index)
+			return
+		else
+			locked = true
+		end
+
+		self.uiMessages:warn("Cannot edit this key.")
+	end
+	if typeof(branch[1]) == "number" then
+		self.uiMessages:warn("Drag and drop to change the order of elements in an array.")
+		return
+	end
+
+	self:_setInModal(true)
+
+	local userResponse, newKey = self:_promptModalTextBox(frame, "key", {
+		defaultText = frame.Key.Text,
+		locked = locked,
+	})
+
+	self:_setInModal(false)
+
+	if userResponse == "empty" then
+		self.uiMessages:error("Key was empty.")
+	elseif userResponse == "submit" then
+		-- It did not change
+		if newKey == branch[1] then
+			return
+		end
+
+		self:_processResult(self:_editKey({
+			index = index,
+			key = newKey,
+			pushAction = true,
+		}))
+	end
+end
+
+function Tree:_promptEditValue(index: number)
+	if self.readOnly then
+		return
+	end
+
+	local branch = self._flatBranches[index]
+	local frame = self._frames[index]
+	local locked = false
+
+	if branch.LOCKVALUE then
+		if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
+			self:_toggleOpen(index)
+			return
+		else
+			locked = true
+		end
+
+		self.uiMessages:warn("Cannot edit this value.")
+	end
+
+	self:_setInModal(true)
+
+	if (typeof(branch[2]) == "string" and branch[2]:find("\n")) or (typeof(branch[2]) == "buffer") then
+		-- Read-only edit menu not supported so abort.
+		if locked then
+			return
+		end
+
+		self:_promptEditMenu(index, {
+			captureValueTextBox = true,
+			position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
+		})
+		return
+	end
+
+	local userResponse, newValue, newValueIsArray = self:_promptModalTextBox(frame, "value", {
+		defaultText = JSONHelper.toInputString(
+			branch[2],
+			if branch[2] == ARRAY_SENTINEL
+				then "array"
+				elseif branch[2] == OBJECT_SENTINEL then "object"
+				elseif typeof(branch[2]) == "nil" then "null"
+				else typeof(branch[2])
+		),
+		locked = locked,
+	})
+
+	self:_setInModal(false)
+
+	if userResponse == "empty" then
+		self.uiMessages:error("Value was empty.")
+	elseif userResponse == "submit" then
+		self:_processResult(self:_editValue({
+			index = index,
+			value = { value = newValue, isArray = newValueIsArray },
+			pushAction = true,
+		}))
+	end
+end
+
+function Tree:_promptInsertInto(index: number, position: Vector2)
+	local branch = self._flatBranches[index]
+
+	local isArray = (branch[2] == ARRAY_SENTINEL)
+	if isArray and branch.ISUSERIDS then
+		local amount = self:_getAmountOfUserIds()
+		if amount >= 4 then
+			self.uiMessages:error("Max number of UserIds is 4.")
+			self:_setInModal(false)
+			return
+		end
+	end
+
+	self:_setInModal(true)
+
+	local result = self:_promptInsertForm({
+		title = "Insert Into",
+		keyValidator = function(key)
+			if self:_doesChildHaveKey(index, key) then
+				return false, "Already contains key."
+			else
+				return true, nil
+			end
+		end,
+		isArray = (branch[2] == ARRAY_SENTINEL),
+		useUserIdConstraint = branch.ISUSERIDS,
+		position = position,
+	})
+
+	self:_setInModal(false)
+	if result then
+		local valueIsArray = (result.type == "array")
+
+		if isArray then
+			result.key = nil
+		end
+
+		local insertResult = self:_tryInsertInto({
+			index = index,
+			key = result.key,
+			value = { value = result.value, isArray = valueIsArray },
+			pushAction = true,
+		})
+		if insertResult.kind == "error" then
+			self.uiMessages:error(insertResult.message)
+		else
+			if branch.ISUSERIDS then
+				insertResult.branch.ISUSERID = true
+			end
+
+			self:_redrawBranches()
+
+			-- When it is successful, the err is actually the index of the branch inserted
+			self:_selectBranch(insertResult.index)
+		end
+	end
+end
+
+function Tree:_promptInsertAfter(index: number, position: Vector2)
+	local branch = self._flatBranches[index]
+	local isArray = (typeof(branch[1]) == "number")
+
+	if isArray and branch.ISUSERID then
+		local amount = self:_getAmountOfUserIds()
+		if amount >= 4 then
+			self.uiMessages:error("Max number of UserIds is 4.")
+			self:_setInModal(false)
+			return
+		end
+	end
+
+	self:_setInModal(true)
+
+	local result = self:_promptInsertForm({
+		title = "Insert After",
+		keyValidator = function(key)
+			if self:_doesSiblingOrSelfHaveKey(index, key) then
+				return false, "Sibling already has key"
+			else
+				return true, nil
+			end
+		end,
+		isArray = (typeof(branch[1]) == "number"),
+		useUserIdConstraint = branch.ISUSERID,
+		position = position,
+	})
+
+	self:_setInModal(false)
+
+	if result then
+		if result then
+			local valueIsArray = (result.type == "array")
+
+			if isArray then
+				result.key = nil
+			end
+
+			local insertResult = self:_tryInsertAfter({
+				index = index,
+				key = result.key,
+				value = { value = result.value, isArray = valueIsArray },
+				pushAction = true,
+			})
+			if insertResult.kind == "error" then
+				self.uiMessages:error(insertResult.message)
+			else
+				if branch.ISUSERID then
+					insertResult.branch.ISUSERID = true
+				end
+
+				self:_redrawBranches()
+
+				-- When it is successful, the err is actually the index of the branch inserted
+				self:_selectBranch(insertResult.index)
+			end
+		end
+	end
+end
+
 local function setBranchWraps(frame, wraps: boolean)
 	if wraps then
 		frame.Key.AutomaticSize = Enum.AutomaticSize.Y
@@ -2626,23 +2933,6 @@ function Tree:_initializeBranchFrame(frame, index: number)
 	self:_updateBranchFrame(frame, branch, index)
 
 	frame.Arrow.Image = if branch[3] then self.theme.icons.downArrow else self.theme.icons.rightArrow
-
-	local function toggleOpen()
-		if self._selectingIsDragging then
-			return
-		end
-
-		branch[3] = not branch[3]
-		self:_updateBranchVisible(index)
-		self:_redrawBranches()
-
-		if not branch[3] then
-			frame.Arrow.Image = self.theme.icons.rightArrow
-			self:_clearNonVisibleBranches()
-		else
-			frame.Arrow.Image = self.theme.icons.downArrow
-		end
-	end
 
 	local function tryStartDrag(input: InputObject)
 		if self.disabled then
@@ -2883,7 +3173,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 	local function onSingleClick()
 		self:_selectBranch(index)
 		if Settings.get("clickToOpen") then
-			toggleOpen()
+			self:_toggleOpen(index)
 		end
 	end
 
@@ -2966,122 +3256,14 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		})
 
 		if option == "Edit" then
-			self:_promptEditKey(index, { position = position })
+			self:_promptEditMenu(index, { position = position })
 		elseif option == "Delete" then
 			self:_deleteBranch({ index = index, pushAction = true })
 			self:_redrawBranches()
 		elseif option == "Insert Into" then
-			local isArray = (branch[2] == ARRAY_SENTINEL)
-			if isArray and branch.ISUSERIDS then
-				local amount = self:_getAmountOfUserIds()
-				if amount >= 4 then
-					self.uiMessages:error("Max number of UserIds is 4.")
-					self:_setInModal(false)
-					return
-				end
-			end
-
-			self:_setInModal(true)
-
-			local result = self:_promptInsertForm({
-				title = "Insert Into",
-				keyValidator = function(key)
-					if self:_doesChildHaveKey(index, key) then
-						return false, "Already contains key."
-					else
-						return true, nil
-					end
-				end,
-				isArray = (branch[2] == ARRAY_SENTINEL),
-				useUserIdConstraint = branch.ISUSERIDS,
-				position = position,
-			})
-
-			self:_setInModal(false)
-			if result then
-				local valueIsArray = (result.type == "array")
-
-				if isArray then
-					result.key = nil
-				end
-
-				local insertResult = self:_tryInsertInto({
-					index = index,
-					key = result.key,
-					value = { value = result.value, isArray = valueIsArray },
-					pushAction = true,
-				})
-				if insertResult.kind == "error" then
-					self.uiMessages:error(insertResult.message)
-				else
-					if branch.ISUSERIDS then
-						insertResult.branch.ISUSERID = true
-					end
-
-					self:_redrawBranches()
-
-					-- When it is successful, the err is actually the index of the branch inserted
-					self:_selectBranch(insertResult.index)
-				end
-			end
+			self:_promptInsertInto(index, position)
 		elseif option == "Insert After" then
-			local isArray = (typeof(branch[1]) == "number")
-
-			if isArray and branch.ISUSERID then
-				local amount = self:_getAmountOfUserIds()
-				if amount >= 4 then
-					self.uiMessages:error("Max number of UserIds is 4.")
-					self:_setInModal(false)
-					return
-				end
-			end
-
-			self:_setInModal(true)
-
-			local result = self:_promptInsertForm({
-				title = "Insert After",
-				keyValidator = function(key)
-					if self:_doesSiblingOrSelfHaveKey(index, key) then
-						return false, "Sibling already has key"
-					else
-						return true, nil
-					end
-				end,
-				isArray = (typeof(branch[1]) == "number"),
-				useUserIdConstraint = branch.ISUSERID,
-				position = position,
-			})
-
-			self:_setInModal(false)
-
-			if result then
-				if result then
-					local valueIsArray = (result.type == "array")
-
-					if isArray then
-						result.key = nil
-					end
-
-					local insertResult = self:_tryInsertAfter({
-						index = index,
-						key = result.key,
-						value = { value = result.value, isArray = valueIsArray },
-						pushAction = true,
-					})
-					if insertResult.kind == "error" then
-						self.uiMessages:error(insertResult.message)
-					else
-						if branch.ISUSERID then
-							insertResult.branch.ISUSERID = true
-						end
-
-						self:_redrawBranches()
-
-						-- When it is successful, the err is actually the index of the branch inserted
-						self:_selectBranch(insertResult.index)
-					end
-				end
-			end
+			self:_promptInsertAfter(index, position)
 		elseif option == "Lookup Id" then
 			self._idLookedUp:Fire(branch[2])
 		elseif option == "Expand All" then
@@ -3100,7 +3282,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 	end
 
 	self._frameConnections[index] = {
-		frame.Arrow.Activated:Connect(toggleOpen),
+		frame.Arrow.Activated:Connect(function()
+			self:_toggleOpen(index)
+		end),
 
 		frame.Key.MouseButton2Click:Connect(onRightClick),
 		frame.Value.MouseButton2Click:Connect(onRightClick),
@@ -3149,50 +3333,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			if count == 0 then
 				onSingleClick()
 			elseif count == 1 then
-				if self.readOnly then
-					return
-				end
-
-				local locked = false
-
-				if branch.ISROOT or branch.LOCKKEY then
-					if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
-						toggleOpen()
-						return
-					else
-						locked = true
-					end
-
-					self.uiMessages:warn("Cannot edit this key.")
-				end
-				if typeof(branch[1]) == "number" then
-					self.uiMessages:warn("Drag and drop to change the order of elements in an array.")
-					return
-				end
-
-				self:_setInModal(true)
-
-				local userResponse, newKey = self:_promptModalTextBox(frame, "key", {
-					defaultText = frame.Key.Text,
-					locked = locked,
-				})
-
-				self:_setInModal(false)
-
-				if userResponse == "empty" then
-					self.uiMessages:error("Key was empty.")
-				elseif userResponse == "submit" then
-					-- It did not change
-					if newKey == branch[1] then
-						return
-					end
-
-					self:_processResult(self:_editKey({
-						index = index,
-						key = newKey,
-						pushAction = true,
-					}))
-				end
+				self:_promptEditKey(index)
 			end
 		end),
 		frame.Value.Activated:Connect(function(_, count)
@@ -3205,61 +3346,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			if count == 0 then
 				onSingleClick()
 			elseif count == 1 then
-				if self.readOnly then
-					return
-				end
-
-				local locked = false
-
-				if branch.LOCKVALUE then
-					if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
-						toggleOpen()
-						return
-					else
-						locked = true
-					end
-
-					self.uiMessages:warn("Cannot edit this value.")
-				end
-
-				self:_setInModal(true)
-
-				if (typeof(branch[2]) == "string" and branch[2]:find("\n")) or (typeof(branch[2]) == "buffer") then
-					-- Read-only edit menu not supported so abort.
-					if locked then
-						return
-					end
-
-					self:_promptEditKey(index, {
-						captureValueTextBox = true,
-						position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
-					})
-					return
-				end
-
-				local userResponse, newValue, newValueIsArray = self:_promptModalTextBox(frame, "value", {
-					defaultText = JSONHelper.toInputString(
-						branch[2],
-						if branch[2] == ARRAY_SENTINEL
-							then "array"
-							elseif branch[2] == OBJECT_SENTINEL then "object"
-							elseif typeof(branch[2]) == "nil" then "null"
-							else typeof(branch[2])
-					),
-					locked = locked,
-				})
-
-				self:_setInModal(false)
-
-				if userResponse == "empty" then
-					self.uiMessages:error("Value was empty.")
-				elseif userResponse == "submit" then
-					self:_processResult(self:_editValue({
-						index = index,
-						value = { value = newValue, isArray = newValueIsArray },
-						pushAction = true,
-					}))
-				end
+				self:_promptEditValue(index)
 			end
 		end),
 
@@ -3625,6 +3712,7 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 		end
 
 		self:_updateCanvasSize()
+		self._selectionChanged:Fire()
 	elseif (not dontDeselect) and lastIndex then
 		self._selectingBranchIndex = nil
 		self._selectingBranchVisualIndex = nil
@@ -3639,6 +3727,7 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 		end
 
 		self:_updateCanvasSize()
+		self._selectionChanged:Fire()
 	end
 end
 
@@ -3828,6 +3917,120 @@ function Tree:getKeyInfo(): ({ number }, { [string]: any })
 	return userIds, metadata
 end
 
+--[[ HOTKEY OPERATIONS ]]
+
+function Tree:tryDeleteSelected(): boolean
+	if not self._selectingBranchIndex then
+		return false
+	end
+
+	self:_deleteBranch({ index = self._selectingBranchIndex, pushAction = true })
+	self:_redrawBranches()
+
+	return true
+end
+
+function Tree:tryOpenSelected(): boolean
+	if not self._selectingBranchIndex then
+		return false
+	end
+
+	local branch = self._flatBranches[self._selectingBranchIndex]
+	if branch[2] ~= ARRAY_SENTINEL and branch[2] ~= OBJECT_SENTINEL then
+		-- Doing delay (task.defer did not work) because if this was triggered by a hotkey, the pressed key will be inserted into the textbox
+		task.delay(0, function()
+			self:_promptEditValue(self._selectingBranchIndex)
+		end)
+		return true
+	end
+
+	if branch[3] then
+		return
+	end
+
+	self:_toggleOpen(self._selectingBranchIndex)
+	return true
+end
+
+function Tree:tryCloseSelected(): boolean
+	if not self._selectingBranchIndex then
+		return false
+	end
+
+	local branch = self._flatBranches[self._selectingBranchIndex]
+	if branch[2] ~= ARRAY_SENTINEL and branch[2] ~= OBJECT_SENTINEL then
+		return
+	end
+
+	if not branch[3] then
+		return
+	end
+
+	self:_toggleOpen(self._selectingBranchIndex)
+	return true
+end
+
+function Tree:trySelectNext(): boolean
+	if not self._selectingBranchIndex then
+		return false
+	end
+
+	local nextVisibleIndex = self._selectingBranchVisibleIndex + 1
+	local nextIndex = self._visibleIndexes[nextVisibleIndex]
+	if nextIndex then
+		self:_selectBranch(nextIndex)
+		self:_scrollTo(nextVisibleIndex)
+		return true
+	end
+
+	return false
+end
+
+function Tree:trySelectPrevious(): boolean
+	if not self._selectingBranchIndex then
+		return false
+	end
+
+	local previousVisibleIndex = self._selectingBranchVisibleIndex - 1
+	local previousIndex = self._visibleIndexes[previousVisibleIndex]
+	if previousIndex then
+		self:_selectBranch(previousIndex)
+		self:_scrollTo(previousVisibleIndex)
+		return true
+	end
+
+	return false
+end
+
+function Tree:tryEditKeySelected(): boolean
+	if not self._selectingBranchIndex then
+		return false
+	end
+
+	self:_promptEditKey(self._selectingBranchIndex)
+	return true
+end
+
+function Tree:tryInsertSelected(): boolean
+	if not self._selectingBranchIndex then
+		return false
+	end
+
+	local frame = self._frames[self._selectingBranchIndex]
+	local branch = self._flatBranches[self._selectingBranchIndex]
+	if branch and frame then
+		if branch[2] == OBJECT_SENTINEL or branch[2] == ARRAY_SENTINEL then
+			self:_promptInsertInto(self._selectingBranchIndex, frame.Value.AbsolutePosition)
+		else
+			self:_promptInsertAfter(self._selectingBranchIndex, frame.Value.AbsolutePosition)
+		end
+	end
+
+	return false
+end
+
+--[[ HOTKEY OPERATIONS END ]]
+
 function Tree:destroy(completely: boolean)
 	assert(not completely, "Tree should not own the scrolling frame that contains it.")
 	self._dirtyChanged:Destroy()
@@ -3843,6 +4046,12 @@ function Tree:destroy(completely: boolean)
 		bar:Destroy()
 	end
 	self._hierarchyBarFolder:Destroy()
+
+	for _, event in self do
+		if typeof(event) == "Instance" and event:IsA("BindableEvent") then
+			event:Destroy()
+		end
+	end
 end
 
 return Tree
