@@ -195,6 +195,19 @@ function UI.new(theme: Theme.Theme, uiMessages)
 	self.styleStates.connect.tabs:select("Connect")
 	self:switchConnectTab("connect")
 
+	-- Hack to get AutomaticSize to not mess up since the overlay textlabel messes with that
+	-- This also causes the overlay text label to not render when the user has typed a lot of text and is far from its origin
+	self.styleStates.connect.dataStoreNameTextBox.overlay:GetPropertyChangedSignal("Size"):Connect(function(size)
+		if self.styleStates.connect.dataStoreNameTextBox.overlay.Size.X.Scale ~= 1 then
+			self.styleStates.connect.dataStoreNameTextBox.overlay.Size = UDim2.fromScale(1, 1)
+		end
+	end)
+	self.styleStates.connect.dataStoreScopeTextBox.overlay:GetPropertyChangedSignal("Size"):Connect(function(size)
+		if self.styleStates.connect.dataStoreScopeTextBox.overlay.Size.X.Scale ~= 1 then
+			self.styleStates.connect.dataStoreScopeTextBox.overlay.Size = UDim2.fromScale(1, 1)
+		end
+	end)
+
 	-- Tab switch groups
 
 	createTabSwitchGroup({
@@ -307,6 +320,11 @@ function UI:setActiveView(view: "game" | "datastore" | "key" | "orderedDatastore
 	end
 
 	self:autoFocus()
+
+	if view == "game" then
+		-- Window might've resized, so update this if it's too small to do center alignment
+		self:_updateConnectCentering()
+	end
 end
 
 function UI:autoFocus()
@@ -395,6 +413,11 @@ function UI:_updateConnectCentering()
 	else
 		self.gui.ConnectDataStore.Content.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 		self.gui.ConnectDataStore.Content.UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	end
+
+	-- Gui too small for center aligment
+	if self.gui.AbsoluteSize.X <= 360 then
+		self.gui.ConnectDataStore.Content.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	end
 end
 

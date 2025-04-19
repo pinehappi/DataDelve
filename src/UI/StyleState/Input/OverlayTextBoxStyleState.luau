@@ -72,7 +72,9 @@ function OverlayTextBoxStyleState.from(theme: Theme.Theme, textBox: TextBox & { 
 			local startBoundsX = self._lastShift
 			local endBoundsX = startBoundsX + (self.textBox.AbsoluteSize.X - paddingX) - 1
 			local cursorX = getLengthToCursor(textBox)
+
 			self.overlay.Size = UDim2.new(0, cursorX, 1, 0) -- The RichTextLabel will stop rendering when it is too far away, so make it bigger
+
 			if cursorX < startBoundsX then
 				self:_updateShift(cursorX)
 				self._atEnd = false

@@ -539,6 +539,15 @@ function App.new(id: string)
 		end)
 	)
 
+	table.insert(
+		self.connections,
+		self.ui.gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			if self.ui.activeView == "game" then
+				self.ui:_updateConnectCentering()
+			end
+		end)
+	)
+
 	-- Enabled
 	self._enabledChanged = Instance.new("BindableEvent")
 	self.enabledChanged = self._enabledChanged.Event
