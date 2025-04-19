@@ -22,8 +22,8 @@ local WIDGET_INFO = DockWidgetPluginGuiInfo.new(
 	Enum.InitialDockState.Float, -- Widget will be initialized in floating panel
 	false,
 	false,
-	400,
-	250,
+	500,
+	350,
 	350,
 	230
 )

@@ -2879,7 +2879,7 @@
               </Vector2>
               <BinaryString name="AttributesSerialize"></BinaryString>
               <bool name="AutoLocalize">true</bool>
-              <token name="AutomaticSize">0</token>
+              <token name="AutomaticSize">1</token>
               <Color3 name="BackgroundColor3">
                 <R>0.05490196</R>
                 <G>0.05490196</G>
