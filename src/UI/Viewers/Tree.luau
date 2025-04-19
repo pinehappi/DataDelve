@@ -127,6 +127,7 @@ function Tree.new(
 		_colors = getHighlightColors(theme),
 
 		_inModal = false,
+		_inRightClick = false,
 		_hoveringBranchIndex = nil,
 		_selectingBranchIndex = nil,
 		_selectingBranchVisibleIndex = nil,
@@ -251,6 +252,9 @@ function Tree.new(
 					return
 				end
 				if not checkTrulyVisible(self.frame) then
+					return
+				end
+				if self._inModal or self._inRightClick then
 					return
 				end
 
@@ -3188,6 +3192,8 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			return
 		end
 
+		self:_setInModal(true, "rightClick")
+
 		self:_selectBranch(index, true)
 
 		local options: { [number]: any } = {}
@@ -3246,6 +3252,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		end
 
 		if #options == 0 then
+			self:_setInModal(false)
 			return
 		end
 
@@ -3632,11 +3639,12 @@ function Tree:_tryAddHierarchyBarsUpTo(amount: number)
 	end
 end
 
-function Tree:_setInModal(inModal: boolean)
+function Tree:_setInModal(inModal: boolean, inRightClick: "rightClick"?)
 	self._inModal = inModal
+	self._inRightClick = not not inRightClick
 	self.frame.ScrollingEnabled = not inModal
 
-	if self._hoveringBranchIndex then
+	if self._hoveringBranchIndex and not inRightClick then
 		local hoveringIndex = self._hoveringBranchIndex
 		self._hoveringBranchIndex = nil
 		self:_updateBranchFrameBackgroundColor(hoveringIndex)
@@ -3657,7 +3665,7 @@ function Tree:_updateBranchFrameBackgroundColor(index: boolean, frame: Frame?)
 end
 
 function Tree:_setHovering(index: number?)
-	if self._inModal then
+	if self._inModal and not self._inRightClick then
 		return
 	end
 	if self._selectingIsDragging then
