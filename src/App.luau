@@ -33,6 +33,7 @@ local ContextMenuStyleState = require(script.Parent.UI.StyleState.Utility.Contex
 
 local SingleKeyWidget = require(script.Parent.UI.Widgets.SingleKeyWidget)
 local EditKeyView = require(script.Parent.UI.Views.EditKeyView)
+local HistoryView = require(script.Parent.UI.Views.HistoryView)
 
 local Theme = require(script.Parent.UI.Theme).global
 local UI = require(script.Parent.UI)
@@ -77,6 +78,7 @@ function App.new(id: string)
 		uiMessages = uiMessages,
 
 		editKeyView = nil,
+		historyView = nil,
 		viewer = nil,
 
 		connections = {},
@@ -95,6 +97,8 @@ function App.new(id: string)
 
 	self.ui:setParent(self.widget)
 	self.uiMessages:setParent(self.widget)
+
+	self.historyView = HistoryView.from(Theme, History.global, self.ui.gui.ConnectDataStore.Content.History)
 
 	-- Breadcrumbs
 
@@ -146,31 +150,31 @@ function App.new(id: string)
 	end)
 
 	-- History
-
-	self.ui:updateConnectionsHistory(History.connectionRecords)
-
+	self.ui:updateHistoryTabVisible(#History.connectionRecords > 0)
 	table.insert(self.connections, {
 		History.connectionsChanged:Connect(function()
-			self.ui:updateConnectionsHistory(History.connectionRecords)
+			self.ui:updateHistoryTabVisible(#History.connectionRecords > 0)
 		end),
 	})
 
-	self.ui.connectionRecordSelected:Connect(function(record: Types.DataStoreConnectionRecord)
+	self.historyView.connectionRecordSelected:Connect(function(record: Types.DataStoreConnectionRecord)
 		self:tryConnect(record.connection)
 	end)
-	self.ui.connectionRecordDeleted:Connect(function(record: Types.DataStoreConnectionRecord)
+	self.historyView.connectionRecordDeleted:Connect(function(record: Types.DataStoreConnectionRecord)
 		History:removeConnectionRecord(record.connection)
 	end)
-	self.ui.connectionRecordPinChanged:Connect(function(record: Types.DataStoreConnectionRecord, pinned: boolean)
-		if pinned then
-			History:pinConnectionRecord(record.connection)
-			self.uiMessages:success("Pinned connection.")
-		else
-			History:unpinConnectionRecord(record.connection)
-			self.uiMessages:success("Unpinned connection.")
+	self.historyView.connectionRecordPinChanged:Connect(
+		function(record: Types.DataStoreConnectionRecord, pinned: boolean)
+			if pinned then
+				History:pinConnectionRecord(record.connection)
+				self.uiMessages:success("Pinned connection.")
+			else
+				History:unpinConnectionRecord(record.connection)
+				self.uiMessages:success("Unpinned connection.")
+			end
 		end
-	end)
-	self.ui.connnectionRecordLoaded:Connect(function(record: Types.DataStoreConnectionRecord)
+	)
+	self.historyView.connectionRecordLoaded:Connect(function(record: Types.DataStoreConnectionRecord)
 		self.ui.styleStates.connect.orderedDataStoreCheckbox:setValue(record.connection.isOrdered)
 		self.ui.styleStates.connect.dataStoreNameTextBox.textBox.Text = record.connection.name
 		self.ui.styleStates.connect.dataStoreScopeTextBox.textBox.Text = record.connection.scope or ""
@@ -674,9 +678,7 @@ function App.listDataStores(self: App, prefix: string?)
 	self.ui.gui.ConnectDataStore.Content.DataStoreList.Empty.Visible = empty
 	self.ui.gui.ConnectDataStore.Content.DataStoreList.Instructions.Visible = false
 
-	if not empty then
-		self.ui.gui.ConnectDataStore.Content.UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-	end
+	self.ui:_updateConnectCentering()
 end
 
 function App.tryListDataStores(self: App)

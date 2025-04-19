@@ -226,7 +226,7 @@ function OrderedDataStoreView.from(
 
 			self:_updateHighlightColors({ tween = false })
 
-			StyleStateHelper.update(self.styleStates)
+			StyleStateHelper.update(self.styleStates, "slow")
 		end)
 	)
 

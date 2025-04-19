@@ -191,7 +191,7 @@ function EditKeyView.from(params)
 		self._theme.colorsChanged:Connect(function()
 			task.wait()
 
-			StyleStateHelper.update(self._styleStates)
+			StyleStateHelper.update(self._styleStates, "slow")
 		end)
 	)
 

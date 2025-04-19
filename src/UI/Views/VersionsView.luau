@@ -160,7 +160,7 @@ function VersionsView.from(params: VersionsViewFromParams)
 		self.connections,
 		self.theme.colorsChanged:Connect(function()
 			task.wait()
-			StyleStateHelper.update(self.styleStates :: any)
+			StyleStateHelper.update(self.styleStates :: any, "slow")
 		end)
 	)
 

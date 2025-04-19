@@ -230,7 +230,7 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 		self.connections,
 		theme.colorsChanged:Connect(function()
 			task.wait()
-			StyleStateHelper.update(self.styleStates :: any) -- TODO: why is this a warning without :: any
+			StyleStateHelper.update(self.styleStates :: any, "slow") -- TODO: why is this a warning without :: any
 		end)
 	)
 

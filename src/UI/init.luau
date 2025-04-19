@@ -117,7 +117,6 @@ function UI.new(theme: Theme.Theme, uiMessages)
 			}),
 
 			datastoreTableLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.DataStoreList),
-			historyLabels = LabelStyleState.fromDescendants(theme, gui.ConnectDataStore.Content.History),
 		},
 		browse = {
 			scrollingFrame = ScrollingFrameStyleState.from(theme, gui.BrowseKeys.Keys),
@@ -272,7 +271,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 		self.connections,
 		theme.colorsChanged:Connect(function()
 			task.wait()
-			StyleStateHelper.update(self.styleStates)
+			StyleStateHelper.update(self.styleStates, "slow")
 
 			for _, connectionRecordStyleStates in self._connectionRecordStyleStates do
 				connectionRecordStyleStates:update("slow")
@@ -286,15 +285,6 @@ end
 function UI:setParent(parent: LayerCollector)
 	self.gui.Parent = parent
 	self.parent = parent
-end
-
-function UI:setEditKeyView(editKeyView: EditKeyView.EditKeyView)
-	local previousEditKeyView = self.editKeyView
-	if previousEditKeyView then
-		previousEditKeyView:destroy()
-	end
-
-	self.editKeyView = editKeyView
 end
 
 function UI:setActiveView(view: "game" | "datastore" | "key" | "orderedDatastore" | "settings")
@@ -393,117 +383,45 @@ function UI:updateBreadcrumbsVisibility()
 end
 
 function UI:_updateConnectCentering()
-	if self.gui.ConnectDataStore.Content.History.Visible then
-		self.gui.ConnectDataStore.Content.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-		self.gui.ConnectDataStore.Content.UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-	else
-		if
+	if
+		(
 			self.gui.ConnectDataStore.Content.DataStoreList.Visible
 			and self.gui.ConnectDataStore.Content.DataStoreList.Table.Visible
 			and self.styleStates.connect.tabs:isSelecting("list")
-		then
-			self.gui.ConnectDataStore.Content.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-			self.gui.ConnectDataStore.Content.UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-		else
-			self.gui.ConnectDataStore.Content.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-			self.gui.ConnectDataStore.Content.UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-		end
+		) or (self.styleStates.connect.tabs:isSelecting("history"))
+	then
+		self.gui.ConnectDataStore.Content.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		self.gui.ConnectDataStore.Content.UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+	else
+		self.gui.ConnectDataStore.Content.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		self.gui.ConnectDataStore.Content.UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	end
 end
 
-function UI:switchConnectTab(tab: "connect" | "list")
+function UI:switchConnectTab(tab: "connect" | "list" | "history")
 	local connectVisible = (tab == "connect")
+	local listVisible = (tab == "list")
+	local historyVisible = (tab == "history")
 
 	self.gui.ConnectDataStore.Content.Form.Connect.Visible = connectVisible
 	self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = connectVisible
 	self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = connectVisible
 	self.gui.ConnectDataStore.Content.Form.IsOrderedDataStore.Visible = connectVisible
 
-	self.gui.ConnectDataStore.Content.Form.Prefix.Visible = not connectVisible
-	self.gui.ConnectDataStore.Content.DataStoreList.Visible = not connectVisible
+	self.gui.ConnectDataStore.Content.Form.Prefix.Visible = listVisible
+	self.gui.ConnectDataStore.Content.DataStoreList.Visible = listVisible
+
+	self.gui.ConnectDataStore.Content.History.Visible = historyVisible
+
 	self:_updateConnectCentering()
 end
 
-local function updateConnectionRowPinVisual(row, theme, pinned: boolean)
-	if pinned then
-		if not row:FindFirstChild("ConnectionRowPinIcon") then
-			local icon = Assets.ConnectionRowPinIcon:Clone()
-			icon.Parent = row
-			icon.ImageColor3 = theme.colors.text
+function UI:updateHistoryTabVisible(visible: boolean)
+	self.styleStates.connect.tabs.frame.History.Visible = visible
+	if not visible then
+		if self.styleStates.connect.tabs:isSelecting("history") then
+			self.styleStates.connect.tabs:select("Connect")
 		end
-		row.DataStore.Position = UDim2.new(0, 20, 0, 0)
-		row.DataStore.Size = UDim2.new(0.5, -20, 1, 0)
-	else
-		local icon = row:FindFirstChild("ConnectionRowPinIcon")
-		if icon then
-			icon:Destroy()
-		end
-		row.DataStore.Position = UDim2.new(0, 0, 0, 0)
-		row.DataStore.Size = UDim2.new(0.5, 0, 1, 0)
-	end
-end
-
-function UI:updateConnectionsHistory(records: { Types.DataStoreConnectionRecord })
-	local isVisible = (#records > 0)
-	self.gui.ConnectDataStore.Content.Separator.Visible = isVisible
-	self.gui.ConnectDataStore.Content.History.Visible = isVisible
-
-	self:_updateConnectCentering()
-
-	for _, v in self._connectionRecordStyleStates do
-		v:destroy(true)
-	end
-	self._connectionRecordStyleStates = {}
-
-	for _, record in records do
-		local row = Assets.ConnectionRow:Clone()
-		if record.connection.scope and record.connection.scope ~= "" then
-			row.DataStore.Text = `{record.connection.scope}/{record.connection.name}`
-		else
-			row.DataStore.Text = record.connection.name
-		end
-		row.ConnectionType.Text = if record.connection.allScopes
-			then "AllScopes"
-			elseif record.connection.isOrdered then "Ordered"
-			else "Normal"
-		row.LastAccess.Text = DateTime.fromUnixTimestamp(record.lastAccess):FormatUniversalTime("ll LT", "en-us")
-		row.LayoutOrder = if record.pinned then 0 else 1
-		updateConnectionRowPinVisual(row, self.theme, record.pinned)
-		row.Parent = self.gui.ConnectDataStore.Content.History.Table
-
-		local styleState = ButtonStyleState.from(self.theme, row, {
-			style = "transparent",
-		})
-
-		table.insert(self._connectionRecordStyleStates, styleState)
-
-		row.Activated:Connect(function()
-			self._connectionRecordSelected:Fire(record)
-		end)
-		row.MouseButton2Click:Connect(function()
-			styleState:setSelecting(true):update()
-			local option =
-				ContextMenuStyleState.prompt(self.theme, self.parent, self.parent:GetRelativeMousePosition(), {
-					options = {
-						if record.pinned
-							then { icon = self.theme.icons.unpin, text = "Unpin" }
-							else { icon = self.theme.icons.pin, text = "Pin" },
-						{ icon = self.theme.icons.import, text = "Load" },
-						{ icon = self.theme.icons.delete, text = "Delete" },
-					},
-				})
-			styleState:setSelecting(false):update()
-
-			if option == "Delete" then
-				self._connectionRecordDeleted:Fire(record)
-			elseif option == "Load" then
-				self._connectionRecordLoaded:Fire(record)
-			elseif option == "Pin" then
-				self._connectionRecordPinChanged:Fire(record, true)
-			elseif option == "Unpin" then
-				self._connectionRecordPinChanged:Fire(record, false)
-			end
-		end)
 	end
 end
 

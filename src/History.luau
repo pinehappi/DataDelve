@@ -123,4 +123,5 @@ function History:save(plugin: Plugin)
 end
 
 History.global = History.new(game.GameId)
+export type History = typeof(History.new(1))
 return History

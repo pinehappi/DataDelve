@@ -417,6 +417,7 @@
             <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
           </CachedFaceId>
         </Font>
+        <Ref name="HoverHapticEffect">null</Ref>
         <bool name="Interactable">true</bool>
         <int name="LayoutOrder">0</int>
         <float name="LineHeight">1</float>
@@ -435,6 +436,7 @@
           <YS>0</YS>
           <YO>0</YO>
         </UDim2>
+        <Ref name="PressHapticEffect">null</Ref>
         <bool name="RichText">false</bool>
         <Ref name="RootLocalizationTable">null</Ref>
         <float name="Rotation">0</float>
@@ -653,6 +655,7 @@
             <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
           </CachedFaceId>
         </Font>
+        <Ref name="HoverHapticEffect">null</Ref>
         <bool name="Interactable">true</bool>
         <int name="LayoutOrder">0</int>
         <float name="LineHeight">1</float>
@@ -671,6 +674,7 @@
           <YS>0</YS>
           <YO>3</YO>
         </UDim2>
+        <Ref name="PressHapticEffect">null</Ref>
         <bool name="RichText">false</bool>
         <Ref name="RootLocalizationTable">null</Ref>
         <float name="Rotation">0</float>
@@ -940,6 +944,7 @@
               <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
             </CachedFaceId>
           </Font>
+          <Ref name="HoverHapticEffect">null</Ref>
           <bool name="Interactable">true</bool>
           <int name="LayoutOrder">0</int>
           <float name="LineHeight">1</float>
@@ -958,6 +963,7 @@
             <YS>0</YS>
             <YO>0</YO>
           </UDim2>
+          <Ref name="PressHapticEffect">null</Ref>
           <bool name="RichText">false</bool>
           <Ref name="RootLocalizationTable">null</Ref>
           <float name="Rotation">0</float>
@@ -1384,6 +1390,7 @@
               <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
             </CachedFaceId>
           </Font>
+          <Ref name="HoverHapticEffect">null</Ref>
           <bool name="Interactable">true</bool>
           <int name="LayoutOrder">0</int>
           <float name="LineHeight">1</float>
@@ -1402,6 +1409,7 @@
             <YS>0</YS>
             <YO>0</YO>
           </UDim2>
+          <Ref name="PressHapticEffect">null</Ref>
           <bool name="RichText">false</bool>
           <Ref name="RootLocalizationTable">null</Ref>
           <float name="Rotation">0</float>
@@ -1829,6 +1837,7 @@
             <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
           </CachedFaceId>
         </Font>
+        <Ref name="HoverHapticEffect">null</Ref>
         <bool name="Interactable">true</bool>
         <int name="LayoutOrder">0</int>
         <float name="LineHeight">1</float>
@@ -1847,6 +1856,7 @@
           <YS>0</YS>
           <YO>0</YO>
         </UDim2>
+        <Ref name="PressHapticEffect">null</Ref>
         <bool name="RichText">false</bool>
         <Ref name="RootLocalizationTable">null</Ref>
         <float name="Rotation">0</float>
@@ -2337,6 +2347,7 @@
             <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
           </CachedFaceId>
         </Font>
+        <Ref name="HoverHapticEffect">null</Ref>
         <bool name="Interactable">true</bool>
         <int name="LayoutOrder">0</int>
         <float name="LineHeight">1</float>
@@ -2355,6 +2366,7 @@
           <YS>0</YS>
           <YO>0</YO>
         </UDim2>
+        <Ref name="PressHapticEffect">null</Ref>
         <bool name="RichText">false</bool>
         <Ref name="RootLocalizationTable">null</Ref>
         <float name="Rotation">0</float>
@@ -2553,6 +2565,7 @@
             <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
           </CachedFaceId>
         </Font>
+        <Ref name="HoverHapticEffect">null</Ref>
         <bool name="Interactable">true</bool>
         <int name="LayoutOrder">0</int>
         <float name="LineHeight">1</float>
@@ -2571,6 +2584,7 @@
           <YS>0</YS>
           <YO>0</YO>
         </UDim2>
+        <Ref name="PressHapticEffect">null</Ref>
         <bool name="RichText">false</bool>
         <Ref name="RootLocalizationTable">null</Ref>
         <float name="Rotation">0</float>
@@ -2789,6 +2803,7 @@
             <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
           </CachedFaceId>
         </Font>
+        <Ref name="HoverHapticEffect">null</Ref>
         <bool name="Interactable">true</bool>
         <int name="LayoutOrder">0</int>
         <float name="LineHeight">1</float>
@@ -2807,6 +2822,7 @@
           <YS>0</YS>
           <YO>3</YO>
         </UDim2>
+        <Ref name="PressHapticEffect">null</Ref>
         <bool name="RichText">false</bool>
         <Ref name="RootLocalizationTable">null</Ref>
         <float name="Rotation">0</float>
@@ -2991,6 +3007,7 @@
             <url>rbxasset://fonts/SourceSansPro-Regular.ttf</url>
           </CachedFaceId>
         </Font>
+        <Ref name="HoverHapticEffect">null</Ref>
         <bool name="Interactable">true</bool>
         <int name="LayoutOrder">0</int>
         <float name="LineHeight">1</float>
@@ -3009,6 +3026,7 @@
           <YS>0</YS>
           <YO>0</YO>
         </UDim2>
+        <Ref name="PressHapticEffect">null</Ref>
         <bool name="RichText">false</bool>
         <Ref name="RootLocalizationTable">null</Ref>
         <float name="Rotation">0</float>

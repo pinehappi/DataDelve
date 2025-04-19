@@ -13,7 +13,7 @@ local StyleStateHelper = {}
 StyleStateHelper.superDuperFastTween = TweenInfo.new(0.05, Enum.EasingStyle.Sine)
 StyleStateHelper.veryFastTween = TweenInfo.new(0.2, Enum.EasingStyle.Quad)
 StyleStateHelper.fastTween = TweenInfo.new(0.35, Enum.EasingStyle.Sine)
-StyleStateHelper.slowTween = TweenInfo.new(1, Enum.EasingStyle.Quad)
+StyleStateHelper.slowTween = TweenInfo.new(0.5, Enum.EasingStyle.Quad)
 StyleStateHelper.instantTween = TweenInfo.new(0, Enum.EasingStyle.Linear)
 
 function StyleStateHelper.getTweenInfoForSpeed(speed: TransitionSpeed)
