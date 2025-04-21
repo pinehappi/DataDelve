@@ -45,6 +45,8 @@ lune run sync [path_to_plugin_file] -- --fastMode
 
 This will sync the directory up with the provided plugin file. You can sync directly with the plugin file in your local plugins folder.
 
+If you run into an issue like `missing directory assets/test` or whatever, add the directory manually then re-run the script.
+
 # Development Workflow
 
 This is the workflow I use which you can use if you want:
