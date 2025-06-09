@@ -418,8 +418,8 @@ function EditKeyView:_initializeInteraction()
 			local contextMenuStyleState, contextMenuModal =
 				ContextMenuStyleState.createMenu(self._theme, self._widget, {
 					options = {
-						{ icon = self._theme.icons.export, text = "Export to JSON" },
-						{ icon = self._theme.icons.import, text = "Import from JSON" },
+						{ icon = self._theme.icons.export, text = "Export to File" },
+						{ icon = self._theme.icons.import, text = "Import from File" },
 						ContextMenuStyleState.SEPARATOR,
 						{ icon = self._theme.icons.rename, text = "Duplicate/Move Key" },
 						{ icon = self._theme.icons.storage, text = "View Data Usage" },
@@ -439,39 +439,23 @@ function EditKeyView:_initializeInteraction()
 
 			-- Respond
 			if not self._transactor.locked then
-				if result == "Export to JSON" then
-					local confirmDialogStyleState, confirmDialogModal =
-						ConfirmDialogStyleState.createDialog(self._theme, self._widget, position, {
-							title = "Usage notice",
-							message = `The file will be saved with the file extension {rfmt.code(".lua")}. You must change it to {rfmt.code(
-								".json"
-							)} after exporting it. This is a limitation of Roblox. Script injection permissions are also required to create a script for export.`,
-							yesText = "Understood",
-							noText = "Cancel",
-						})
+				if result == "Export to File" then
+					local value = self._viewer:getValue()
+					local name = if self._session.connection.scope
+						then `{self._session.connection.scope}_{self._session.connection.name}_{self._session.currentKey}`
+						else `{self._session.connection.name}_{self._session.currentKey}`
+					local exported, err = ExportImportHelper.export(name, value)
 
-					local confirmed = confirmDialogStyleState.interacted:Wait()
-					confirmDialogModal:destroy()
-					confirmDialogStyleState:destroy(true)
-
-					if confirmed then
-						local value = self._viewer:getValue()
-						local name = if self._session.connection.scope
-							then `{self._session.connection.scope}_{self._session.connection.name}_{self._session.currentKey}`
-							else `{self._session.connection.name}_{self._session.currentKey}`
-						local exported, err = ExportImportHelper.export(name, value)
-
-						if exported then
-							self._uiMessages:success("Exported to JSON.")
-						else
-							self._uiMessages:error(err or "Export cancelled.")
-						end
+					if exported then
+						self._uiMessages:success("Exported to file.")
+					else
+						self._uiMessages:error(err or "Export cancelled.")
 					end
-				elseif result == "Import from JSON" then
+				elseif result == "Import from File" then
 					local passed = true
 					if self._viewer.isDirty then
 						local confirmed = ConfirmDialogStyleState.confirm(self._theme, self._widget, position, {
-							title = "Import from JSON?",
+							title = "Import from file?",
 							message = "This will override any changes made.",
 						})
 

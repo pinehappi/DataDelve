@@ -67,7 +67,7 @@ function ExportImportHelper.export(fileName: string, value: any): (boolean, stri
 	moduleScript.Parent = game:GetService("TweenService")
 
 	SelectionService:Set({ moduleScript })
-	local exported = plugin:PromptSaveSelection(`{fileName}_json`)
+	local exported = plugin:PromptSaveSelection(fileName)
 
 	SelectionService:Set(originalSelection)
 	moduleScript:Destroy()
@@ -77,7 +77,7 @@ end
 -- Returns if the user selected a valid JSON file
 -- The second return is either the JSON value or error message
 function ExportImportHelper.import(): (boolean, (string | unknown)?)
-	local file = StudioService:PromptImportFile({ "json" })
+	local file = StudioService:PromptImportFile({ "txt", "lua", "luau", "json" })
 	if file then
 		local contents = file:GetBinaryContents()
 		local json: unknown?
