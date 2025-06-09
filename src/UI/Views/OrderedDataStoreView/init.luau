@@ -149,7 +149,6 @@ function OrderedDataStoreView.from(
 					if count == 0 then
 						toggleSelect()
 					elseif count == 1 then
-						uiMessages:warn("Cannot edit ordered datastore keys at the moment.")
 						self:_promptModalTextBox(key, {
 							frame = key,
 							side = "key",

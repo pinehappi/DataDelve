@@ -2700,7 +2700,6 @@ function Tree:_promptEditKey(index: number)
 		self.uiMessages:warn("Cannot edit this key.")
 	end
 	if typeof(branch[1]) == "number" then
-		self.uiMessages:warn("Drag and drop to change the order of elements in an array.")
 		return
 	end
 
@@ -3290,7 +3289,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 	self._frameConnections[index] = {
 		frame.Arrow.Activated:Connect(function()
-			self:_toggleOpen(index)
+			if not self.disabled then
+				self:_toggleOpen(index)
+			end
 		end),
 
 		frame.Key.MouseButton2Click:Connect(onRightClick),

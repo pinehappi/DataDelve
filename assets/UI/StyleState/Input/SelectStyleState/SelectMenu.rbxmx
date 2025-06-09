@@ -45,7 +45,6 @@
         <YS>0</YS>
         <YO>0</YO>
       </UDim2>
-      <float name="ResolutionScale">1</float>
       <Ref name="RootLocalizationTable">null</Ref>
       <float name="Rotation">0</float>
       <bool name="Selectable">false</bool>

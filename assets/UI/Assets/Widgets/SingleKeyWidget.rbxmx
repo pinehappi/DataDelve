@@ -128,7 +128,7 @@
     </Item>
     <Item class="Frame" referent="2">
       <Properties>
-        <string name="Name">HotkeyInputReciver</string>
+        <string name="Name">HotkeyInputReceiver</string>
         <bool name="Active">false</bool>
         <Vector2 name="AnchorPoint">
           <X>0</X>
