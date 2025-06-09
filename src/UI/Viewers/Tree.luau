@@ -1612,7 +1612,7 @@ function Tree:_insertForUndoRedo(
 			result.branch.ISUSERID = true
 		end
 
-		self:_selectBranch(result.index, true)
+		self:_focusBranch(result.index)
 
 		self:_redrawBranches()
 	end
@@ -2840,8 +2840,7 @@ function Tree:_promptInsertInto(index: number, position: Vector2)
 
 			self:_redrawBranches()
 
-			-- When it is successful, the err is actually the index of the branch inserted
-			self:_selectBranch(insertResult.index)
+			self:_focusBranch(insertResult.index)
 		end
 	end
 end
@@ -2900,8 +2899,7 @@ function Tree:_promptInsertAfter(index: number, position: Vector2)
 
 				self:_redrawBranches()
 
-				-- When it is successful, the err is actually the index of the branch inserted
-				self:_selectBranch(insertResult.index)
+				self:_focusBranch(insertResult.index)
 			end
 		end
 	end
