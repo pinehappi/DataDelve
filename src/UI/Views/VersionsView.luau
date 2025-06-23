@@ -97,7 +97,6 @@ function VersionsView.from(params: VersionsViewFromParams)
 				})
 				row.Created.Text = DateTime.fromUnixTimestampMillis(info.CreatedTime)
 					:FormatUniversalTime("ll LT", "en-us")
-				row.Deleted.Text = if info.IsDeleted then "Yes" else "No"
 				row.Version.Text = info.Version
 				if info.Version == self._session.currentVersion then
 					row.Version.FontFace =
