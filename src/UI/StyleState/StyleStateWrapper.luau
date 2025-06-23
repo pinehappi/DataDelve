@@ -7,7 +7,7 @@ local StyleStateWrapper = {}
 StyleStateWrapper.__index = StyleStateWrapper
 
 export type StyleStateWrapperOptions = {
-	autoFollowTheme: boolean?,
+	autoFollowTheme: boolean?, -- default: true
 	onThemeChange: (() -> ())?, -- Will only be called if autoFollowTheme is true
 }
 function StyleStateWrapper.new<

@@ -24,7 +24,7 @@ local JSONHelper = require(script.Parent.Parent.Parent.JSONHelper)
 local Validators = require(script.Parent.Parent.Parent.Validators)
 local StyleState = script.Parent.Parent.StyleState
 local PopupHelper = require(script.Parent.Parent.PopupHelper)
-local HexEditorWidget = require(script.Parent.Parent.Widgets.HexEditorWidget)
+local BufferWidget = require(script.Parent.Parent.Widgets.BufferWidget)
 local Assets = script.Parent.Parent.Assets
 
 local StyleStateWrapper = require(StyleState.StyleStateWrapper)
@@ -44,6 +44,7 @@ local promptKeyValueForm = require(script.Parent.Parent.Utilities.promptKeyValue
 local getHighlightColors = require(script.Parent.Parent.Utilities.getHighlightColors)
 local lockObjectWithoutResize = require(script.Parent.Parent.Utilities.lockObjectWithoutResize)
 local checkTrulyVisible = require(script.Parent.Parent.Utilities.checkTrulyVisible)
+local shortStringFromBuffer = require(script.Parent.Parent.Utilities.shortStringFromBuffer)
 
 local SIZE_PER_BRANCH = script.Branch.AbsoluteSize.Y
 local DRAG_AND_DROP_REGION_SIZE = 10
@@ -103,6 +104,9 @@ export type TreeOptions = {
 
 	readOnly: boolean,
 	allOpen: boolean?, -- If all the branches start out open
+	-- default: true. Difference between this and `keyInfo = nil` is that `keyInfo = nil` will still
+	-- show the the Key Info area, but disabling this will completely disable the Key Info area.
+	showKeyInfo: boolean?,
 
 	isTesting: boolean?,
 
@@ -123,6 +127,7 @@ function Tree.new(
 
 		disabled = false,
 		readOnly = options.readOnly,
+		showKeyInfo = if options.showKeyInfo == nil then true else options.showKeyInfo,
 
 		_colors = getHighlightColors(theme),
 
@@ -286,85 +291,101 @@ local OBJECT_SENTINEL = newproxy()
 local DECREMENT_DEPTH_SENTINEL = newproxy()
 
 function Tree:_initializeBranchesFromData(data: JSONHelper.JSONValue, keyInfo: KeyInfo, allOpen: boolean?)
-	local dataDepths, dataBranches = self:_flatten({
-		key = "Data",
-		value = data,
-		initialDepth = 0,
-		expectLarge = true,
-		allOpen = allOpen,
-	})
-	dataBranches[1].ISROOT = true
-	dataBranches[1].LOCKKEY = true
+	if self.showKeyInfo then
+		local dataDepths, dataBranches = self:_flatten({
+			key = "Data",
+			value = data,
+			initialDepth = 0,
+			expectLarge = true,
+			allOpen = allOpen,
+		})
+		dataBranches[1].ISROOT = true
+		dataBranches[1].LOCKKEY = true
 
-	local metadataDepths, metadataBranches = self:_flatten({
-		key = "Metadata",
-		value = keyInfo.Metadata,
-		initialDepth = 1,
-		expectLarge = true,
-	})
-	metadataBranches[1].LOCKKEY = true
-	metadataBranches[1].LOCKVALUE = true
-	metadataBranches[1].ISMETADATA = true
-	metadataBranches[1][3] = true -- Auto-open
+		local metadataDepths, metadataBranches = self:_flatten({
+			key = "Metadata",
+			value = keyInfo.Metadata,
+			initialDepth = 1,
+			expectLarge = true,
+		})
+		metadataBranches[1].LOCKKEY = true
+		metadataBranches[1].LOCKVALUE = true
+		metadataBranches[1].ISMETADATA = true
+		metadataBranches[1][3] = true -- Auto-open
 
-	local keyInfoDepths = table.create(5 + #keyInfo.UserIds)
-	local keyInfoBranches = table.create(5 + #keyInfo.UserIds)
-	table.insert(
-		keyInfoBranches,
-		{ "Key Info", OBJECT_SENTINEL, false, LOCKKEY = true, LOCKVALUE = true, ISKEYROOT = true }
-	)
-	table.insert(keyInfoDepths, 0)
-	table.insert(keyInfoBranches, {
-		"CreatedTime",
-		keyInfo.CreatedTime,
-		LOCKKEY = true,
-		LOCKVALUE = true,
-		ISTIME = true,
-	})
-	table.insert(keyInfoDepths, 1)
-	table.insert(keyInfoBranches, {
-		"UpdatedTime",
-		keyInfo.UpdatedTime,
-		LOCKKEY = true,
-		LOCKVALUE = true,
-		ISTIME = true,
-	})
-	table.insert(keyInfoDepths, 1)
-	table.insert(keyInfoBranches, { "Version", keyInfo.Version, LOCKKEY = true, LOCKVALUE = true })
-	table.insert(keyInfoDepths, 1)
-	table.insert(
-		keyInfoBranches,
-		{ "UserIds", ARRAY_SENTINEL, true, LOCKKEY = true, LOCKVALUE = true, ISUSERIDS = true }
-	)
-	table.insert(keyInfoDepths, 1)
-	self._userIdsIndex = #keyInfoDepths
-	for i, id in keyInfo.UserIds do
-		table.insert(keyInfoBranches, { i, id, ISUSERID = true })
-		table.insert(keyInfoDepths, 2)
+		local keyInfoDepths = table.create(5 + #keyInfo.UserIds)
+		local keyInfoBranches = table.create(5 + #keyInfo.UserIds)
+		table.insert(
+			keyInfoBranches,
+			{ "Key Info", OBJECT_SENTINEL, false, LOCKKEY = true, LOCKVALUE = true, ISKEYROOT = true }
+		)
+		table.insert(keyInfoDepths, 0)
+		table.insert(keyInfoBranches, {
+			"CreatedTime",
+			keyInfo.CreatedTime,
+			LOCKKEY = true,
+			LOCKVALUE = true,
+			ISTIME = true,
+		})
+		table.insert(keyInfoDepths, 1)
+		table.insert(keyInfoBranches, {
+			"UpdatedTime",
+			keyInfo.UpdatedTime,
+			LOCKKEY = true,
+			LOCKVALUE = true,
+			ISTIME = true,
+		})
+		table.insert(keyInfoDepths, 1)
+		table.insert(keyInfoBranches, { "Version", keyInfo.Version, LOCKKEY = true, LOCKVALUE = true })
+		table.insert(keyInfoDepths, 1)
+		table.insert(
+			keyInfoBranches,
+			{ "UserIds", ARRAY_SENTINEL, true, LOCKKEY = true, LOCKVALUE = true, ISUSERIDS = true }
+		)
+		table.insert(keyInfoDepths, 1)
+		self._userIdsIndex = #keyInfoDepths
+		for i, id in keyInfo.UserIds do
+			table.insert(keyInfoBranches, { i, id, ISUSERID = true })
+			table.insert(keyInfoDepths, 2)
+		end
+
+		-- Combine it all together
+		local totalCapacity = #keyInfoDepths + #metadataDepths + #dataDepths
+		local depths = table.create(totalCapacity)
+		local branches = table.create(totalCapacity)
+
+		table.move(keyInfoDepths, 1, #keyInfoDepths, 1, depths)
+		table.move(keyInfoBranches, 1, #keyInfoBranches, 1, branches)
+
+		table.move(metadataDepths, 1, #metadataDepths, #depths + 1, depths)
+		table.move(metadataBranches, 1, #metadataBranches, #branches + 1, branches)
+
+		local rootIndex = #branches + 1
+		table.move(dataDepths, 1, #dataDepths, #depths + 1, depths)
+		table.move(dataBranches, 1, #dataBranches, #branches + 1, branches)
+
+		-- Final touches
+		self._visibleIndexes = { 1, rootIndex }
+
+		self._flatDepths = depths
+		self._flatBranches = branches
+		return rootIndex
+	else
+		local dataDepths, dataBranches = self:_flatten({
+			key = "Data",
+			value = data,
+			initialDepth = 0,
+			expectLarge = true,
+			allOpen = allOpen,
+		})
+		dataBranches[1].ISROOT = true
+		dataBranches[1].LOCKKEY = true
+
+		self._visibleIndexes = { 1 }
+		self._flatDepths = dataDepths
+		self._flatBranches = dataBranches
+		return 1
 	end
-
-	-- Combine it all together
-	local totalCapacity = #keyInfoDepths + #metadataDepths + #dataDepths
-	local depths = table.create(totalCapacity)
-	local branches = table.create(totalCapacity)
-
-	table.move(keyInfoDepths, 1, #keyInfoDepths, 1, depths)
-	table.move(keyInfoBranches, 1, #keyInfoBranches, 1, branches)
-
-	table.move(metadataDepths, 1, #metadataDepths, #depths + 1, depths)
-	table.move(metadataBranches, 1, #metadataBranches, #branches + 1, branches)
-
-	local rootIndex = #branches + 1
-	table.move(dataDepths, 1, #dataDepths, #depths + 1, depths)
-	table.move(dataBranches, 1, #dataBranches, #branches + 1, branches)
-
-	-- Final touches
-	self._visibleIndexes = { 1, rootIndex }
-
-	self._flatDepths = depths
-	self._flatBranches = branches
-
-	return rootIndex
 end
 
 type FlattenOptions = {
@@ -472,13 +493,17 @@ end
 -- Utilities for analyzing branches
 
 function Tree:_getRootIndex(): number
-	local didKeyInfo = false
-	for i, depth in self._flatDepths do
-		if depth == 0 then
-			if didKeyInfo then
-				return i
-			else
-				didKeyInfo = true
+	if not self.showKeyInfo then
+		return 1
+	else
+		local didKeyInfo = false
+		for i, depth in self._flatDepths do
+			if depth == 0 then
+				if didKeyInfo then
+					return i
+				else
+					didKeyInfo = true
+				end
 			end
 		end
 	end
@@ -589,16 +614,20 @@ function Tree:_getUniversalTimeTable(index: number)
 end
 
 function Tree:_getAmountOfUserIds(): number
-	local index = self._userIdsIndex + 1
-	while true do
-		local depth = self._flatDepths[index]
-		if depth ~= 2 then
-			break
-		else
-			index += 1
+	if not self._userIdsIndex then
+		return 0
+	else
+		local index = self._userIdsIndex + 1
+		while true do
+			local depth = self._flatDepths[index]
+			if depth ~= 2 then
+				break
+			else
+				index += 1
+			end
 		end
+		return (index - self._userIdsIndex) - 1
 	end
-	return (index - self._userIdsIndex) - 1
 end
 
 -- Utilities for manipulating branches
@@ -1992,7 +2021,7 @@ function Tree:_updateBranchFrame(frame, branch, index)
 			frame.Value.Text = tostring(value)
 			frame.Value.TextColor3 = colors.boolean
 		elseif typeof(value) == "buffer" then
-			frame.Value.Text = `<buffer {buffer.len(value)}>`
+			frame.Value.Text = shortStringFromBuffer(value)
 			frame.Value.TextColor3 = colors.buffer
 		elseif typeof(value) == "nil" then
 			frame.Value.Text = "null"
@@ -2229,16 +2258,20 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 		elseif valueType == "buffer" then
 			defaultValues["buffer"] = defaultValues["buffer"] or buffer.create(0)
 
-			local link = script.EditMenuInputTemplates.HexEditorLink:Clone()
-			local styleState = ButtonStyleState.from(self.theme, link, {
-				style = "secondary",
+			local frame = script.EditMenuInputTemplates.BufferEditor:Clone()
+			local styleState = StyleStateWrapper.new(self.theme, {
+				frame = BackgroundStyleState.from(self.theme, frame), -- just so it gets destroyed...
+				label = LabelStyleState.from(self.theme, frame.BufferLabel),
+				button = ButtonStyleState.from(self.theme, frame.Link, { style = "secondary" }),
+			}, {
+				autoFollowTheme = false,
 			})
 			wrapper.styleStates.value = styleState
-			link.Parent = editFrame.Form.Value
+			frame.BufferLabel.Text = shortStringFromBuffer(defaultValues["buffer"])
+			frame.Parent = editFrame.Form.Value
 
-			link.Activated:Connect(function()
-				local hexEditorWidget =
-					HexEditorWidget.new("DATADELVE HEX EDITOR WIDGET", self.theme, defaultValues["buffer"])
+			frame.Link.Activated:Connect(function()
+				local bufferWidget = BufferWidget.new(self.theme, defaultValues["buffer"])
 
 				-- Make a dummy object to get a modal up
 				local dummyObject = Instance.new("Frame")
@@ -2256,7 +2289,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 					resultInstructionEvent:Fire(nil)
 				end)
 
-				hexEditorWidget.interacted:Connect(function(submit)
+				bufferWidget.interacted:Connect(function(submit)
 					if submit then
 						resultInstructionEvent:Fire("submit")
 					else
@@ -2266,7 +2299,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 
 				task.wait(0.5) -- A little debounce in case the user clicks again because they don't see the widget
 				local shouldSubmit: boolean
-				if not hexEditorWidget.dead then
+				if not bufferWidget.dead then
 					shouldSubmit = resultInstructionEvent.Event:Wait()
 				else
 					shouldSubmit = false
@@ -2274,15 +2307,14 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 
 				-- Wait for result instruction then act on it
 				if shouldSubmit then
-					local got, size = hexEditorWidget.editor:getRawBuffer()
-					local copy = buffer.create(size)
-					buffer.copy(copy, 0, got, 0, size)
+					local copy = bufferWidget:getFreshBuffer()
 					lastValue = copy
 					defaultValues["buffer"] = lastValue
+					frame.BufferLabel.Text = shortStringFromBuffer(lastValue)
 				end
 
 				modal:destroy(true)
-				hexEditorWidget:destroy()
+				bufferWidget:destroy()
 			end)
 
 			editFrame.Form.Value.Visible = true
@@ -3856,6 +3888,10 @@ end
 
 -- Returns UserId and Metadata
 function Tree:getKeyInfo(): ({ number }, { [string]: any })
+	if not self.showKeyInfo then
+		return {}, {}
+	end
+
 	local metadata = {}
 	local userIds = {}
 
@@ -3911,11 +3947,7 @@ function Tree:getKeyInfo(): ({ number }, { [string]: any })
 			table.insert(branchStack, value)
 			depth += 1
 		else
-			if typeof(key) == "number" then
-				table.insert(currentBranch, value)
-			else
-				currentBranch[key] = value
-			end
+			currentBranch[key] = value
 		end
 
 		lastDepth = depth

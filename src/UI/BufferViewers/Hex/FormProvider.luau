@@ -17,7 +17,7 @@ function FormProvider.generate(
 	theme: any,
 	hexEditorTheme: HexEditor.ThemeData,
 	inputReceiver: GuiObject | UserInputService,
-	container: GuiObject
+	container: GuiBase2d
 ): HexEditor.HexEditorFormProvider
 	local betterContextMenuOptions: { [any]: ContextMenuStyleState.Options } = {
 		[HexEditor.SINGLE_BYTE_CONTEXT_MENU_OPTIONS] = {

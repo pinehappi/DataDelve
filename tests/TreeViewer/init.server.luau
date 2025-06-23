@@ -300,92 +300,111 @@ local function runOperation(tree, operation: Operation)
 end
 
 local function testOutput(name: string, data, expected, operations: { Operation })
-	local viewer
-	local passed = false
-	local success, err = pcall(function()
-		local fake = script.Parent.Parent.UI.Assets.Views.EditKey.Container.Content.ScrollingFrame:Clone()
-		local keyInfo = table.clone(fakeKeyInfo)
-		keyInfo.UserIds = fuzzUserIds()
-		if typeof(data) == "table" then
-			keyInfo.Metadata = data
-		end
-
-		viewer = Tree.new(Theme.global, {}, fake, {
-			rootName = "test",
-			data = data,
-			keyInfo = keyInfo,
-			isTesting = true,
-		})
-		for _, operation in operations do
-			if typeof(operation) ~= "table" then
-				continue
+	for _, showKeyInfo in { true, false } do
+		local viewer
+		local passed = false
+		local success = xpcall(function()
+			local fake = script.Parent.Parent.UI.Assets.Views.EditKey.Container.Content.ScrollingFrame:Clone()
+			local keyInfo = table.clone(fakeKeyInfo)
+			keyInfo.UserIds = fuzzUserIds()
+			if typeof(data) == "table" then
+				keyInfo.Metadata = data
+			else
+				keyInfo.Metadata = { data }
 			end
 
-			if
-				operation.type == "insertInto"
-				or operation.type == "insertAfter"
-				or operation.type == "move"
-				or operation.type == "moveEnd"
-				or operation.type == "edit"
-			then
-				viewer:_expandAll(viewer:_getRootIndex()) -- "move" doesn't work if the branch you moved is not visible
-				break
+			viewer = Tree.new(Theme.global, {}, fake, {
+				rootName = "test",
+				data = data,
+				keyInfo = keyInfo,
+				isTesting = true,
+				showKeyInfo = showKeyInfo,
+			})
+			for _, operation in operations do
+				if typeof(operation) ~= "table" then
+					continue
+				end
+
+				if
+					operation.type == "insertInto"
+					or operation.type == "insertAfter"
+					or operation.type == "move"
+					or operation.type == "moveEnd"
+					or operation.type == "edit"
+				then
+					viewer:_expandAll(viewer:_getRootIndex()) -- "move" doesn't work if the branch you moved is not visible
+					break
+				end
 			end
-		end
-		for _, operation in operations do
-			if typeof(operation) ~= "table" then
-				continue
+			for _, operation in operations do
+				if typeof(operation) ~= "table" then
+					continue
+				end
+
+				runOperation(viewer, operation)
 			end
 
-			runOperation(viewer, operation)
-		end
+			local value = viewer:getValue()
+			local userIds, metadata = viewer:getKeyInfo()
+			if not equals(expected, value) then
+				warn(`{name} failed`)
+				warn("got:", value)
+				warn("expected:", expected)
+				return
+			end
 
-		local value = viewer:getValue()
-		local userIds, metadata = viewer:getKeyInfo()
-		if not equals(expected, value) then
-			warn(`{name} failed`)
-			warn("got:", value)
-			warn("expected:", expected)
-			return
-		end
-		if not tablesEqual(userIds, keyInfo.UserIds) then
-			warn(`userIds {name} failed`)
-			warn("got:", userIds)
-			warn("expected:", expected)
-			return
-		end
-		if not tablesEqual(userIds, keyInfo.UserIds) then
-			warn(`metadata {name} failed`)
-			warn("got:", userIds)
-			warn("expected:", expected)
-			return
-		end
+			if showKeyInfo then
+				if not tablesEqual(userIds, keyInfo.UserIds) then
+					warn(`userIds {name} failed`)
+					warn("got:", userIds)
+					warn("expected:", expected)
+					return
+				end
+				if not tablesEqual(metadata, keyInfo.Metadata) then
+					warn(`metadata {name} failed`)
+					warn("got:", metadata)
+					warn("expected:", expected)
+					return
+				end
+			else
+				if not tablesEqual(userIds, {}) then
+					warn(`userIds {name} failed`)
+					warn("got:", userIds)
+					warn("expected to be empty")
+				end
+				if not tablesEqual(metadata, {}) then
+					warn(`metadata {name} failed`)
+					warn("got:", metadata)
+					warn("expected to be empty")
+				end
+			end
 
-		passed = true
-	end)
+			passed = true
+		end, function()
+			warn(`{name} errored. Show Key Info: {showKeyInfo}`, debug.traceback(nil, 2))
+		end)
 
-	if not success then
-		warn(`{name} errored`)
-		warn("value:", data)
-		warn("err:", err)
-		warn("dump:", viewer:_dump())
-	elseif passed and #operations == 1 and not operations.skipUndoRedo then
-		viewer:undo()
-		local undoed = viewer:getValue()
-		if not equals(undoed, data) then
-			warn({ `{name} Undo failed` })
-			warn("value:", undoed)
-			warn("expected:", data)
-			return
-		end
+		if not success then
+			warn("value:", data)
+			warn("dump:", viewer:_dump())
+		elseif passed and #operations == 1 and not operations.skipUndoRedo then
+			viewer:undo()
+			local undoed = viewer:getValue()
+			if not equals(undoed, data) then
+				warn({ `{name} Undo failed` })
+				warn("value:", undoed)
+				warn("expected:", data)
+				return
+			end
 
-		viewer:redo()
-		local redoed = viewer:getValue()
-		if not equals(redoed, expected) then
-			warn({ `{name} Redo failed` })
-			warn("value:", redoed)
-			warn("expected:", redoed)
-			return
+			viewer:redo()
+			local redoed = viewer:getValue()
+			if not equals(redoed, expected) then
+				warn({ `{name} Redo failed` })
+				warn("value:", redoed)
+				warn("expected:", redoed)
+				return
+			end
 		end
 	end
 end
