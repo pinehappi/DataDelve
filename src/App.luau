@@ -704,7 +704,7 @@ end
 function App._trySwapEditKeyView(
 	self: App,
 	keyName: string,
-	options: { version: string?, popCurrentCrumb: boolean? }
+	options: { version: string?, popCurrentCrumb: boolean?, openVersionsView: boolean? }
 ): (boolean, string?)
 	if self._isGettingKey then
 		return false, "Already getting another key."
@@ -744,13 +744,15 @@ function App._trySwapEditKeyView(
 		inputReceiver = self.ui.gui.HotkeyInputReceiver,
 		session = forkedSession,
 		transactor = self._keyTransactor,
-		swapCallback = function(keyName, version)
+		swapCallback = function(keyName, version, openVersionsView)
 			return self:_trySwapEditKeyView(keyName, {
 				popCurrentCrumb = true,
 				version = version,
+				openVersionsView = (openVersionsView :: any) :: boolean,
 			})
 		end,
 		isVersionLoaded = not not options.version,
+		openWithVersionsView = options.openVersionsView,
 	})
 
 	editKeyView.deleted:Connect(function()

@@ -44,28 +44,28 @@ export type EditFrame = typeof(Assets.Views.EditKey)
 -- Only putting this up here so it can be used in typeof below
 local function getStyleStates(theme: Theme.Theme, frame: EditFrame, shouldDeleteBeDisabled: boolean)
 	return {
-		delete = ButtonStyleState.from(theme, frame.Delete, {
+		delete = ButtonStyleState.from(theme, frame.Container.Delete, {
 			style = "secondary",
 			disabled = shouldDeleteBeDisabled,
 		}),
-		save = ButtonStyleState.from(theme, frame.Save, {
+		save = ButtonStyleState.from(theme, frame.Container.Save, {
 			style = "primary",
 		}),
-		refresh = ButtonStyleState.from(theme, frame.Refresh, {
+		refresh = ButtonStyleState.from(theme, frame.Container.Refresh, {
 			style = "secondary",
 		}),
-		more = ButtonStyleState.from(theme, frame.More, {
+		more = ButtonStyleState.from(theme, frame.Container.More, {
 			style = "transparent",
 		}),
 
-		versions = ButtonStyleState.from(theme, frame.Versions, {
+		versions = ButtonStyleState.from(theme, frame.Container.LeftTopbar.Versions, {
 			style = "secondary",
 		}),
 
-		undo = ButtonStyleState.from(theme, frame.Undo, {
+		undo = ButtonStyleState.from(theme, frame.Container.LeftTopbar.Undo, {
 			style = "dormant",
 		}),
-		redo = ButtonStyleState.from(theme, frame.Redo, {
+		redo = ButtonStyleState.from(theme, frame.Container.LeftTopbar.Redo, {
 			style = "dormant",
 		}),
 	}
@@ -78,7 +78,11 @@ export type Transaction = () -> ()
 
 -- Callback to swap this edit key view with one for newKey.
 -- Returns `true` for success and `false` for fail with error message
-export type SwapCallback = (newKey: string, version: string?) -> (boolean, string?)
+export type SwapCallback = (
+	newKey: string,
+	version: string?,
+	openWithVersionsView: "openVersionsView"?
+) -> (boolean, string?)
 
 export type EditKeyViewFromParams = {
 	theme: Theme.Theme,
@@ -89,6 +93,11 @@ export type EditKeyViewFromParams = {
 	transactor: Transactor.Transactor,
 	swapCallback: SwapCallback,
 	isVersionLoaded: boolean,
+
+	-- when versions view is open in drawer mode (on the side), we want to preserve it between version loads
+	-- so you can quickly swap between them. This option will be set to true when you switched to a new view
+	-- using the verisons drawer
+	openWithVersionsView: boolean?,
 }
 
 export type EditKeyViewImplementation = {
@@ -107,6 +116,8 @@ export type EditKeyViewImplementation = {
 	_updateDisabled: (EditKeyView) -> (),
 	_updateUndoRedoButtons: (EditKeyView, speed: StyleStateHelper.TransitionSpeed) -> (),
 	_setViewer: (EditKeyView, data: any, isDirty: boolean?) -> (),
+	_tryOpenVersionsView: (EditKeyView) -> (),
+	_updateVersionsViewMode: (EditKeyView) -> (),
 
 	_createDataUsageCard: (EditKeyView, dataUsage: number, metadataUsage: number) -> (),
 	_promptDuplicateMoveKey: (
@@ -140,6 +151,9 @@ export type EditKeyViewFields = {
 	_connections: { RBXScriptConnection },
 
 	_viewer: Viewer,
+	_versionsView: VersionsView.VersionsView?,
+
+	_dead: boolean,
 }
 
 export type EditKeyView = typeof(setmetatable({} :: EditKeyViewFields, {} :: EditKeyViewImplementation))
@@ -151,6 +165,7 @@ EditKeyView.__index = EditKeyView
 
 function EditKeyView.from(params)
 	local self = setmetatable({}, EditKeyView)
+	self._dead = false
 
 	-- Events
 
@@ -167,6 +182,7 @@ function EditKeyView.from(params)
 	self._transactor = params.transactor
 
 	self._viewer = nil :: any
+	self._versionsView = nil
 
 	-- UI
 
@@ -179,17 +195,33 @@ function EditKeyView.from(params)
 
 	self._connections = {}
 	self._tooltipDestructors = {
-		Tooltip.bindButtonGeneric(self._theme, self._frame.Versions, `Equivalent to {rfmt.code("ListVersionsAsync")}.`),
-		Tooltip.bindButtonGeneric(self._theme, self._frame.Save, `Save\nEquivalent to {rfmt.code("UpdateAsync")}.`),
-		Tooltip.bindButtonGeneric(self._theme, self._frame.Refresh, `Refresh\nEquivalent to {rfmt.code("GetAsync")}.`),
-		Tooltip.bindButtonGeneric(self._theme, self._frame.Delete, `Delete\nEquivalent to {rfmt.code("RemoveAsync")}.`),
+		Tooltip.bindButtonGeneric(
+			self._theme,
+			self._frame.Container.LeftTopbar.Versions,
+			`Equivalent to {rfmt.code("ListVersionsAsync")}.`
+		),
+		Tooltip.bindButtonGeneric(
+			self._theme,
+			self._frame.Container.Save,
+			`Save\nEquivalent to {rfmt.code("UpdateAsync")}.`
+		),
+		Tooltip.bindButtonGeneric(
+			self._theme,
+			self._frame.Container.Refresh,
+			`Refresh\nEquivalent to {rfmt.code("GetAsync")}.`
+		),
+		Tooltip.bindButtonGeneric(
+			self._theme,
+			self._frame.Container.Delete,
+			`Delete\nEquivalent to {rfmt.code("RemoveAsync")}.`
+		),
 	}
 
 	self:_initializeInteraction()
 
 	table.insert(
 		self._connections,
-		showShadowOnScroll(params.frame.Content.ScrollingFrame, params.frame.Content.Shadow)
+		showShadowOnScroll(self._frame.Container.Content.ScrollingFrame, self._frame.Container.Content.Shadow)
 	)
 	table.insert(
 		self._connections,
@@ -207,8 +239,22 @@ function EditKeyView.from(params)
 		end)
 	)
 
+	table.insert(
+		self._connections,
+		self._frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			if self._versionsView then
+				self:_updateVersionsViewMode()
+			end
+		end)
+	)
+
 	self:_setViewer(self._session.currentValue, params.isVersionLoaded)
 	self:_updateDisabled()
+
+	if params.openWithVersionsView then
+		self:_tryOpenVersionsView()
+	end
+	self:_updateVersionsViewMode()
 
 	return self
 end
@@ -219,10 +265,15 @@ end
 
 function EditKeyView:destroy(completely)
 	local self = self :: any
+	self._dead = true
 	self.swapCallback = nil
 
 	if self._viewer then
 		self._viewer:destroy()
+	end
+
+	if self._versionsView then
+		self._versionsView:destroy(true)
 	end
 
 	StyleStateHelper.destroy(self._styleStates)
@@ -547,52 +598,7 @@ function EditKeyView:_initializeInteraction()
 		end),
 
 		self._styleStates.versions.button.Activated:Connect(function()
-			if self._transactor.locked or not self._viewer then
-				return
-			end
-
-			self._transactor:transact(function()
-				local versionsFrame = Assets.Views.VersionsPopup:Clone()
-				local versionsView = VersionsView.from({
-					theme = self._theme,
-					uiMessages = self._uiMessages,
-					widget = self._widget,
-					frame = versionsFrame,
-					session = self._session,
-					loadVersion = function(version: string)
-						if self._viewer then
-							local continueCallback = function()
-								return self._swapCallback(self._session.currentKey, version)
-							end
-
-							if not self._viewer.isDirty then
-								return true, continueCallback
-							else
-								local confirmed = ConfirmDialogStyleState.confirm(
-									self._theme,
-									self._widget,
-									self._widget:GetRelativeMousePosition(),
-									{
-										title = "Load version?",
-										message = "This will delete any changes made.",
-									}
-								)
-
-								if confirmed then
-									return true, continueCallback
-								end
-							end
-						end
-
-						return false, nil
-					end,
-				})
-
-				-- The VersionsView will delete itself whenever it is done, so wait till then
-				repeat
-					task.wait()
-				until not versionsFrame.Parent
-			end)
+			self:_tryOpenVersionsView()
 		end),
 	}
 end
@@ -621,7 +627,7 @@ function EditKeyView:_updateDisabled()
 end
 
 function EditKeyView:_runOperation(transaction)
-	local endLoadingBar = LoadingBarStyleState.show(self._theme, self._frame.LoadingBar)
+	local endLoadingBar = LoadingBarStyleState.show(self._theme, self._frame.Container.LoadingBar)
 	self._transactor:transact(transaction)
 	endLoadingBar()
 end
@@ -828,7 +834,7 @@ function EditKeyView:_setViewer(data: any, isDirty: boolean?)
 		self._viewer:destroy()
 	end
 
-	self._viewer = Tree.new(self._theme, self._uiMessages, self._frame.Content.ScrollingFrame, {
+	self._viewer = Tree.new(self._theme, self._uiMessages, self._frame.Container.Content.ScrollingFrame, {
 		data = data,
 		keyInfo = self._session.currentKeyInfo and {
 			CreatedTime = self._session.currentKeyInfo.CreatedTime,
@@ -861,6 +867,91 @@ function EditKeyView:_setViewer(data: any, isDirty: boolean?)
 	self._viewer.idLookedUp:Connect(function(key)
 		self._idLookedUp:Fire(key)
 	end)
+end
+
+function EditKeyView:_tryOpenVersionsView()
+	if self._versionsView then
+		return
+	end
+
+	local versionsFrame = Assets.Views.VersionsPopup:Clone()
+	local versionsView = VersionsView.from({
+		theme = self._theme,
+		uiMessages = self._uiMessages,
+		widget = self._widget,
+		container = self._frame,
+		frame = versionsFrame,
+		session = self._session,
+		loadVersion = function(version: string)
+			if self._viewer then
+				local continueCallback = function()
+					if self._transactor.locked or not self._viewer then
+						return false
+					end
+
+					local swapResult: boolean
+					self._transactor:transact(function()
+						swapResult = self._swapCallback(
+							self._session.currentKey,
+							version,
+							if self._versionsView and self._versionsView.mode == "drawer"
+								then "openVersionsView"
+								else nil
+						)
+					end)
+					return swapResult
+				end
+
+				if not self._viewer.isDirty then
+					return true, continueCallback
+				else
+					local confirmed = ConfirmDialogStyleState.confirm(
+						self._theme,
+						self._widget,
+						self._widget:GetRelativeMousePosition(),
+						{
+							title = "Load version?",
+							message = "This will delete any changes made.",
+						}
+					)
+
+					if confirmed then
+						return true, continueCallback
+					end
+				end
+			end
+
+			return false, nil
+		end,
+	})
+
+	versionsView.closed:Connect(function()
+		if (self._versionsView == versionsView) and not self._dead then
+			self._versionsView = nil
+			self:_updateVersionsViewMode()
+		end
+	end)
+
+	self._versionsView = versionsView
+	self:_updateVersionsViewMode()
+end
+
+function EditKeyView:_updateVersionsViewMode()
+	if not self._versionsView then
+		self._frame.Container.Position = UDim2.fromOffset(0, 0)
+		self._frame.Container.Size = UDim2.fromScale(1, 1)
+		self._frame.Container.LeftTopbar.Versions.Visible = true
+	elseif self._frame.AbsoluteSize.X > 700 then
+		self._versionsView:setViewMode("drawer")
+		self._frame.Container.Position = UDim2.fromOffset(self._versionsView.frame.AbsoluteSize.X, 0)
+		self._frame.Container.Size = UDim2.new(1, -self._versionsView.frame.AbsoluteSize.X, 1, 0)
+		self._frame.Container.LeftTopbar.Versions.Visible = false
+	else
+		self._versionsView:setViewMode("popup")
+		self._frame.Container.Position = UDim2.fromOffset(0, 0)
+		self._frame.Container.Size = UDim2.fromScale(1, 1)
+		self._frame.Container.LeftTopbar.Versions.Visible = true
+	end
 end
 
 return EditKeyView

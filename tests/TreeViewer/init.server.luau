@@ -303,7 +303,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 	local viewer
 	local passed = false
 	local success, err = pcall(function()
-		local fake = script.Parent.Parent.UI.Assets.Views.EditKey.Content.ScrollingFrame:Clone()
+		local fake = script.Parent.Parent.UI.Assets.Views.EditKey.Container.Content.ScrollingFrame:Clone()
 		local keyInfo = table.clone(fakeKeyInfo)
 		keyInfo.UserIds = fuzzUserIds()
 		if typeof(data) == "table" then

@@ -38,13 +38,13 @@ function BackgroundStyleState:update(speed: StyleStateHelper.TransitionSpeed)
 		elseif self.style == "header" then "backgroundOutline"
 		else "popupBackgroundOutline"
 
-	TweenService:Create(self.background, tweenInfo, {
+	StyleStateHelper.tween(self.background, tweenInfo, {
 		BackgroundColor3 = self.theme.colors[background],
-	}):Play()
+	})
 	if self.stroke then
-		TweenService:Create(self.stroke, tweenInfo, {
+		StyleStateHelper.tween(self.stroke, tweenInfo, {
 			Color = self.theme.colors[outline],
-		}):Play()
+		})
 	end
 end
 

@@ -40,7 +40,12 @@ export type SingleKeyWidgetImplementation = {
 	new: (SingleKeyParamNewParams) -> (SingleKeyWidget?, string?),
 	destroy: (SingleKeyWidget) -> (),
 
-	_trySwapEditKeyView: (SingleKeyWidget, keyName: string, version: string?) -> (boolean, string?),
+	_trySwapEditKeyView: (
+		SingleKeyWidget,
+		keyName: string,
+		version: string?,
+		openVersionsView: boolean
+	) -> (boolean, string?),
 }
 
 export type SingleKeyWidgetFields = {
@@ -123,7 +128,7 @@ function SingleKeyWidget.new(params)
 	return self
 end
 
-function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?)
+function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?, openVersionsView: boolean?)
 	local success: boolean, err: string?
 	local forkedSession = self._session:fork()
 	if version then
@@ -149,10 +154,11 @@ function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?)
 		inputReceiver = self._frame.HotkeyInputReceiver,
 		session = forkedSession,
 		transactor = self._transactor,
-		swapCallback = function(keyName, version)
-			return self:_trySwapEditKeyView(keyName, version)
+		swapCallback = function(keyName, version, openVersionsView)
+			return self:_trySwapEditKeyView(keyName, version, (openVersionsView :: any) :: boolean)
 		end,
 		isVersionLoaded = not not version,
+		openWithVersionsView = openVersionsView,
 	})
 
 	editKeyView.deleted:Connect(function()

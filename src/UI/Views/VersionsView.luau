@@ -42,6 +42,7 @@ export type VersionsViewFromParams = {
 	theme: Theme.Theme,
 	uiMessages: UIMessages.UIMessages,
 	widget: PluginGui,
+	container: GuiObject, -- used in drawer mode
 	frame: typeof(Assets.Views.VersionsPopup),
 	session: Session.Session,
 	loadVersion: LoadVersionCallback,
@@ -53,6 +54,7 @@ function VersionsView.from(params: VersionsViewFromParams)
 	self.uiMessages = params.uiMessages
 	self.frame = params.frame
 	self.widget = params.widget
+	self.container = params.container
 	self.connections = {}
 
 	-- State
@@ -65,16 +67,18 @@ function VersionsView.from(params: VersionsViewFromParams)
 	self.minDate = nil
 	self.maxDate = nil
 
-	-- UI
+	-- Events
 
-	self.modal = PopupHelper.modal(self.frame, self.widget, {
-		scrimTransparency = 0.5,
-	})
+	self._closed = Instance.new("BindableEvent")
+	self.closed = self._closed.Event
+
+	-- UI
 
 	self.styleStates = {
 		background = BackgroundStyleState.from(self.theme, self.frame, {
 			style = "popup",
 		}),
+		rightSeparator = SeparatorStyleState.from(self.theme, self.frame["Escape Layout"].RightSeparator),
 		title = LabelStyleState.from(self.theme, self.frame.Title),
 		instructions = LabelStyleState.from(self.theme, self.frame.Instructions),
 		close = ButtonStyleState.from(self.theme, self.frame["Escape Layout"].Close, {
@@ -145,6 +149,11 @@ function VersionsView.from(params: VersionsViewFromParams)
 		listLabels = LabelStyleState.fromDescendants(self.theme, self.frame.List),
 		listSeparators = SeparatorStyleState.fromDescendants(self.theme, self.frame.List),
 	}
+
+	self.mode = "popup"
+	self._modal = nil
+	self._modalConnection = nil
+	self:setViewMode(self.mode :: any)
 
 	-- Extra setup
 
@@ -256,16 +265,6 @@ function VersionsView.from(params: VersionsViewFromParams)
 
 	table.insert(
 		self.connections,
-		self.modal.cancelled:Connect(function()
-			if self._transactor.locked then
-				return
-			end
-			self:destroy(true)
-		end)
-	)
-
-	table.insert(
-		self.connections,
 		self._transactor.lockedChanged:Connect(function(locked)
 			self.styleStates.minDate:setDisabled(locked):update()
 			self.styleStates.maxDate:setDisabled(locked):update()
@@ -298,21 +297,75 @@ function VersionsView.from(params: VersionsViewFromParams)
 	return self
 end
 
+function VersionsView:setViewMode(viewMode: "drawer" | "popup")
+	self:_cleanupModal()
+
+	if viewMode == "drawer" then
+		self.frame.AnchorPoint = Vector2.new(0, 0)
+		self.frame.Size = UDim2.new(0, 338, 1, 0)
+		self.frame.Position = UDim2.fromOffset(0, 0)
+		self.frame.UICorner.CornerRadius = UDim.new(0, 0)
+		self.styleStates.background.style = "default"
+		self.styleStates.background:update("instant")
+		self.styleStates.background.background.UIStroke.Enabled = false
+		self.styleStates.rightSeparator.separator.Visible = true
+		self.frame.Parent = self.container
+	else
+		self.frame.AnchorPoint = Vector2.new(0.5, 0.5)
+		self.frame.Size = UDim2.fromScale(0.9, 0.8)
+		self.frame.Position = UDim2.fromScale(0.5, 0.5)
+		self.frame.UICorner.CornerRadius = UDim.new(0, 4)
+		self.styleStates.background.style = "popup"
+		self.styleStates.background:update("instant")
+		self.styleStates.background.background.UIStroke.Enabled = true
+		self.styleStates.rightSeparator.separator.Visible = false
+
+		local modal = PopupHelper.modal(self.frame, self.widget, {
+			scrimTransparency = 0.5,
+		})
+		self._modal = modal
+		self._modalConnection = modal.cancelled:Connect(function()
+			if self._transactor.locked then
+				return
+			end
+			self:destroy(true)
+		end)
+	end
+
+	self.mode = viewMode
+end
+
 function VersionsView:_loadVersion(version: string)
 	local shouldContinue, continueCallback = self._loadVersionCallback(version)
 	if shouldContinue and continueCallback then
+		local continueSuccess = false
 		local success = self:_runOperation(function()
-			local success, err = continueCallback()
-			if not success then
-				self.uiMessages:reportDataStoreError(err)
+			local success, result = continueCallback()
+			if (not success) or not result then
+				if typeof(result) == "string" then
+					self.uiMessages:reportDataStoreError(result)
+				end
+				continueSuccess = false
 			else
 				self.uiMessages:success(`Loaded version {version}.`)
+				continueSuccess = true
 			end
 		end)
 
 		if success then
 			self:destroy(true)
 		end
+	end
+end
+
+function VersionsView:_cleanupModal()
+	if self._modalConnection then
+		self._modalConnection:Disconnect()
+		self._modalConnection = nil
+	end
+	if self._modal then
+		self._modal:destroy()
+		self._modal = nil
 	end
 end
 
@@ -403,6 +456,14 @@ end
 
 function VersionsView:destroy(completely: boolean)
 	local self = self :: any
+	if self._dead then
+		return
+	end
+
+	self._closed:Fire()
+
+	self:_cleanupModal()
+
 	StyleStateHelper.destroy(self.styleStates)
 
 	for _, destructor in self._tooltipDestructors do
@@ -414,13 +475,15 @@ function VersionsView:destroy(completely: boolean)
 	end
 
 	self._transactor:destroy()
-	self.modal:destroy()
 
 	if completely then
 		self.frame:Destroy()
 	end
 
+	self._closed:Destroy()
 	table.clear(self)
+	self._dead = true
 end
 
+export type VersionsView = typeof(VersionsView.from({} :: VersionsViewFromParams))
 return VersionsView
