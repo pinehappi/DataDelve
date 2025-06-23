@@ -26,7 +26,11 @@ local placeSettings: PlaceSettings
 do
 	local got = plugin:GetSetting(DESERIALIZATION_KEY)
 	if got then
-		placeSettings = got[tostring(game.PlaceId)] or {
+		placeSettings = got[tostring(game.PlaceId)]
+	end
+
+	if not placeSettings then
+		placeSettings = {
 			defaultDeserializer = nil,
 		}
 	end
