@@ -43,10 +43,11 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-      
-      - name: Install Lune
-        run: cargo install lune --locked
-      
+      - uses: CompeyDev/setup-rokit@v0.1.2
+
+      - name: Install Stuff
+        run: rokit install
+        
       # Build
       - name: Build with Script
         run: lune run build github_action_release -- --fastMode
