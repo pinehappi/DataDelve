@@ -22,10 +22,9 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-      - uses: CompeyDev/setup-rokit@v0.1.2
 
-      - name: Install Stuff
-        run: rokit install
+      - name: Setup Rokit
+        uses: CompeyDev/setup-rokit@v0.1.2
 
       - name: Run Style Check
         run: stylua . --check
@@ -40,10 +39,9 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-      - uses: CompeyDev/setup-rokit@v0.1.2
-
-      - name: Install Stuff
-        run: rokit install
+      
+      - name: Setup Rokit
+        uses: CompeyDev/setup-rokit@v0.1.2
         
       # Build
       - name: Build with Script
