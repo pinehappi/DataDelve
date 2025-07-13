@@ -22,13 +22,10 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@v0.1.2
 
-      # Meh
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Stylua
-        run: cargo install stylua --features luau
+      - name: Install Stuff
+        run: rokit install
 
       - name: Run Style Check
         run: stylua . --check
