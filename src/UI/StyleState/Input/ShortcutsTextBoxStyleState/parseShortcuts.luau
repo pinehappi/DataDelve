@@ -105,7 +105,7 @@ return function(source: string): ShortcutsString
 
 	for first, last in utf8.graphemes(source) do
 		local grapheme = source:sub(first, last)
-		if grapheme == "@" then
+		if grapheme == "@" or grapheme == "$" then
 			if lastGrapheme == "\\" then
 				lastGrapheme = ""
 
@@ -118,20 +118,26 @@ return function(source: string): ShortcutsString
 				insertCurrentPiece()
 				startPiece("normal")
 				continue
-			elseif lastGrapheme == "@" then
+			elseif lastGrapheme == "@" or lastGrapheme == "$" then
 				if pieceType == "mention" then
 					insertCurrentPiece()
 					startPiece("normal")
 				end
-				table.insert(pieceContent, "@")
+				table.insert(pieceContent, lastGrapheme)
 			end
 		elseif grapheme == "\\" then
 			if lastGrapheme == "\\" then
-				if pieceType ~= "normal" then
-					insertCurrentPiece()
-					startPiece("normal")
-				end
-				table.insert(pieceContent, "\\")
+				lastGrapheme = ""
+
+				insertCurrentPiece()
+				startPiece("escapedNormal")
+
+				table.insert(pieceContent, "\\\\")
+
+				insertCurrentPiece()
+				startPiece("normal")
+
+				continue
 			end
 		else
 			if pieceType == "mention" then
@@ -143,12 +149,12 @@ return function(source: string): ShortcutsString
 
 			if lastGrapheme == "\\" then
 				table.insert(pieceContent, "\\")
-			elseif lastGrapheme == "@" then
+			elseif lastGrapheme == "@" or lastGrapheme == "$" then
 				if isValidUsernameGrapheme(grapheme) then
 					insertCurrentPiece()
 					startPiece("mention")
 				end
-				table.insert(pieceContent, "@")
+				table.insert(pieceContent, lastGrapheme)
 			end
 			table.insert(pieceContent, grapheme)
 		end
@@ -164,13 +170,13 @@ return function(source: string): ShortcutsString
 			startPiece("normal")
 			table.insert(pieceContent, "\\")
 		end
-	elseif lastGrapheme == "@" then
+	elseif lastGrapheme == "@" or lastGrapheme == "$" then
 		if pieceType == "normal" then
-			table.insert(pieceContent, "@")
+			table.insert(pieceContent, lastGrapheme)
 		else
 			insertCurrentPiece()
 			startPiece("normal")
-			table.insert(pieceContent, "@")
+			table.insert(pieceContent, lastGrapheme)
 		end
 	end
 	insertCurrentPiece()
