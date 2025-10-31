@@ -297,7 +297,7 @@ function ContextMenuStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 		local hovering = (self._hoveringOption == button.Name)
 		StyleStateHelper.tween(button, tweenInfo, {
 			BackgroundTransparency = if hovering then self.theme.colors.button.transparent.press else 1,
-			BackgroundColor3 = self.theme.colors.mainAccent,
+			BackgroundColor3 = self.theme.colors.button.transparent.baseColor,
 		})
 		StyleStateHelper.tween(button.TextLabel, tweenInfo, {
 			TextColor3 = self.theme.colors.text,

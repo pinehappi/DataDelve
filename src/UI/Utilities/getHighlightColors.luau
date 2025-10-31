@@ -65,7 +65,7 @@ return function(theme, forceDefault: "forceDefault"?)
 			theme.colors.background,
 			theme.colors.button.transparent.hover
 		)
-		colors.selectBackground = theme.colors.button.transparent.baseColor:Lerp(
+		colors.selectBackground = theme.colors.button.transparent.selectColor:Lerp(
 			theme.colors.background,
 			theme.colors.button.transparent.select
 		)

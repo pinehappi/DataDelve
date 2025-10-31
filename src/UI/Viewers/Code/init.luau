@@ -222,7 +222,7 @@ function CodeViewer:_updateTheme()
 	self._editor:setTheme(getCodeEditorTheme(self._theme))
 	self._container.Error.BackgroundColor3 = self._theme.colors.message.background
 	self._container.Error.UIStroke.Color = self._theme.colors.message.outline
-	self._container.Error.TextLabel.TextColor3 = self._theme.colors.error
+	self._container.Error.TextLabel.TextColor3 = self._theme.colors.message.text
 	self._container.Error.ImageLabel.ImageColor3 = self._theme.colors.error
 	self._container.Error.ImageLabel.Image = self._theme.icons.error
 end

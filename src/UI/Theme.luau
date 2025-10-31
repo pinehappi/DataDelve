@@ -82,7 +82,7 @@ function Theme.improveContrast(color: Color3, backgroundColor: Color3)
 	local ratio = Theme.getContrastRatio(color, backgroundColor)
 	local originalColor = color
 
-	if ratio < 4.5 then
+	if ratio < 6 then
 		for i = 1, 10 do
 			color = originalColor:Lerp(moveTowardsColor, i / 10)
 			if Theme.getContrastRatio(color, backgroundColor) >= 4.5 then
@@ -219,6 +219,7 @@ function Theme.generatePreset(preset: string, accent: string)
 				},
 				transparent = {
 					baseColor = if accent == "neutral" then accentColor else Color3.fromHSV(accentHue, 0.9, 1),
+					selectColor = if accent == "neutral" then accentColor else Color3.fromHSV(accentHue, 0.9, 1),
 
 					select = 0.7,
 					disable = 1,
@@ -372,6 +373,7 @@ function Theme.generatePreset(preset: string, accent: string)
 				},
 				transparent = {
 					baseColor = if accent == "neutral" then accentColor else Color3.fromHSV(accentHue, 0.9, 0.7),
+					selectColor = if accent == "neutral" then accentColor else Color3.fromHSV(accentHue, 0.9, 0.7),
 
 					select = 0.7,
 					disable = 1,
@@ -680,16 +682,17 @@ function Theme.generatePreset(preset: string, accent: string)
 					},
 				},
 				transparent = {
-					baseColor = StudioTheme:GetColor(
-						Enum.StudioStyleGuideColor.TableItem,
+					baseColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
+					selectColor = StudioTheme:GetColor(
+						Enum.StudioStyleGuideColor.DialogMainButton,
 						Enum.StudioStyleGuideModifier.Selected
 					),
 
 					select = 0.5,
 					disable = 1,
 					default = 1,
-					hover = 0.75,
-					press = 0.6,
+					hover = 0.95,
+					press = 0.85,
 				},
 				dormant = if isDark
 					then {
