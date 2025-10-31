@@ -17,32 +17,6 @@ local getHighlightColors = require(script.Parent.Parent.Parent.Utilities.getHigh
 local JsonTextBoxStyleState = setmetatable({}, { __index = OverlayTextBoxStyleState })
 JsonTextBoxStyleState.__index = JsonTextBoxStyleState
 
-local HIGHLIGHT_GROUPS = {
-	["blockComment"] = "disabled",
-	["comma"] = "plain",
-	["colon"] = "plain",
-	["equals"] = "plain",
-	["doubleQuotedString"] = "string",
-	["false"] = "boolean",
-	["identifier"] = "key",
-	["leftCurlyBracket"] = "object",
-	["leftSquareBracket"] = "array",
-	["lineComment"] = "disabled",
-	["null"] = "null",
-	["number"] = "number",
-	["hexNumber"] = "number",
-	["rightCurlyBracket"] = "object",
-	["rightSquareBracket"] = "array",
-	["singleQuotedString"] = "string",
-	["escapeEscape"] = "root",
-	["hexEscape"] = "root",
-	["unicodeEscape"] = "root",
-	["characterEscape"] = "root",
-	["true"] = "boolean",
-	["whitespace"] = "plain",
-	["error"] = "error",
-}
-
 export type JsonTextBoxStyleStateFromOptions = {
 	-- Default is false. Whether or not to respsect the users highlight colors setting.
 	useDefaultTheme: boolean?,
@@ -140,7 +114,7 @@ function JsonTextBoxStyleState:_updatePieces()
 		for _, token in result.tokens :: { json5.Token } do
 			table.insert(pieces, {
 				text = json5.getTokenContent(source, token),
-				hg = if errorSpots[token.start] then "error" else HIGHLIGHT_GROUPS[token.kind],
+				hg = if errorSpots[token.start] then "error" else JSONHelper.highlightGroups[token.kind],
 			})
 		end
 

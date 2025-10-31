@@ -205,8 +205,11 @@ function Session:trySaveCurrentKey(value: any, userIds: { number }, metadata: { 
 
 	if success then
 		self.currentValue = newValue
-		self.currentKeyInfo = newKeyInfo
-		self.currentVersion = newKeyInfo.Version
+		-- if there is no new keyinfo that probably means they saved null to an empty key
+		if newKeyInfo then
+			self.currentKeyInfo = newKeyInfo
+			self.currentVersion = newKeyInfo.Version
+		end
 		self.isLoadedVersion = false
 	end
 

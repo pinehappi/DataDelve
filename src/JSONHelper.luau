@@ -9,6 +9,33 @@ local JSONHelper = {}
 export type JSONType = "string" | "number" | "array" | "object" | "boolean" | "null" | "buffer"
 export type JSONValue = string | number | { [string]: JSONValue } | { JSONValue } | boolean | buffer | nil
 
+-- These correspond to colors in `getHighlightColors`
+JSONHelper.highlightGroups = {
+	["blockComment"] = "disabled",
+	["comma"] = "plain",
+	["colon"] = "plain",
+	["equals"] = "plain",
+	["doubleQuotedString"] = "string",
+	["false"] = "boolean",
+	["identifier"] = "key",
+	["leftCurlyBracket"] = "object",
+	["leftSquareBracket"] = "array",
+	["lineComment"] = "disabled",
+	["null"] = "null",
+	["number"] = "number",
+	["hexNumber"] = "number",
+	["rightCurlyBracket"] = "object",
+	["rightSquareBracket"] = "array",
+	["singleQuotedString"] = "string",
+	["escapeEscape"] = "root",
+	["hexEscape"] = "root",
+	["unicodeEscape"] = "root",
+	["characterEscape"] = "root",
+	["true"] = "boolean",
+	["whitespace"] = "plain",
+	["error"] = "error",
+}
+
 -- TODO: this will error if the source string cannot be converted to JSON, like if it had an incorrect encoding issue.
 -- The only time this will pop up is with Import from JSON since these malformed strings cannot be stored in a DataStore.
 function JSONHelper.escapeString(source: string): string

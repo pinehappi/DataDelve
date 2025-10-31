@@ -304,7 +304,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 		local viewer
 		local passed = false
 		local success = xpcall(function()
-			local fake = script.Parent.Parent.UI.Assets.Views.EditKey.Container.Content.ScrollingFrame:Clone()
+			local fake = script.Parent.Parent.UI.Assets.Views.EditKey.Container.Content:Clone()
 			local keyInfo = table.clone(fakeKeyInfo)
 			keyInfo.UserIds = fuzzUserIds()
 			if typeof(data) == "table" then
@@ -344,7 +344,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 				runOperation(viewer, operation)
 			end
 
-			local value = viewer:getValue()
+			local value = viewer:getValue().value
 			local userIds, metadata = viewer:getKeyInfo()
 			if not equals(expected, value) then
 				warn(`{name} failed`)
@@ -389,7 +389,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			warn("dump:", viewer:_dump())
 		elseif passed and #operations == 1 and not operations.skipUndoRedo then
 			viewer:undo()
-			local undoed = viewer:getValue()
+			local undoed = viewer:getValue().value
 			if not equals(undoed, data) then
 				warn({ `{name} Undo failed` })
 				warn("value:", undoed)
@@ -398,7 +398,7 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			end
 
 			viewer:redo()
-			local redoed = viewer:getValue()
+			local redoed = viewer:getValue().value
 			if not equals(redoed, expected) then
 				warn({ `{name} Redo failed` })
 				warn("value:", redoed)

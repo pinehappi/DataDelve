@@ -43,6 +43,12 @@ local defaultIcons = {
 	externalLink = "rbxassetid://107795554941527",
 	hex = "rbxassetid://89135486788434",
 	script = "rbxassetid://91274876240645",
+	tree = "rbxassetid://122537027737334",
+	circle = "rbxassetid://134783631811707",
+	brackets = "rbxassetid://114949690827797",
+	error = "rbxassetid://18829614103",
+	warn = "rbxassetid://18829786614",
+	success = "rbxassetid://18829818279",
 }
 
 -- Reference: https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
@@ -123,6 +129,10 @@ end
 
 function Theme.getAccentColor(preset: string, accent: string)
 	return Color3.fromHSV(Theme.getAccentComponents(preset, accent))
+end
+
+local function areColorsSimilar(a: Color3, b: Color3): boolean
+	return math.abs(a.R - b.R) <= 0.01 and math.abs(a.B - b.B) <= 0.01 and math.abs(a.G - b.G) <= 0.01
 end
 
 function Theme.generatePreset(preset: string, accent: string)
@@ -443,6 +453,18 @@ function Theme.generatePreset(preset: string, accent: string)
 	elseif preset == "studio" then
 		local StudioTheme = StudioSettings.Theme :: StudioTheme
 		local isDark = Theme.getLuminance(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground)) < 0.5
+
+		-- if it's the old colors
+		local isOld = if isDark
+			then areColorsSimilar(
+				StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton),
+				Color3.fromRGB(0, 162, 255)
+			)
+			else areColorsSimilar(
+				StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton),
+				Color3.fromRGB(228, 238, 254)
+			)
+
 		return {
 			button = {
 				primary = {
@@ -545,17 +567,21 @@ function Theme.generatePreset(preset: string, accent: string)
 							Enum.StudioStyleGuideColor.Button,
 							Enum.StudioStyleGuideModifier.Disabled
 						),
-						default = if isDark
+						default = if isDark and isOld
 							then Color3.fromRGB(69, 69, 69)
 							else StudioTheme:GetColor(
 								Enum.StudioStyleGuideColor.Button,
 								Enum.StudioStyleGuideModifier.Default
 							),
-						hover = if isDark
+						hover = if isDark and isOld
 							then Color3.fromRGB(77, 77, 77)
-							else StudioTheme:GetColor(
+							elseif isOld then StudioTheme:GetColor(
 								Enum.StudioStyleGuideColor.Button,
 								Enum.StudioStyleGuideModifier.Selected
+							)
+							else StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.Button,
+								Enum.StudioStyleGuideModifier.Hover
 							),
 						press = StudioTheme:GetColor(
 							Enum.StudioStyleGuideColor.Button,
@@ -682,11 +708,17 @@ function Theme.generatePreset(preset: string, accent: string)
 					},
 			},
 
-			message = {
-				text = Color3.fromRGB(250, 250, 250),
-				background = Color3.fromRGB(24, 24, 24),
-				outline = Color3.fromRGB(24, 24, 24),
-			},
+			message = if isOld
+				then {
+					text = Color3.fromRGB(250, 250, 250),
+					background = Color3.fromRGB(24, 24, 24),
+					outline = Color3.fromRGB(24, 24, 24),
+				}
+				else {
+					text = Color3.fromRGB(250, 250, 250),
+					background = Color3.fromRGB(24, 24, 24),
+					outline = Color3.fromRGB(43, 43, 43),
+				},
 
 			floatingAction = {
 				background = StudioTheme:GetColor(

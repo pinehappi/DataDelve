@@ -20,10 +20,6 @@ local CloseButtonTemplate = script.CloseButtonTemplate
 local UIMessages = {}
 UIMessages.__index = UIMessages
 
-UIMessages.ERROR_ICON = "rbxassetid://18829614103"
-UIMessages.WARNING_ICON = "rbxassetid://18829786614"
-UIMessages.SUCCESS_ICON = "rbxassetid://18829818279"
-
 -- Toasts
 
 local MIN_TOAST_X = 100
@@ -213,7 +209,7 @@ end
 
 function UIMessages:success(message: string)
 	self:toast({
-		icon = UIMessages.SUCCESS_ICON,
+		icon = self.theme.icons.success,
 		iconColor = self.theme.colors.success,
 		text = message,
 	})
@@ -221,7 +217,7 @@ end
 
 function UIMessages:error(message: string)
 	self:toast({
-		icon = UIMessages.ERROR_ICON,
+		icon = self.theme.icons.error,
 		iconColor = self.theme.colors.error,
 		text = message,
 	})
@@ -229,7 +225,7 @@ end
 
 function UIMessages:warn(message: string)
 	self:toast({
-		icon = UIMessages.WARNING_ICON,
+		icon = self.theme.icons.warn,
 		iconColor = self.theme.colors.warn,
 		text = message,
 	})

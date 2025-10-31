@@ -1768,6 +1768,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.24313726</R>
@@ -1778,9 +1783,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="UIPadding" referent="31">
@@ -2682,6 +2689,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.24313726</R>
@@ -2692,9 +2704,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="UIPadding" referent="50">
@@ -4568,6 +4582,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.20392157</R>
@@ -4578,9 +4597,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="UICorner" referent="80">
@@ -4808,6 +4829,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.24313726</R>
@@ -4818,9 +4844,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="UIPadding" referent="86">
@@ -5207,6 +5235,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.20392157</R>
@@ -5217,9 +5250,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="UICorner" referent="95">
@@ -5625,6 +5660,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.20392157</R>
@@ -5635,9 +5675,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="UICorner" referent="106">
@@ -6053,6 +6095,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.20392157</R>
@@ -6063,9 +6110,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="ImageLabel" referent="118">
@@ -7069,6 +7118,11 @@
                 <string name="Name">UIStroke</string>
                 <token name="ApplyStrokeMode">1</token>
                 <BinaryString name="AttributesSerialize"></BinaryString>
+                <UDim name="BorderOffset">
+                  <S>0</S>
+                  <O>0</O>
+                </UDim>
+                <token name="BorderStrokePosition">0</token>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <Color3 name="Color">
                   <R>0.24313726</R>
@@ -7079,9 +7133,11 @@
                 <bool name="Enabled">true</bool>
                 <token name="LineJoinMode">0</token>
                 <int64 name="SourceAssetId">-1</int64>
+                <token name="StrokeSizingMode">0</token>
                 <BinaryString name="Tags"></BinaryString>
                 <float name="Thickness">1</float>
                 <float name="Transparency">0</float>
+                <int name="ZIndex">1</int>
               </Properties>
             </Item>
             <Item class="UIPadding" referent="134">
@@ -7604,6 +7660,11 @@
             <string name="Name">UIStroke</string>
             <token name="ApplyStrokeMode">1</token>
             <BinaryString name="AttributesSerialize"></BinaryString>
+            <UDim name="BorderOffset">
+              <S>0</S>
+              <O>0</O>
+            </UDim>
+            <token name="BorderStrokePosition">0</token>
             <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
             <Color3 name="Color">
               <R>0.24313726</R>
@@ -7614,9 +7675,11 @@
             <bool name="Enabled">true</bool>
             <token name="LineJoinMode">0</token>
             <int64 name="SourceAssetId">-1</int64>
+            <token name="StrokeSizingMode">0</token>
             <BinaryString name="Tags"></BinaryString>
             <float name="Thickness">1</float>
             <float name="Transparency">0</float>
+            <int name="ZIndex">1</int>
           </Properties>
         </Item>
         <Item class="UIPadding" referent="144">
@@ -7877,6 +7940,11 @@
             <string name="Name">UIStroke</string>
             <token name="ApplyStrokeMode">1</token>
             <BinaryString name="AttributesSerialize"></BinaryString>
+            <UDim name="BorderOffset">
+              <S>0</S>
+              <O>0</O>
+            </UDim>
+            <token name="BorderStrokePosition">0</token>
             <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
             <Color3 name="Color">
               <R>0.20392157</R>
@@ -7887,9 +7955,11 @@
             <bool name="Enabled">true</bool>
             <token name="LineJoinMode">0</token>
             <int64 name="SourceAssetId">-1</int64>
+            <token name="StrokeSizingMode">0</token>
             <BinaryString name="Tags"></BinaryString>
             <float name="Thickness">1</float>
             <float name="Transparency">0</float>
+            <int name="ZIndex">1</int>
           </Properties>
         </Item>
         <Item class="UICorner" referent="149">
@@ -8200,6 +8270,11 @@
             <string name="Name">UIStroke</string>
             <token name="ApplyStrokeMode">1</token>
             <BinaryString name="AttributesSerialize"></BinaryString>
+            <UDim name="BorderOffset">
+              <S>0</S>
+              <O>0</O>
+            </UDim>
+            <token name="BorderStrokePosition">0</token>
             <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
             <Color3 name="Color">
               <R>0.20392157</R>
@@ -8210,9 +8285,11 @@
             <bool name="Enabled">true</bool>
             <token name="LineJoinMode">0</token>
             <int64 name="SourceAssetId">-1</int64>
+            <token name="StrokeSizingMode">0</token>
             <BinaryString name="Tags"></BinaryString>
             <float name="Thickness">1</float>
             <float name="Transparency">0</float>
+            <int name="ZIndex">1</int>
           </Properties>
         </Item>
         <Item class="UICorner" referent="156">
@@ -8865,6 +8942,11 @@
                 <string name="Name">UIStroke</string>
                 <token name="ApplyStrokeMode">1</token>
                 <BinaryString name="AttributesSerialize"></BinaryString>
+                <UDim name="BorderOffset">
+                  <S>0</S>
+                  <O>0</O>
+                </UDim>
+                <token name="BorderStrokePosition">0</token>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <Color3 name="Color">
                   <R>0.24313726</R>
@@ -8875,9 +8957,11 @@
                 <bool name="Enabled">true</bool>
                 <token name="LineJoinMode">0</token>
                 <int64 name="SourceAssetId">-1</int64>
+                <token name="StrokeSizingMode">0</token>
                 <BinaryString name="Tags"></BinaryString>
                 <float name="Thickness">1</float>
                 <float name="Transparency">0</float>
+                <int name="ZIndex">1</int>
               </Properties>
             </Item>
             <Item class="UIPadding" referent="169">
@@ -9426,6 +9510,11 @@
             <string name="Name">UIStroke</string>
             <token name="ApplyStrokeMode">1</token>
             <BinaryString name="AttributesSerialize"></BinaryString>
+            <UDim name="BorderOffset">
+              <S>0</S>
+              <O>0</O>
+            </UDim>
+            <token name="BorderStrokePosition">0</token>
             <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
             <Color3 name="Color">
               <R>0.24313726</R>
@@ -9436,9 +9525,11 @@
             <bool name="Enabled">true</bool>
             <token name="LineJoinMode">0</token>
             <int64 name="SourceAssetId">-1</int64>
+            <token name="StrokeSizingMode">0</token>
             <BinaryString name="Tags"></BinaryString>
             <float name="Thickness">1</float>
             <float name="Transparency">0</float>
+            <int name="ZIndex">1</int>
           </Properties>
         </Item>
         <Item class="UIPadding" referent="180">
@@ -9699,6 +9790,11 @@
             <string name="Name">UIStroke</string>
             <token name="ApplyStrokeMode">1</token>
             <BinaryString name="AttributesSerialize"></BinaryString>
+            <UDim name="BorderOffset">
+              <S>0</S>
+              <O>0</O>
+            </UDim>
+            <token name="BorderStrokePosition">0</token>
             <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
             <Color3 name="Color">
               <R>0.20392157</R>
@@ -9709,9 +9805,11 @@
             <bool name="Enabled">true</bool>
             <token name="LineJoinMode">0</token>
             <int64 name="SourceAssetId">-1</int64>
+            <token name="StrokeSizingMode">0</token>
             <BinaryString name="Tags"></BinaryString>
             <float name="Thickness">1</float>
             <float name="Transparency">0</float>
+            <int name="ZIndex">1</int>
           </Properties>
         </Item>
         <Item class="UICorner" referent="185">
@@ -9958,6 +10056,11 @@
             <string name="Name">UIStroke</string>
             <token name="ApplyStrokeMode">1</token>
             <BinaryString name="AttributesSerialize"></BinaryString>
+            <UDim name="BorderOffset">
+              <S>0</S>
+              <O>0</O>
+            </UDim>
+            <token name="BorderStrokePosition">0</token>
             <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
             <Color3 name="Color">
               <R>0.20392157</R>
@@ -9968,9 +10071,11 @@
             <bool name="Enabled">true</bool>
             <token name="LineJoinMode">0</token>
             <int64 name="SourceAssetId">-1</int64>
+            <token name="StrokeSizingMode">0</token>
             <BinaryString name="Tags"></BinaryString>
             <float name="Thickness">1</float>
             <float name="Transparency">0</float>
+            <int name="ZIndex">1</int>
           </Properties>
         </Item>
         <Item class="UICorner" referent="191">
@@ -10191,6 +10296,11 @@
             <string name="Name">UIStroke</string>
             <token name="ApplyStrokeMode">1</token>
             <BinaryString name="AttributesSerialize"></BinaryString>
+            <UDim name="BorderOffset">
+              <S>0</S>
+              <O>0</O>
+            </UDim>
+            <token name="BorderStrokePosition">0</token>
             <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
             <Color3 name="Color">
               <R>0.20392157</R>
@@ -10201,9 +10311,11 @@
             <bool name="Enabled">true</bool>
             <token name="LineJoinMode">0</token>
             <int64 name="SourceAssetId">-1</int64>
+            <token name="StrokeSizingMode">0</token>
             <BinaryString name="Tags"></BinaryString>
             <float name="Thickness">1</float>
             <float name="Transparency">0</float>
+            <int name="ZIndex">1</int>
           </Properties>
         </Item>
         <Item class="UICorner" referent="196">
@@ -10434,6 +10546,11 @@
             <string name="Name">UIStroke</string>
             <token name="ApplyStrokeMode">1</token>
             <BinaryString name="AttributesSerialize"></BinaryString>
+            <UDim name="BorderOffset">
+              <S>0</S>
+              <O>0</O>
+            </UDim>
+            <token name="BorderStrokePosition">0</token>
             <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
             <Color3 name="Color">
               <R>0.24313727</R>
@@ -10444,9 +10561,11 @@
             <bool name="Enabled">true</bool>
             <token name="LineJoinMode">0</token>
             <int64 name="SourceAssetId">-1</int64>
+            <token name="StrokeSizingMode">0</token>
             <BinaryString name="Tags"></BinaryString>
             <float name="Thickness">1</float>
             <float name="Transparency">0</float>
+            <int name="ZIndex">1</int>
           </Properties>
         </Item>
         <Item class="ImageLabel" referent="202">
@@ -11832,6 +11951,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.24313726</R>
@@ -11842,9 +11966,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="UIPadding" referent="223">
@@ -12275,6 +12401,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.24313726</R>
@@ -12285,9 +12416,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="UIPadding" referent="231">
@@ -12740,6 +12873,11 @@
                   <string name="Name">UIStroke</string>
                   <token name="ApplyStrokeMode">1</token>
                   <BinaryString name="AttributesSerialize"></BinaryString>
+                  <UDim name="BorderOffset">
+                    <S>0</S>
+                    <O>0</O>
+                  </UDim>
+                  <token name="BorderStrokePosition">0</token>
                   <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                   <Color3 name="Color">
                     <R>0.24313726</R>
@@ -12750,9 +12888,11 @@
                   <bool name="Enabled">true</bool>
                   <token name="LineJoinMode">0</token>
                   <int64 name="SourceAssetId">-1</int64>
+                  <token name="StrokeSizingMode">0</token>
                   <BinaryString name="Tags"></BinaryString>
                   <float name="Thickness">1</float>
                   <float name="Transparency">0</float>
+                  <int name="ZIndex">1</int>
                 </Properties>
               </Item>
               <Item class="UIPadding" referent="240">
@@ -13558,6 +13698,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -13568,9 +13713,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="254">
@@ -13772,6 +13919,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -13782,9 +13934,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="259">
@@ -13986,6 +14140,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -13996,9 +14155,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="264">
@@ -14200,6 +14361,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -14210,9 +14376,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="269">
@@ -14414,6 +14582,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -14424,9 +14597,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="274">
@@ -14628,6 +14803,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -14638,9 +14818,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="279">
@@ -14842,6 +15024,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -14852,9 +15039,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="284">
@@ -15164,6 +15353,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -15174,9 +15368,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="292">
@@ -15378,6 +15574,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -15388,9 +15589,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="297">
@@ -15592,6 +15795,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -15602,9 +15810,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="302">
@@ -15806,6 +16016,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -15816,9 +16031,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="307">
@@ -16020,6 +16237,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -16030,9 +16252,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="312">
@@ -16234,6 +16458,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -16244,9 +16473,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="317">
@@ -16448,6 +16679,11 @@
                       <string name="Name">UIStroke</string>
                       <token name="ApplyStrokeMode">0</token>
                       <BinaryString name="AttributesSerialize"></BinaryString>
+                      <UDim name="BorderOffset">
+                        <S>0</S>
+                        <O>0</O>
+                      </UDim>
+                      <token name="BorderStrokePosition">0</token>
                       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                       <Color3 name="Color">
                         <R>1</R>
@@ -16458,9 +16694,11 @@
                       <bool name="Enabled">true</bool>
                       <token name="LineJoinMode">0</token>
                       <int64 name="SourceAssetId">-1</int64>
+                      <token name="StrokeSizingMode">0</token>
                       <BinaryString name="Tags"></BinaryString>
                       <float name="Thickness">1.5</float>
                       <float name="Transparency">0</float>
+                      <int name="ZIndex">1</int>
                     </Properties>
                   </Item>
                   <Item class="UICorner" referent="322">
@@ -16776,6 +17014,11 @@
                 <string name="Name">UIStroke</string>
                 <token name="ApplyStrokeMode">1</token>
                 <BinaryString name="AttributesSerialize"></BinaryString>
+                <UDim name="BorderOffset">
+                  <S>0</S>
+                  <O>0</O>
+                </UDim>
+                <token name="BorderStrokePosition">0</token>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <Color3 name="Color">
                   <R>0.24313726</R>
@@ -16786,9 +17029,11 @@
                 <bool name="Enabled">true</bool>
                 <token name="LineJoinMode">0</token>
                 <int64 name="SourceAssetId">-1</int64>
+                <token name="StrokeSizingMode">0</token>
                 <BinaryString name="Tags"></BinaryString>
                 <float name="Thickness">1</float>
                 <float name="Transparency">0</float>
+                <int name="ZIndex">1</int>
               </Properties>
             </Item>
             <Item class="UIPadding" referent="328">
@@ -17524,6 +17769,11 @@
                 <string name="Name">UIStroke</string>
                 <token name="ApplyStrokeMode">1</token>
                 <BinaryString name="AttributesSerialize"></BinaryString>
+                <UDim name="BorderOffset">
+                  <S>0</S>
+                  <O>0</O>
+                </UDim>
+                <token name="BorderStrokePosition">0</token>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <Color3 name="Color">
                   <R>0.24313726</R>
@@ -17534,9 +17784,11 @@
                 <bool name="Enabled">true</bool>
                 <token name="LineJoinMode">0</token>
                 <int64 name="SourceAssetId">-1</int64>
+                <token name="StrokeSizingMode">0</token>
                 <BinaryString name="Tags"></BinaryString>
                 <float name="Thickness">1</float>
                 <float name="Transparency">0</float>
+                <int name="ZIndex">1</int>
               </Properties>
             </Item>
             <Item class="UIPadding" referent="340">
@@ -17902,6 +18154,11 @@
               <string name="Name">UIStroke</string>
               <token name="ApplyStrokeMode">0</token>
               <BinaryString name="AttributesSerialize"></BinaryString>
+              <UDim name="BorderOffset">
+                <S>0</S>
+                <O>0</O>
+              </UDim>
+              <token name="BorderStrokePosition">0</token>
               <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
               <Color3 name="Color">
                 <R>0</R>
@@ -17912,9 +18169,11 @@
               <bool name="Enabled">true</bool>
               <token name="LineJoinMode">0</token>
               <int64 name="SourceAssetId">-1</int64>
+              <token name="StrokeSizingMode">0</token>
               <BinaryString name="Tags"></BinaryString>
               <float name="Thickness">1</float>
               <float name="Transparency">0</float>
+              <int name="ZIndex">1</int>
             </Properties>
           </Item>
         </Item>
@@ -18200,6 +18459,11 @@
                 <string name="Name">UIStroke</string>
                 <token name="ApplyStrokeMode">1</token>
                 <BinaryString name="AttributesSerialize"></BinaryString>
+                <UDim name="BorderOffset">
+                  <S>0</S>
+                  <O>0</O>
+                </UDim>
+                <token name="BorderStrokePosition">0</token>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <Color3 name="Color">
                   <R>0.24313726</R>
@@ -18210,9 +18474,11 @@
                 <bool name="Enabled">true</bool>
                 <token name="LineJoinMode">0</token>
                 <int64 name="SourceAssetId">-1</int64>
+                <token name="StrokeSizingMode">0</token>
                 <BinaryString name="Tags"></BinaryString>
                 <float name="Thickness">1</float>
                 <float name="Transparency">0</float>
+                <int name="ZIndex">1</int>
               </Properties>
             </Item>
             <Item class="UIPadding" referent="354">
@@ -18603,6 +18869,11 @@
                 <string name="Name">UIStroke</string>
                 <token name="ApplyStrokeMode">1</token>
                 <BinaryString name="AttributesSerialize"></BinaryString>
+                <UDim name="BorderOffset">
+                  <S>0</S>
+                  <O>0</O>
+                </UDim>
+                <token name="BorderStrokePosition">0</token>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <Color3 name="Color">
                   <R>0.24313726</R>
@@ -18613,9 +18884,11 @@
                 <bool name="Enabled">true</bool>
                 <token name="LineJoinMode">0</token>
                 <int64 name="SourceAssetId">-1</int64>
+                <token name="StrokeSizingMode">0</token>
                 <BinaryString name="Tags"></BinaryString>
                 <float name="Thickness">1</float>
                 <float name="Transparency">0</float>
+                <int name="ZIndex">1</int>
               </Properties>
             </Item>
             <Item class="UIPadding" referent="362">
@@ -19006,6 +19279,11 @@
                 <string name="Name">UIStroke</string>
                 <token name="ApplyStrokeMode">1</token>
                 <BinaryString name="AttributesSerialize"></BinaryString>
+                <UDim name="BorderOffset">
+                  <S>0</S>
+                  <O>0</O>
+                </UDim>
+                <token name="BorderStrokePosition">0</token>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <Color3 name="Color">
                   <R>0.24313726</R>
@@ -19016,9 +19294,11 @@
                 <bool name="Enabled">true</bool>
                 <token name="LineJoinMode">0</token>
                 <int64 name="SourceAssetId">-1</int64>
+                <token name="StrokeSizingMode">0</token>
                 <BinaryString name="Tags"></BinaryString>
                 <float name="Thickness">1</float>
                 <float name="Transparency">0</float>
+                <int name="ZIndex">1</int>
               </Properties>
             </Item>
             <Item class="UIPadding" referent="370">
@@ -19409,6 +19689,11 @@
                 <string name="Name">UIStroke</string>
                 <token name="ApplyStrokeMode">1</token>
                 <BinaryString name="AttributesSerialize"></BinaryString>
+                <UDim name="BorderOffset">
+                  <S>0</S>
+                  <O>0</O>
+                </UDim>
+                <token name="BorderStrokePosition">0</token>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <Color3 name="Color">
                   <R>0.24313726</R>
@@ -19419,9 +19704,11 @@
                 <bool name="Enabled">true</bool>
                 <token name="LineJoinMode">0</token>
                 <int64 name="SourceAssetId">-1</int64>
+                <token name="StrokeSizingMode">0</token>
                 <BinaryString name="Tags"></BinaryString>
                 <float name="Thickness">1</float>
                 <float name="Transparency">0</float>
+                <int name="ZIndex">1</int>
               </Properties>
             </Item>
             <Item class="UIPadding" referent="378">
@@ -19812,6 +20099,11 @@
                 <string name="Name">UIStroke</string>
                 <token name="ApplyStrokeMode">1</token>
                 <BinaryString name="AttributesSerialize"></BinaryString>
+                <UDim name="BorderOffset">
+                  <S>0</S>
+                  <O>0</O>
+                </UDim>
+                <token name="BorderStrokePosition">0</token>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <Color3 name="Color">
                   <R>0.24313726</R>
@@ -19822,9 +20114,11 @@
                 <bool name="Enabled">true</bool>
                 <token name="LineJoinMode">0</token>
                 <int64 name="SourceAssetId">-1</int64>
+                <token name="StrokeSizingMode">0</token>
                 <BinaryString name="Tags"></BinaryString>
                 <float name="Thickness">1</float>
                 <float name="Transparency">0</float>
+                <int name="ZIndex">1</int>
               </Properties>
             </Item>
             <Item class="UIPadding" referent="386">

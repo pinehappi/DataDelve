@@ -19,7 +19,7 @@ function FormProvider.generate(
 	inputReceiver: GuiObject | UserInputService,
 	container: GuiBase2d
 ): HexEditor.HexEditorFormProvider
-	local betterContextMenuOptions: { [any]: ContextMenuStyleState.Options } = {
+	local betterContextMenuOptions: { [any]: { ContextMenuStyleState.Option } } = {
 		[HexEditor.SINGLE_BYTE_CONTEXT_MENU_OPTIONS] = {
 			{ icon = theme.icons.insert, text = "Insert Null Bytes" },
 			{ icon = theme.icons.delete, text = "Delete Byte" },

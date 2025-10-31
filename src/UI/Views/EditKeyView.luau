@@ -1,11 +1,10 @@
 --!strict
 
-local SelectionService = game:GetService("Selection")
-
 local Theme = require(script.Parent.Parent.Theme)
 local UIMessages = require(script.Parent.Parent.UIMessages)
 local Session = require(script.Parent.Parent.Parent.Session)
 local Transactor = require(script.Parent.Parent.Parent.Transactor)
+local Settings = require(script.Parent.Parent.Parent.Settings)
 
 local ExportImportHelper = require(script.Parent.Parent.Parent.ExportImportHelper)
 local PopupHelper = require(script.Parent.Parent.PopupHelper)
@@ -32,10 +31,11 @@ local LoadingBarStyleState = require(StyleState.Utility.LoadingBarStyleState)
 local ContextMenuStyleState = require(StyleState.Utility.ContextMenuStyleState)
 local PopupFormStyleState = require(StyleState.Utility.PopupFormStyleState)
 
-local Tree = require(script.Parent.Parent.Viewers.Tree)
+local ViewerTypes = require(script.Parent.Parent.Viewers.Types)
+local TreeViewer = require(script.Parent.Parent.Viewers.Tree)
+local CodeViewer = require(script.Parent.Parent.Viewers.Code)
 
 local rfmt = require(script.Parent.Parent.Parent.rfmt)
-local showShadowOnScroll = require(script.Parent.Parent.Utilities.showShadowOnScroll)
 
 --[==[ THINGS THAT HAVE TO COME FIRST SO THEY CAN BE USED LATER ]==]
 
@@ -73,7 +73,6 @@ end
 
 --[==[ CLASS TYPES ]==]
 
-type Viewer = any
 export type Transaction = () -> ()
 
 -- Callback to swap this edit key view with one for newKey.
@@ -115,9 +114,11 @@ export type EditKeyViewImplementation = {
 	_shouldDeleteBeDisabled: (EditKeyView) -> boolean,
 	_updateDisabled: (EditKeyView) -> (),
 	_updateUndoRedoButtons: (EditKeyView, speed: StyleStateHelper.TransitionSpeed) -> (),
-	_setViewer: (EditKeyView, data: any, isDirty: boolean?) -> (),
+	_switchViewerMode: (EditKeyView, mode: ViewerTypes.ViewerMode) -> (),
+	_setViewer: (EditKeyView, data: any, userIds: { number }?, metadata: unknown?, isDirty: boolean?) -> (),
 	_tryOpenVersionsView: (EditKeyView) -> (),
 	_updateVersionsViewMode: (EditKeyView) -> (),
+	_getKeyInfo: (EditKeyView) -> ({ number }?, unknown?),
 
 	_createDataUsageCard: (EditKeyView, dataUsage: number, metadataUsage: number) -> (),
 	_promptDuplicateMoveKey: (
@@ -150,7 +151,8 @@ export type EditKeyViewFields = {
 
 	_connections: { RBXScriptConnection },
 
-	_viewer: Viewer,
+	_viewerMode: ViewerTypes.ViewerMode,
+	_viewer: ViewerTypes.Viewer,
 	_versionsView: VersionsView.VersionsView?,
 
 	_dead: boolean,
@@ -181,6 +183,7 @@ function EditKeyView.from(params)
 	self._session = params.session
 	self._transactor = params.transactor
 
+	self._viewerMode = Settings.data.viewerMode :: any
 	self._viewer = nil :: any
 	self._versionsView = nil
 
@@ -221,10 +224,6 @@ function EditKeyView.from(params)
 
 	table.insert(
 		self._connections,
-		showShadowOnScroll(self._frame.Container.Content.ScrollingFrame, self._frame.Container.Content.Shadow)
-	)
-	table.insert(
-		self._connections,
 		self._theme.colorsChanged:Connect(function()
 			task.wait()
 
@@ -248,8 +247,14 @@ function EditKeyView.from(params)
 		end)
 	)
 
-	self:_setViewer(self._session.currentValue, params.isVersionLoaded)
-	self:_updateDisabled()
+	local userIds, metadata = self:_getKeyInfo()
+	self:_setViewer(self._session.currentValue, userIds, metadata, params.isVersionLoaded)
+
+	-- fix ui update race condition
+	task.delay(0, function()
+		task.wait()
+		self:_updateDisabled()
+	end)
 
 	if params.openWithVersionsView then
 		self:_tryOpenVersionsView()
@@ -310,8 +315,11 @@ function EditKeyView:_initializeInteraction()
 				return
 			end
 
-			local value, hasNil = self._viewer:getValue()
-			if hasNil then
+			local valueResult = self._viewer:getValue()
+			if valueResult.kind == "failure" then
+				self._uiMessages:error(valueResult.message)
+				return
+			elseif valueResult.hasNil then
 				if
 					not ConfirmDialogStyleState.confirm(
 						self._theme,
@@ -347,10 +355,10 @@ function EditKeyView:_initializeInteraction()
 				end
 			end
 
-			local userIds, metadata = self._viewer:getKeyInfo()
+			local userIds, metadata = self:_getKeyInfo()
 
 			self:_runOperation(function()
-				local success, err = self._session:trySaveCurrentKey(value, userIds, metadata)
+				local success, err = self._session:trySaveCurrentKey(valueResult.value, userIds, metadata)
 				if not success then
 					self._uiMessages:reportDataStoreError(err)
 				else
@@ -440,7 +448,9 @@ function EditKeyView:_initializeInteraction()
 				return
 			end
 
-			self._viewer:undo()
+			if self._viewer.isHistoryCapable then
+				self._viewer:undo()
+			end
 		end),
 
 		self._styleStates.redo.button.Activated:Connect(function()
@@ -448,7 +458,9 @@ function EditKeyView:_initializeInteraction()
 				return
 			end
 
-			self._viewer:redo()
+			if self._viewer.isHistoryCapable then
+				self._viewer:redo()
+			end
 		end),
 
 		self._styleStates.more.button.Activated:Connect(function()
@@ -466,14 +478,25 @@ function EditKeyView:_initializeInteraction()
 				+ self._styleStates.more.button.AbsoluteSize
 				+ Vector2.new(0, 6)
 
+			local viewModeOptions = {
+				{ icon = self._theme.icons.tree, text = "Tree" },
+				{ icon = self._theme.icons.brackets, text = "Code" },
+				--[[ContextMenuStyleState.SEPARATOR,
+				{ icon = self._theme.icons.hex, text = "Hex" },
+				{ icon = self._theme.icons.script, text = "Deserializer" },]]
+			}
+
 			local contextMenuStyleState, contextMenuModal =
 				ContextMenuStyleState.createMenu(self._theme, self._widget, {
+					submenuDirection = "left",
 					options = {
 						{ icon = self._theme.icons.export, text = "Export to File" },
 						{ icon = self._theme.icons.import, text = "Import from File" },
 						ContextMenuStyleState.SEPARATOR,
 						{ icon = self._theme.icons.rename, text = "Duplicate/Move Key" },
 						{ icon = self._theme.icons.storage, text = "View Data Usage" },
+						ContextMenuStyleState.SEPARATOR,
+						{ text = "View Mode", options = viewModeOptions },
 					},
 				})
 
@@ -491,11 +514,16 @@ function EditKeyView:_initializeInteraction()
 			-- Respond
 			if not self._transactor.locked then
 				if result == "Export to File" then
-					local value = self._viewer:getValue()
+					local valueResult = self._viewer:getValue()
+					if valueResult.kind == "failure" then
+						self._uiMessages:error(valueResult.message)
+						return
+					end
+
 					local name = if self._session.connection.scope
 						then `{self._session.connection.scope}_{self._session.connection.name}_{self._session.currentKey}`
 						else `{self._session.connection.name}_{self._session.currentKey}`
-					local exported, err = ExportImportHelper.export(name, value)
+					local exported, err = ExportImportHelper.export(name, valueResult.value)
 
 					if exported then
 						self._uiMessages:success("Exported to file.")
@@ -525,7 +553,8 @@ function EditKeyView:_initializeInteraction()
 							end
 						else
 							self:_runOperation(function()
-								self:_setViewer(result, true)
+								local userIds, metadata = self:_getKeyInfo()
+								self:_setViewer(result, userIds, metadata, true)
 								task.wait(0) -- prevent race conditions with tweens for buttons
 							end)
 						end
@@ -543,15 +572,20 @@ function EditKeyView:_initializeInteraction()
 							if duplicateAction.key == self._session.currentKey then
 								self._uiMessages:error(`The key is already named <b>{self._session.currentKey}</b>`)
 							else
-								local data = self._viewer:getValue()
-								if data == nil then
+								local valueResult = self._viewer:getValue()
+								if valueResult.kind == "failure" then
+									self._uiMessages:error(valueResult.message)
+									return
+								end
+
+								if valueResult.value == nil then
 									self._uiMessages:error("Cannot duplicate empty key.")
 								else
-									local userIds, metadata = self._viewer:getKeyInfo()
+									local userIds, metadata = self:_getKeyInfo()
 
 									self:_runOperation(function()
 										local success, err = self._session:tryDuplicateKey({
-											data = data,
+											data = valueResult.value,
 											metadata = metadata,
 											userIds = userIds,
 
@@ -583,13 +617,25 @@ function EditKeyView:_initializeInteraction()
 				elseif result == "View Data Usage" then
 					local keyUsage: number
 					local metadataUsage: number
+					local valueResult = self._viewer:getValue()
+					if valueResult.kind == "failure" then
+						self._uiMessages:error(valueResult.message)
+						return
+					end
+
 					self:_runOperation(function()
-						keyUsage = #(JSONHelper.encode(self._viewer:getValue()))
-						local _, metadata = self._viewer:getKeyInfo()
+						keyUsage = #(JSONHelper.encode(valueResult.value))
+						local _, metadata = self:_getKeyInfo()
 						metadataUsage = #(JSONHelper.encode(metadata))
 					end)
 
 					self:_createDataUsageCard(keyUsage, metadataUsage)
+				elseif typeof(result) == "table" and result[1] == "View Mode" then
+					if result[2] == "Tree" then
+						self:_switchViewerMode("Tree")
+					elseif result[2] == "Code" then
+						self:_switchViewerMode("Code")
+					end
 				end
 			end
 
@@ -825,38 +871,67 @@ function EditKeyView:_promptDuplicateMoveKey(position, isAllScopes)
 end
 
 function EditKeyView:_updateUndoRedoButtons(speed: StyleStateHelper.TransitionSpeed)
-	self._styleStates.undo:setDisabled(not self._viewer:canUndo()):update(speed)
-	self._styleStates.redo:setDisabled(not self._viewer:canRedo()):update(speed)
+	self._styleStates.undo.button.Visible = self._viewer.isHistoryCapable
+	self._styleStates.redo.button.Visible = self._viewer.isHistoryCapable
+
+	if self._viewer.isHistoryCapable then
+		self._styleStates.undo:setDisabled(not self._viewer:canUndo()):update(speed)
+		self._styleStates.redo:setDisabled(not self._viewer:canRedo()):update(speed)
+	end
 end
 
-function EditKeyView:_setViewer(data: any, isDirty: boolean?)
+function EditKeyView:_switchViewerMode(mode: ViewerTypes.ViewerMode)
+	if self._viewerMode == mode then
+		return
+	end
+
+	self._viewerMode = mode
+	Settings.data.viewerMode = mode -- Synchronize. Saving might behave funky with multiple views open.
+
+	-- TODO: retain key info changes
+	local valueResult = self._viewer:getValue()
+	if valueResult.kind == "failure" then
+		self._uiMessages:error(valueResult.message)
+		return
+	end
+
+	local userIds, metadata = self:_getKeyInfo()
+	self:_setViewer(valueResult.value, userIds, metadata, self._viewer.isDirty)
+end
+
+function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unknown?, isDirty: boolean?)
 	if self._viewer then
 		self._viewer:destroy()
 	end
 
-	self._viewer = Tree.new(self._theme, self._uiMessages, self._frame.Container.Content.ScrollingFrame, {
+	local options = {
 		data = data,
 		keyInfo = self._session.currentKeyInfo and {
 			CreatedTime = self._session.currentKeyInfo.CreatedTime,
 			UpdatedTime = self._session.currentKeyInfo.UpdatedTime,
 			Version = self._session.currentKeyInfo.Version,
-			UserIds = self._session.currentKeyInfo:GetUserIds(),
-			Metadata = self._session.currentKeyInfo:GetMetadata(),
+			UserIds = userIds,
+			Metadata = metadata,
 		},
 
 		dirty = isDirty,
 		readOnly = false,
 		inputReceiver = self._inputReceiver,
-	})
+	}
 
-	self._viewer.selectionChanged:Connect(function()
-		SelectionService:Set({})
-	end)
+	if self._viewerMode == "Tree" then
+		self._viewer = TreeViewer.new(self._theme, self._uiMessages, self._frame.Container.Content, options)
+	else
+		self._viewer = CodeViewer.new(self._theme, self._uiMessages, self._frame.Container.Content, options) :: any
+	end
 
 	self:_updateUndoRedoButtons("instant")
-	self._viewer.historyChanged:Connect(function()
-		self:_updateUndoRedoButtons()
-	end)
+
+	if self._viewer.isHistoryCapable then
+		self._viewer.historyChanged:Connect(function()
+			self:_updateUndoRedoButtons()
+		end)
+	end
 
 	self._styleStates.save:setDisabled((not self._viewer.isDirty) or self._transactor.locked):update("instant")
 
@@ -951,6 +1026,16 @@ function EditKeyView:_updateVersionsViewMode()
 		self._frame.Container.Position = UDim2.fromOffset(0, 0)
 		self._frame.Container.Size = UDim2.fromScale(1, 1)
 		self._frame.Container.LeftTopbar.Versions.Visible = true
+	end
+end
+
+function EditKeyView:_getKeyInfo()
+	if self._viewer and self._viewer.isKeyInfoCapable then
+		return self._viewer:getKeyInfo()
+	elseif self._session.currentKeyInfo then
+		return self._session.currentKeyInfo:GetUserIds(), self._session.currentKeyInfo:GetMetadata()
+	else
+		return nil, nil
 	end
 end
 

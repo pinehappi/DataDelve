@@ -1,5 +1,7 @@
 --!strict
 
+local ViewerTypes = require(script.Parent.UI.Viewers.Types)
+
 local MAIN_SETTINGS_KEY = "DataDelveSetting alpha 1"
 
 export type SettingsData = {
@@ -12,6 +14,7 @@ export type SettingsData = {
 	listDeletedKeys: boolean,
 	automaticallyList: boolean,
 	clickToOpen: boolean,
+	viewerMode: ViewerTypes.ViewerMode,
 }
 
 local defaultSettings: SettingsData = {
@@ -24,6 +27,7 @@ local defaultSettings: SettingsData = {
 	listDeletedKeys = false,
 	automaticallyList = true,
 	clickToOpen = false,
+	viewerMode = "Tree",
 }
 
 local Settings = {}

@@ -18,14 +18,17 @@
 -- NOTE: right now `Display as Time` for objects is disabled because it requires the children to update the parent when they change
 -- NOTE: right now hierarchy bars are disabled because they're ugly
 
+local SelectionService = game:GetService("Selection")
 local Settings = require(script.Parent.Parent.Parent.Settings)
 
 local JSONHelper = require(script.Parent.Parent.Parent.JSONHelper)
 local Validators = require(script.Parent.Parent.Parent.Validators)
 local StyleState = script.Parent.Parent.StyleState
+local Utilities = script.Parent.Parent.Utilities
 local PopupHelper = require(script.Parent.Parent.PopupHelper)
 local BufferWidget = require(script.Parent.Parent.Widgets.BufferWidget)
 local Assets = script.Parent.Parent.Assets
+local Types = require(script.Parent.Types)
 
 local StyleStateWrapper = require(StyleState.StyleStateWrapper)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
@@ -39,12 +42,13 @@ local JsonTextBoxStyleState = require(StyleState.Input.JsonTextBoxStyleState)
 local SelectStyleState = require(StyleState.Input.SelectStyleState)
 local SwitchStyleState = require(StyleState.Input.SwitchStyleState)
 
-local TimestampHelper = require(script.Parent.Parent.Utilities.TimestampHelper)
-local promptKeyValueForm = require(script.Parent.Parent.Utilities.promptKeyValueForm)
-local getHighlightColors = require(script.Parent.Parent.Utilities.getHighlightColors)
-local lockObjectWithoutResize = require(script.Parent.Parent.Utilities.lockObjectWithoutResize)
-local checkTrulyVisible = require(script.Parent.Parent.Utilities.checkTrulyVisible)
-local shortStringFromBuffer = require(script.Parent.Parent.Utilities.shortStringFromBuffer)
+local TimestampHelper = require(Utilities.TimestampHelper)
+local promptKeyValueForm = require(Utilities.promptKeyValueForm)
+local getHighlightColors = require(Utilities.getHighlightColors)
+local lockObjectWithoutResize = require(Utilities.lockObjectWithoutResize)
+local checkTrulyVisible = require(Utilities.checkTrulyVisible)
+local shortStringFromBuffer = require(Utilities.shortStringFromBuffer)
+local showShadowOnScroll = require(Utilities.showShadowOnScroll)
 
 local SIZE_PER_BRANCH = script.Branch.AbsoluteSize.Y
 local DRAG_AND_DROP_REGION_SIZE = 10
@@ -89,40 +93,20 @@ local FLAGS = {
 	"ISTIME", -- if it should display as time (can either be timestamp or universal time table)
 }
 
-export type KeyInfo = {
-	CreatedTime: number,
-	UpdatedTime: number,
-	Version: string,
-	UserIds: { number },
-	Metadata: any,
-}
+function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOptions)
+	-- setup instances
+	local frame = script.TreeScrollingFrame:Clone()
+	local shadow = script.Shadow:Clone()
 
-export type TreeOptions = {
-	data: JSONHelper.JSONValue,
-	keyInfo: KeyInfo?,
-	dirty: boolean?, -- If it's dirty by default
+	frame.Parent = container
+	shadow.Parent = container
 
-	readOnly: boolean,
-	allOpen: boolean?, -- If all the branches start out open
-	-- default: true. Difference between this and `keyInfo = nil` is that `keyInfo = nil` will still
-	-- show the the Key Info area, but disabling this will completely disable the Key Info area.
-	showKeyInfo: boolean?,
-
-	isTesting: boolean?,
-
-	inputReceiver: Frame | UserInputService | nil,
-}
-
-function Tree.new(
-	theme,
-	uiMessages,
-	frame: ScrollingFrame & { UIListLayout: UIListLayout, UIPadding: UIPadding },
-	options: TreeOptions
-)
+	-- setup object
 	local self = setmetatable({
 		theme = theme,
 		uiMessages = uiMessages,
 		frame = frame,
+		shadow = shadow,
 		gui = frame:FindFirstAncestorWhichIsA("PluginGui"),
 
 		disabled = false,
@@ -162,6 +146,9 @@ function Tree.new(
 		_undoStackPosition = 0,
 
 		_isTesting = options.isTesting,
+
+		isHistoryCapable = true,
+		isKeyInfoCapable = true,
 	}, Tree)
 
 	--
@@ -175,9 +162,6 @@ function Tree.new(
 
 	self._idLookedUp = Instance.new("BindableEvent")
 	self.idLookedUp = self._idLookedUp.Event
-
-	self._selectionChanged = Instance.new("BindableEvent")
-	self.selectionChanged = self._selectionChanged.Event
 
 	self.frame.CanvasPosition = Vector2.new(0, 0)
 	self.frame.BackgroundColor3 = self._colors.background
@@ -231,6 +215,8 @@ function Tree.new(
 				end
 			end)
 		end),
+
+		showShadowOnScroll(frame, shadow),
 
 		self.frame.InputEnded:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
@@ -290,7 +276,7 @@ local ARRAY_SENTINEL = newproxy()
 local OBJECT_SENTINEL = newproxy()
 local DECREMENT_DEPTH_SENTINEL = newproxy()
 
-function Tree:_initializeBranchesFromData(data: JSONHelper.JSONValue, keyInfo: KeyInfo, allOpen: boolean?)
+function Tree:_initializeBranchesFromData(data: JSONHelper.JSONValue, keyInfo: Types.KeyInfo, allOpen: boolean?)
 	if self.showKeyInfo then
 		local dataDepths, dataBranches = self:_flatten({
 			key = "Data",
@@ -3751,7 +3737,7 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 		end
 
 		self:_updateCanvasSize()
-		self._selectionChanged:Fire()
+		SelectionService:Set({})
 	elseif (not dontDeselect) and lastIndex then
 		self._selectingBranchIndex = nil
 		self._selectingBranchVisualIndex = nil
@@ -3766,7 +3752,7 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 		end
 
 		self:_updateCanvasSize()
-		self._selectionChanged:Fire()
+		SelectionService:Set({})
 	end
 end
 
@@ -3881,9 +3867,13 @@ end
 
 -- Recreates the tree from the flat internal representation
 -- The second return value is if there were any nil values
-function Tree:getValue(): (any, boolean)
+function Tree:getValue(): Types.GetValueResult
 	local result = self:_unflatten(self:_getRootIndex())
-	return result.value.value, result.hasNil
+	return {
+		kind = "success",
+		value = result.value.value,
+		hasNil = result.hasNil,
+	}
 end
 
 -- Returns UserId and Metadata
@@ -4070,8 +4060,7 @@ end
 
 --[[ HOTKEY OPERATIONS END ]]
 
-function Tree:destroy(completely: boolean)
-	assert(not completely, "Tree should not own the scrolling frame that contains it.")
+function Tree:destroy()
 	self._dirtyChanged:Destroy()
 
 	self:_clearFrames()
@@ -4091,6 +4080,9 @@ function Tree:destroy(completely: boolean)
 			event:Destroy()
 		end
 	end
+
+	self.frame:Destroy()
+	self.shadow:Destroy()
 end
 
 return Tree
