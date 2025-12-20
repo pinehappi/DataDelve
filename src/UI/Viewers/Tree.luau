@@ -56,6 +56,9 @@ local DRAG_AND_DROP_REGION_SIZE = 10
 local FRAME_POOL_SIZE_LIMIT = 256
 local UNDO_LIMIT = 64
 
+local SEARCH_BOTTOM_MARGIN = 40
+local NOT_SEARCHED_TRANSPARENCY = 0.6
+
 -- For inconsolata
 local CHAR_WIDTH = 7.2
 local DEFAULT_FONT = Font.new(script.Branch.Key.FontFace.Family)
@@ -81,8 +84,6 @@ local HOTKEYS: { [Enum.KeyCode]: HotkeyAction } = table.freeze({
 
 local Tree = {}
 Tree.__index = Tree
-
-local NOT_SEARCHED_TRANSPARENCY = 0.6
 
 local FLAGS = {
 	"ISROOT", -- for the root of the data
@@ -584,50 +585,6 @@ function Tree:_doesChildHaveKey(index: number, key: string): boolean
 	end
 
 	return false
-end
-
-local validUniversalTimeRanges = {
-	Year = { 1400, 9999 },
-	Month = { 1, 12 },
-	Day = { 1, 31 },
-	Hour = { 0, 23 },
-	Minute = { 0, 59 },
-	Second = { 0, 60 },
-	Millisecond = { 0, 999 },
-}
-local reverseTimeOrder = { "Millisecond", "Second", "Minute", "Hour", "Day", "Month", "Year" }
--- NOTE: not used at the moment
-function Tree:_getUniversalTimeTable(index: number)
-	local branch = self._flatBranches[index]
-	assert(branch[2] == OBJECT_SENTINEL)
-	local childDepth = self._flatDepths[index] + 1
-
-	local universalTimeTable = {}
-
-	for i = 1, 7 do
-		local child = self._flatBranches[index + i]
-		if child and self._flatDepths[index + i] == childDepth then
-			local range = validUniversalTimeRanges[child[1]]
-			if range and (typeof(child[2]) == "number") and (range[1] <= child[2]) and (child[2] <= range[2]) then
-				universalTimeTable[child[1]] = child[2]
-			else
-				return nil
-			end
-		else
-			break
-		end
-	end
-
-	local hadLastOne = false
-	for _, t in reverseTimeOrder do
-		if (not universalTimeTable[t]) and hadLastOne then
-			-- There's a hole!
-			return nil
-		end
-		hadLastOne = universalTimeTable[t]
-	end
-
-	return universalTimeTable
 end
 
 function Tree:_getAmountOfUserIds(): number
@@ -1732,8 +1689,11 @@ function Tree:_scrollTo(visibleIndex: number)
 	if self._selectingBranchVisibleIndex and self._selectingBranchVisibleIndex > visibleIndex then
 		scrollTo += self._selectingBranchOffset
 	end
-	if self.frame.CanvasPosition.Y + self.frame.AbsoluteSize.Y < scrollTo + SIZE_PER_BRANCH then
-		self.frame.CanvasPosition = Vector2.new(0, scrollTo + SIZE_PER_BRANCH - self.frame.AbsoluteSize.Y)
+
+	local bottomMargin = if self._isSearching then SEARCH_BOTTOM_MARGIN else 0
+	if self.frame.CanvasPosition.Y + self.frame.AbsoluteSize.Y - bottomMargin < scrollTo + SIZE_PER_BRANCH then
+		self.frame.CanvasPosition =
+			Vector2.new(0, scrollTo + SIZE_PER_BRANCH - self.frame.AbsoluteSize.Y + bottomMargin)
 	elseif self.frame.CanvasPosition.Y > scrollTo then
 		self.frame.CanvasPosition = Vector2.new(0, scrollTo)
 	end
@@ -1982,7 +1942,9 @@ end
 function Tree:_updateCanvasSize()
 	self.frame.CanvasSize = UDim2.fromOffset(
 		0,
-		SIZE_PER_BRANCH * #self._visibleIndexes + (self._selectingBranchOffset or 0) + (self._isSearching and 40 or 0)
+		SIZE_PER_BRANCH * #self._visibleIndexes
+			+ (self._selectingBranchOffset or 0)
+			+ (self._isSearching and SEARCH_BOTTOM_MARGIN or 0)
 	)
 end
 
@@ -2050,26 +2012,6 @@ function Tree:_updateBranchFrame(frame, branch, index)
 				frame.Value.Text = time
 				frame.Value.TextColor3 = colors.number
 				processed = true
-			end
-		elseif value == OBJECT_SENTINEL then
-			local universalTimeTable = self:_getUniversalTimeTable(index)
-			if universalTimeTable then
-				local success, time = pcall(function()
-					return DateTime.fromUniversalTime(
-						universalTimeTable.Year,
-						universalTimeTable.Month,
-						universalTimeTable.Day,
-						universalTimeTable.Hour,
-						universalTimeTable.Minute,
-						universalTimeTable.Second,
-						universalTimeTable.Millisecond
-					):FormatUniversalTime("ll LTS", "en-us")
-				end)
-				if success then
-					frame.Value.Text = time
-					frame.Value.TextColor3 = colors.number
-					processed = true
-				end
 			end
 		end
 	end
@@ -3434,11 +3376,6 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
 			if (not self._isSearching) and self:_doesBranchHaveChildren(index) then
 				table.insert(options, ContextMenuStyleState.SEPARATOR)
-				--[[if (not branch.ISTIME) and self:_getUniversalTimeTable(index) then
-					table.insert(options, "Display as Time")
-				elseif branch.ISTIME then
-					table.insert(options, "Display as Object")
-				end]]
 				table.insert(options, "Expand All")
 				table.insert(options, "Collapse All")
 			end
@@ -4327,6 +4264,25 @@ function Tree:setSearch(searchTerm: string)
 	end
 end
 
+-- find "i" such that all for all 0 <= j <= i, visibleIndexes[j] <= index
+local function searchVisibleIndexMinimum(visibleIndexes: { number }, index: number): number
+	local lo = 1
+	local hi = #visibleIndexes
+	local result = 0
+
+	while lo <= hi do
+		local mid = lo + (hi - lo) // 2
+		if visibleIndexes[mid] <= index then
+			result = mid
+			lo = mid + 1
+		else
+			hi = mid - 1
+		end
+	end
+
+	return result
+end
+
 local ITERATIONS_PER_PAUSE = 15_000
 local BUFFER_TEXT = "buffer"
 function Tree:_startSearchTask()
@@ -4434,6 +4390,62 @@ function Tree:_startSearchTask()
 
 		update()
 	end)
+end
+
+function Tree:jumpPrevMatch()
+	if not self._isSearching then
+		return
+	end
+	if #self._visibleIndexes == 0 then
+		return
+	end
+	local startIndex = searchVisibleIndexMinimum(self._visibleIndexes, self._selectingBranchIndex or 1)
+
+	for visibleIndex = startIndex - 1, 1, -1 do
+		local index = self._visibleIndexes[visibleIndex]
+		if self._searchedIndexes[index] then
+			self:_selectBranch(index, true)
+			self:_scrollTo(visibleIndex)
+			return
+		end
+	end
+
+	for visibleIndex = #self._visibleIndexes, startIndex, -1 do
+		local index = self._visibleIndexes[visibleIndex]
+		if self._searchedIndexes[index] then
+			self:_selectBranch(index, true)
+			self:_scrollTo(visibleIndex)
+			return
+		end
+	end
+end
+
+function Tree:jumpNextMatch()
+	if not self._isSearching then
+		return
+	end
+	if #self._visibleIndexes == 0 then
+		return
+	end
+	local startIndex = searchVisibleIndexMinimum(self._visibleIndexes, self._selectingBranchIndex or 1)
+
+	for visibleIndex = startIndex + 1, #self._visibleIndexes do
+		local index = self._visibleIndexes[visibleIndex]
+		if self._searchedIndexes[index] then
+			self:_selectBranch(index, true)
+			self:_scrollTo(visibleIndex)
+			return
+		end
+	end
+
+	for visibleIndex = 1, startIndex do
+		local index = self._visibleIndexes[visibleIndex]
+		if self._searchedIndexes[index] then
+			self:_selectBranch(index, true)
+			self:_scrollTo(visibleIndex)
+			return
+		end
+	end
 end
 
 function Tree:endSearch()

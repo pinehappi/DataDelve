@@ -1225,8 +1225,12 @@ function EditKeyView:_startSearch()
 		position = UDim2.new(0, 8, 1, -8),
 		anchorPoint = Vector2.new(0, 1),
 
-		nextClicked = function() end,
-		prevClicked = function() end,
+		nextClicked = function()
+			searchCapability:jumpNextMatch()
+		end,
+		prevClicked = function()
+			searchCapability:jumpPrevMatch()
+		end,
 		closeClicked = function()
 			self:_endSearch()
 		end,

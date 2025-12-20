@@ -78,13 +78,24 @@ function SearchView.new(options)
 	self._styleStates.next.button.Activated:Connect(options.nextClicked)
 	self._styleStates.prev.button.Activated:Connect(options.prevClicked)
 	self._styleStates.close.button.Activated:Connect(options.closeClicked)
-	self._styleStates.textBox.textBox.FocusLost:Connect(function(_, input)
+	self._styleStates.textBox.textBox.FocusLost:Connect(function(isReturn, input)
 		if input and input.KeyCode == Enum.KeyCode.Escape then
 			options.closeClicked()
+		elseif isReturn and input and input:IsModifierKeyDown(Enum.ModifierKey.Shift) then
+			self._styleStates.textBox.textBox:CaptureFocus()
+			options.prevClicked()
+		elseif isReturn then
+			self._styleStates.textBox.textBox:CaptureFocus()
+			options.nextClicked()
 		end
 	end)
 	self._styleStates.textBox.textBox:GetPropertyChangedSignal("Text"):Connect(function()
-		options.searchChanged(self._styleStates.textBox.textBox.Text)
+		-- remove newlines if they pressed enter
+		if self._styleStates.textBox.textBox.Text:find("[\n\r]+$") then
+			self._styleStates.textBox.textBox.Text = self._styleStates.textBox.textBox.Text:gsub("[\n\r]+$", "")
+		else
+			options.searchChanged(self._styleStates.textBox.textBox.Text)
+		end
 	end)
 
 	self._frame.Position = options.position

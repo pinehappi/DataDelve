@@ -87,6 +87,8 @@ export type SearchResult = {
 export type SearchCapability = {
 	setSearch: (SearchCapability, term: string) -> (),
 	endSearch: (SearchCapability) -> (),
+	jumpNextMatch: (SearchCapability) -> (),
+	jumpPrevMatch: (SearchCapability) -> (),
 	searchResultsChanged: RBXScriptSignal,
 }
 
