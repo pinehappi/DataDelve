@@ -145,6 +145,10 @@ function App.new(id: string)
 		self:_updateConnectButton()
 	end)
 
+	self.ui.styleStates.connect.dataStoreTypeSelect.changed:Connect(function()
+		self.ui:updateConnectOptions()
+	end)
+
 	self.ui.gui.ConnectDataStore.Content.Form.Connect.Connect.Activated:Connect(function()
 		self:_submitConnectForm()
 	end)
@@ -175,7 +179,12 @@ function App.new(id: string)
 		end
 	)
 	self.historyView.connectionRecordLoaded:Connect(function(record: Types.DataStoreConnectionRecord)
-		self.ui.styleStates.connect.orderedDataStoreCheckbox:setValue(record.connection.isOrdered)
+		self.ui.styleStates.connect.dataStoreTypeSelect:setSelection(
+			if record.connection.allScopes
+				then "AllScopes"
+				elseif record.connection.isOrdered then "Ordered"
+				else "Normal"
+		)
 		self.ui.styleStates.connect.dataStoreNameTextBox.textBox.Text = record.connection.name
 		self.ui.styleStates.connect.dataStoreScopeTextBox.textBox.Text = record.connection.scope or ""
 		self.ui.styleStates.connect.tabs:select("Connect")
@@ -500,20 +509,14 @@ function App.new(id: string)
 	table.insert(
 		self.connections,
 		Settings.changed:Connect(function(name: string, value: any)
-			if name == "allScopes" then
-				self:_updateAllScopes()
-			elseif name == "hideGameName" then
+			if name == "hideGameName" then
 				self.ui.styleStates.breadcrumbs:setCrumbNameVisibleSafe(1, not value)
 			end
 		end)
 	)
-	self.ui.styleStates.connect.orderedDataStoreCheckbox.toggled:Connect(function()
-		self:_updateAllScopes()
-	end)
 	self.ui.styleStates.connect.tabs.selectingChanged:Connect(function(tab)
 		self.ui:switchConnectTab(tab:lower())
 		self.ui:autoFocus()
-		self:_updateAllScopes()
 
 		if Settings.get("automaticallyList") then
 			if tab:lower() == "list" then
@@ -523,7 +526,6 @@ function App.new(id: string)
 			end
 		end
 	end)
-	self:_updateAllScopes()
 
 	table.insert(
 		self.connections,
@@ -580,8 +582,7 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 		return
 	end
 
-	if Settings.get("allScopes") and not connection.isOrdered then
-		(connection :: any).allScopes = true;
+	if connection.allScopes then
 		(connection :: any).scope = "" -- Has to be to work
 	end
 
@@ -646,16 +647,16 @@ function App._submitConnectForm(self: App)
 		dataStoreScope = nil
 	end
 
-	local isOrdered = self.ui.styleStates.connect.orderedDataStoreCheckbox.value
+	local datastoreType = self.ui.styleStates.connect.dataStoreTypeSelect.selection:lower()
 
 	self.ui.gui.ConnectDataStore.Content.Form.DataStoreName.TextBox.Text = ""
 	self.ui.gui.ConnectDataStore.Content.Form.DataStoreScope.TextBox.Text = ""
-	self.ui.styleStates.connect.orderedDataStoreCheckbox:setValue(false)
 
 	self:tryConnect({
 		name = dataStoreName,
 		scope = dataStoreScope,
-		isOrdered = isOrdered,
+		isOrdered = datastoreType == "ordered",
+		allScopes = datastoreType == "allscopes",
 	})
 end
 
@@ -916,16 +917,6 @@ function App._tryLookupId(self: App, id: number)
 		card:abort()
 		self.uiMessages:error("User not found.")
 	end
-end
-
-function App._updateAllScopes(self: App)
-	if Settings.get("allScopes") then
-		self.ui.gui.ConnectDataStore.Content.Form.DataStoreScope.TextBox.Text = ""
-	end
-
-	self.ui.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = (
-		self.ui.styleStates.connect.orderedDataStoreCheckbox.value or (not Settings.get("allScopes"))
-	) and (self.ui.styleStates.connect.tabs.selecting:lower() == "connect")
 end
 
 function App:toggleEnabled()

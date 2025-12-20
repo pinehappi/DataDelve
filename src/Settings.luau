@@ -7,7 +7,6 @@ local MAIN_SETTINGS_KEY = "DataDelveSetting alpha 1"
 export type SettingsData = {
 	themePreset: string,
 	themeAccent: string,
-	allScopes: boolean,
 	hideGameName: boolean,
 	highlightColors: "Default" | "Script Editor",
 	useAlternatingKeyColors: boolean,
@@ -20,7 +19,6 @@ export type SettingsData = {
 local defaultSettings: SettingsData = {
 	themePreset = "studio",
 	themeAccent = "neutral",
-	allScopes = false,
 	hideGameName = false,
 	highlightColors = "Default",
 	useAlternatingKeyColors = false,

@@ -135,9 +135,6 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 					"Script Editor",
 				},
 			}),
-			allScopesSwitch = SwitchStyleState.from(theme, frame.Content.AllScopes.Switch, {
-				default = Settings.get("allScopes"),
-			}),
 			hideGameNameSwitch = SwitchStyleState.from(theme, frame.Content.HideGameName.Switch, {
 				default = Settings.get("hideGameName"),
 			}),
@@ -167,6 +164,7 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 
 	-- Tooltips
 
+	--[[ disable these for now since they don't work well
 	bindSettingTooltip(
 		self.theme,
 		self.frame.Content.HideGameName,
@@ -204,6 +202,7 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 		self.frame.Content.ClickToOpen,
 		`Whether clicking a branch should open it in the tree viewer.`
 	)
+	]]
 
 	-- Events
 
@@ -253,10 +252,6 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 
 	self.styleStates.highlightColorsSelect.changed:Connect(function(value)
 		Settings.set("highlightColors", value)
-	end)
-
-	self.styleStates.allScopesSwitch.toggled:Connect(function(value)
-		Settings.set("allScopes", value)
 	end)
 
 	self.styleStates.hideGameNameSwitch.toggled:Connect(function(value)

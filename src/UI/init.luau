@@ -22,7 +22,7 @@ local LabelStyleState = require(StyleState.LabelStyleState)
 local LoadMoreListStyleState = require(StyleState.LoadMoreListStyleState)
 local TabsStyleState = require(StyleState.TabsStyleState)
 
-local CheckboxStyleState = require(StyleState.Input.CheckboxStyleState)
+local SelectStyleState = require(StyleState.Input.SelectStyleState)
 local ShortcutsTextBoxStyleState = require(StyleState.Input.ShortcutsTextBoxStyleState)
 
 local SkeletonStyleState = require(StyleState.Utility.SkeletonStyleState)
@@ -84,13 +84,19 @@ function UI.new(theme: Theme.Theme, uiMessages)
 				gui.ConnectDataStore.Content.Form.DataStoreScope.TextBox
 			),
 
-			orderedDataStoreTitle = LabelStyleState.from(
+			dataStoreTypeTitle = LabelStyleState.from(theme, gui.ConnectDataStore.Content.Form.DataStoreType.Title),
+			dataStoreTypeSelect = SelectStyleState.from(
 				theme,
-				gui.ConnectDataStore.Content.Form.IsOrderedDataStore.Title
-			),
-			orderedDataStoreCheckbox = CheckboxStyleState.from(
-				theme,
-				gui.ConnectDataStore.Content.Form.IsOrderedDataStore.Check
+				gui.ConnectDataStore.Content.Form.DataStoreType.Select,
+				{
+					default = "Normal",
+					fitButton = true,
+					options = {
+						{ icon = theme.icons.datastore, name = "Normal" },
+						{ icon = theme.icons.orderedDatastore, name = "Ordered" },
+						{ icon = theme.icons.allScopesDatastore, name = "AllScopes" },
+					},
+				}
 			),
 
 			separators = SeparatorStyleState.fromDescendants(theme, gui.ConnectDataStore),
@@ -228,6 +234,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 		tooltipAnchor = Vector2.new(1, 0),
 	})
 
+	--[=[ disabling these they don't work well
 	Tooltip.bindButtonGeneric(
 		self.theme,
 		self.gui.ConnectDataStore.Content.Form.Connect.Connect,
@@ -252,7 +259,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 		self.theme,
 		self.gui.BrowseKeys.List,
 		`List all keys in the DataStore. Equivalent to a call to {rfmt.code("ListKeysAsync")}.`
-	)
+	)]=]
 
 	-- Events
 
@@ -353,7 +360,7 @@ function UI:updateSettingsButtonPosition()
 	else
 		self.styleStates.settingsButton.button.Parent =
 			self.gui.ConnectDataStore.Content["Put settings button here when breadcrumbs is disabled"]
-		self.styleStates.settingsButton.button.Position = UDim2.new(1, -2, 0, 6)
+		self.styleStates.settingsButton.button.Position = UDim2.new(1, -3, 0, 6)
 	end
 end
 
@@ -421,15 +428,34 @@ function UI:_updateConnectCentering()
 	end
 end
 
+function UI:updateConnectOptions()
+	local datastoreType = self.styleStates.connect.dataStoreTypeSelect.selection:lower()
+	self.gui.ConnectDataStore.Content.Form.DataStoreType.Visible = true
+	if datastoreType == "normal" then
+		self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = true
+		self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = true
+	elseif datastoreType == "ordered" then
+		self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = true
+		self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = true
+	elseif datastoreType == "allscopes" then
+		self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = true
+		self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = false
+	end
+end
+
 function UI:switchConnectTab(tab: "connect" | "list" | "history")
 	local connectVisible = (tab == "connect")
 	local listVisible = (tab == "list")
 	local historyVisible = (tab == "history")
 
 	self.gui.ConnectDataStore.Content.Form.Connect.Visible = connectVisible
-	self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = connectVisible
-	self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = connectVisible
-	self.gui.ConnectDataStore.Content.Form.IsOrderedDataStore.Visible = connectVisible
+	if connectVisible then
+		self:updateConnectOptions()
+	else
+		self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = false
+		self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = false
+		self.gui.ConnectDataStore.Content.Form.DataStoreType.Visible = false
+	end
 
 	self.gui.ConnectDataStore.Content.Form.Prefix.Visible = listVisible
 	self.gui.ConnectDataStore.Content.DataStoreList.Visible = listVisible
