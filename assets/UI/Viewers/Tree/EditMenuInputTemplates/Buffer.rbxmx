@@ -490,7 +490,7 @@
           <token name="SizeConstraint">0</token>
           <int64 name="SourceAssetId">-1</int64>
           <BinaryString name="Tags"></BinaryString>
-          <string name="Text">Open in Hex Editor</string>
+          <string name="Text">Open in New Widget</string>
           <Color3 name="TextColor3">
             <R>0.8627451</R>
             <G>0.8627451</G>

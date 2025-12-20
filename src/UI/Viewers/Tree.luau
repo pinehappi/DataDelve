@@ -152,7 +152,9 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 		_isSearching = false,
 		_searchTask = nil,
 		_originalVisibleIndexes = nil,
+		_isSearchDirty = false,
 		_searchedIndexes = nil,
+		_searchTerm = nil,
 		_noResultsLabel = nil,
 
 		_isTesting = options.isTesting,
@@ -481,6 +483,29 @@ end
 
 -- Utilities for analyzing branches
 
+local function searchVisibleIndex(visibleIndexes: { number }, index: number): number?
+	if #visibleIndexes == 0 then
+		return nil
+	end
+
+	local lo = 1
+	local hi = #visibleIndexes
+	while lo < hi do
+		local mid = lo + (hi - lo) // 2
+		if visibleIndexes[mid] == index then
+			return mid
+		elseif visibleIndexes[mid] < index then
+			lo = mid + 1
+		else
+			hi = mid
+		end
+	end
+
+	if visibleIndexes[lo] == index then
+		return lo
+	end
+end
+
 function Tree:_getRootIndex(): number
 	if not self.showKeyInfo then
 		return 1
@@ -640,7 +665,7 @@ end
 -- Utilities for manipulating branches
 
 function Tree:_bumpVisibleIndexesAfter(index: number, bumpAmount: number, precomputedVisibleIndex: number?)
-	local visibleIndex = precomputedVisibleIndex or table.find(self._visibleIndexes, index)
+	local visibleIndex = precomputedVisibleIndex or searchVisibleIndex(self._visibleIndexes, index)
 	if visibleIndex then
 		for i = visibleIndex + 1, #self._visibleIndexes do
 			self._visibleIndexes[i] += bumpAmount
@@ -653,7 +678,7 @@ function Tree:_bumpVisibleIndexesAfter(index: number, bumpAmount: number, precom
 end
 
 function Tree:_bumpVisibleIndexesIncluding(index: number, bumpAmount: number, precomputedVisibleIndex: number?)
-	local visibleIndex = precomputedVisibleIndex or table.find(self._visibleIndexes, index)
+	local visibleIndex = precomputedVisibleIndex or searchVisibleIndex(self._visibleIndexes, index)
 	if visibleIndex then
 		for i = visibleIndex, #self._visibleIndexes do
 			self._visibleIndexes[i] += bumpAmount
@@ -807,8 +832,6 @@ function Tree:_tryInsertInto(options: {
 	local value = options.value
 	local pushAction = options.pushAction
 
-	self:_makeDirty()
-
 	local branch = self._flatBranches[index]
 	local depth = self._flatDepths[index]
 	assert(branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL)
@@ -849,22 +872,23 @@ function Tree:_tryInsertInto(options: {
 	spliceIn(self._flatDepths, insertAt, insertingDepths)
 	spliceIn(self._flatBranches, insertAt, insertingBranches)
 
-	-- Parent branch was open
-	if branch[3] then
-		local visibleIndex = table.find(self._visibleIndexes, index)
-		if visibleIndex then
-			local insertingVisibleIndexes = table.create(totalInserted)
-			for i = 1, totalInserted do
-				table.insert(insertingVisibleIndexes, insertAt + i - 1)
-			end
+	local visibleIndex = searchVisibleIndex(self._visibleIndexes, index)
+	if visibleIndex then
+		if branch[3] then
+			if visibleIndex then
+				local insertingVisibleIndexes = table.create(totalInserted)
+				for i = 1, totalInserted do
+					table.insert(insertingVisibleIndexes, insertAt + i - 1)
+				end
 
-			self:_bumpVisibleIndexesAfter(index, totalInserted, visibleIndex)
-			spliceIn(self._visibleIndexes, visibleIndex + 1, insertingVisibleIndexes)
+				self:_bumpVisibleIndexesAfter(index, totalInserted, visibleIndex)
+				spliceIn(self._visibleIndexes, visibleIndex + 1, insertingVisibleIndexes)
+			end
+		else
+			branch[3] = true
+			self:_bumpVisibleIndexesAfter(index, totalInserted)
+			self:_updateBranchVisible(index)
 		end
-	else
-		branch[3] = true
-		self:_bumpVisibleIndexesAfter(index, totalInserted)
-		self:_updateBranchVisible(index)
 	end
 
 	self:_clearFrames()
@@ -879,6 +903,8 @@ function Tree:_tryInsertInto(options: {
 			value = value,
 		} :: InsertAction)
 	end
+
+	self:_makeDirty()
 
 	return {
 		kind = "success",
@@ -900,8 +926,6 @@ function Tree:_tryInsertAfter(options: {
 	local key = options.key
 	local value = options.value
 	local pushAction = options.pushAction
-
-	self:_makeDirty()
 
 	local depth = self._flatDepths[index]
 	local len = #self._flatDepths
@@ -945,23 +969,17 @@ function Tree:_tryInsertAfter(options: {
 	end
 
 	-- Visible indexes updating
-
 	local insertingVisibleIndexes = table.create(totalInserted)
 	for i = 1, totalInserted do
 		table.insert(insertingVisibleIndexes, insertAt + i - 1)
 	end
 
-	local insertingAtVisibleIndex = table.find(self._visibleIndexes, insertAt)
+	local insertingAtVisibleIndex = searchVisibleIndex(self._visibleIndexes, insertAt)
 	if insertingAtVisibleIndex then
 		self:_bumpVisibleIndexesIncluding(insertAt, totalInserted, insertingAtVisibleIndex)
 		spliceIn(self._visibleIndexes, insertingAtVisibleIndex, insertingVisibleIndexes)
 	elseif insertAt > len then
 		spliceIn(self._visibleIndexes, #self._visibleIndexes + 1, insertingVisibleIndexes)
-	else
-		self:_informBug({
-			message = "`tryInsertAfter` failed because visible index not found",
-			dumpExtra = { options },
-		})
 	end
 
 	-- This has to be done after updating the visible indexes because it will mess it up
@@ -981,6 +999,8 @@ function Tree:_tryInsertAfter(options: {
 		} :: InsertAction)
 	end
 
+	self:_makeDirty()
+
 	return {
 		kind = "success",
 		branch = insertingBranches[1],
@@ -991,7 +1011,6 @@ end
 -- ASSUMES the branch is visible
 function Tree:_deleteBranch(options: { index: number, onlyChildren: boolean?, pushAction: boolean })
 	local index = options.index
-	self:_makeDirty()
 
 	local branch = self._flatBranches[index]
 
@@ -1029,13 +1048,13 @@ function Tree:_deleteBranch(options: { index: number, onlyChildren: boolean?, pu
 		if hasChildren then
 			index += 1
 
-			local startVisibleIndex = table.find(self._visibleIndexes, index)
+			local startVisibleIndex = searchVisibleIndex(self._visibleIndexes, index)
 			local endVisibleIndex = nil
 			local endIndex = nil
 			for i = index, len do
 				local depth = self._flatDepths[i]
 				if depth <= startDepth then
-					endVisibleIndex = table.find(self._visibleIndexes, i)
+					endVisibleIndex = searchVisibleIndex(self._visibleIndexes, i)
 					if endVisibleIndex then
 						endVisibleIndex -= 1
 					end
@@ -1080,9 +1099,11 @@ function Tree:_deleteBranch(options: { index: number, onlyChildren: boolean?, pu
 		table.remove(self._flatDepths, originalIndex)
 		table.remove(self._flatBranches, originalIndex)
 
-		local visibleIndex = table.find(self._visibleIndexes, originalIndex)
-		self:_bumpVisibleIndexesAfter(originalIndex, -1, visibleIndex)
-		table.remove(self._visibleIndexes, visibleIndex)
+		local visibleIndex = searchVisibleIndex(self._visibleIndexes, originalIndex)
+		if visibleIndex then
+			self:_bumpVisibleIndexesAfter(originalIndex, -1, visibleIndex)
+			table.remove(self._visibleIndexes, visibleIndex)
+		end
 
 		if originalIndex == self._selectingBranchIndex then
 			self._selectingBranchIndex = nil
@@ -1104,6 +1125,8 @@ function Tree:_deleteBranch(options: { index: number, onlyChildren: boolean?, pu
 
 	self:_clearFrames()
 	self:_updateCanvasSize()
+
+	self:_makeDirty()
 end
 
 -- Index is the index in _flatBranches
@@ -1480,9 +1503,6 @@ function Tree:_editValue(options: {
 		end
 	end
 
-	-- Default path
-	self:_makeDirty()
-
 	local insertingDepths, insertingBranches = self:_flatten({
 		key = branch[1],
 		value = value.value,
@@ -1504,7 +1524,7 @@ function Tree:_editValue(options: {
 			end
 		end
 
-		local visibleIndex = table.find(self._visibleIndexes, index)
+		local visibleIndex = searchVisibleIndex(self._visibleIndexes, index)
 		if visibleIndex then
 			local insertingVisibleIndexes = table.create(totalInserting)
 			for i = 1, totalInserting do
@@ -1543,6 +1563,8 @@ function Tree:_editValue(options: {
 		} :: EditValueAction)
 	end
 
+	self:_makeDirty()
+
 	return {
 		kind = "success",
 	}
@@ -1568,9 +1590,11 @@ function Tree:_editKey(options: {
 	local frame = self._frames[index]
 	local branch = self._flatBranches[index]
 	local originalKey = branch[1]
-	self:_makeDirty()
 	branch[1] = key
-	self:_updateBranchFrame(frame, branch, index)
+
+	if frame then
+		self:_updateBranchFrame(frame, branch, index)
+	end
 
 	if options.pushAction then
 		self:_pushAction({
@@ -1580,6 +1604,8 @@ function Tree:_editKey(options: {
 			to = key,
 		} :: EditKeyAction)
 	end
+
+	self:_makeDirty()
 
 	return {
 		kind = "success",
@@ -1649,7 +1675,6 @@ function Tree:_insertForUndoRedo(
 		end
 
 		self:_focusBranch(result.index)
-
 		self:_redrawBranches()
 	end
 
@@ -1670,24 +1695,31 @@ end
 
 function Tree:_moveArrayElementForUndoRedo(fromIndex: number, toIndex: number)
 	local branchIndex = fromIndex
-	local branchVisibleIndex = table.find(self._visibleIndexes, branchIndex)
-	if branchVisibleIndex then
-		if toIndex > #self._flatBranches then
-			self:_moveArrayElementToEnd({
+	local branchVisibleIndex = searchVisibleIndex(self._visibleIndexes, branchIndex)
+	if not branchVisibleIndex then
+		self:_digExpand(branchIndex)
+
+		branchVisibleIndex = searchVisibleIndex(self._visibleIndexes, branchIndex)
+		if not branchVisibleIndex then
+			return
+		end
+	end
+
+	if toIndex > #self._flatBranches then
+		self:_moveArrayElementToEnd({
+			branchIndex = branchIndex,
+			branchVisibleIndex = branchVisibleIndex,
+		})
+	else
+		local moveBeforeIndex = toIndex
+		local moveBeforeVisibleIndex = searchVisibleIndex(self._visibleIndexes, moveBeforeIndex)
+		if moveBeforeVisibleIndex then
+			self:_moveArrayElement({
 				branchIndex = branchIndex,
 				branchVisibleIndex = branchVisibleIndex,
+				moveBeforeIndex = moveBeforeIndex,
+				moveBeforeVisibleIndex = moveBeforeVisibleIndex,
 			})
-		else
-			local moveBeforeIndex = toIndex
-			local moveBeforeVisibleIndex = table.find(self._visibleIndexes, moveBeforeIndex)
-			if moveBeforeVisibleIndex then
-				self:_moveArrayElement({
-					branchIndex = branchIndex,
-					branchVisibleIndex = branchVisibleIndex,
-					moveBeforeIndex = moveBeforeIndex,
-					moveBeforeVisibleIndex = moveBeforeVisibleIndex,
-				})
-			end
 		end
 	end
 end
@@ -1705,6 +1737,10 @@ function Tree:_scrollTo(visibleIndex: number)
 end
 
 function Tree:_focusBranch(index: number)
+	if self._isSearching then
+		return
+	end
+
 	self:_digExpand(index)
 
 	if self._isTesting then
@@ -1713,7 +1749,7 @@ function Tree:_focusBranch(index: number)
 
 	self:_selectBranch(index, true)
 
-	local visibleIndex = table.find(self._visibleIndexes, index)
+	local visibleIndex = searchVisibleIndex(self._visibleIndexes, index)
 	if visibleIndex then
 		self:_scrollTo(visibleIndex)
 	end
@@ -1879,6 +1915,12 @@ function Tree:_digExpand(index: number)
 		end
 
 		if depth == 0 then
+			-- this might be the case in a search...
+			-- just make it visible since the search will throw away the result anyways
+			if self._isSearching and not self._visibleIndexes[i] then
+				table.insert(self._visibleIndexes, i)
+			end
+
 			self:_updateBranchVisible(i)
 			break
 		end
@@ -1888,6 +1930,9 @@ end
 function Tree:_toggleOpen(index: number)
 	-- DONT REMEMBER WHAT THIS CHECK WAS FOR, KEEPING IT BECAUSE IT DOESN'T SEEM LIKE IT WOULD BREAK ANYTHING
 	if self._selectingIsDragging then
+		return
+	end
+	if self._isSearching then
 		return
 	end
 
@@ -1903,6 +1948,31 @@ function Tree:_toggleOpen(index: number)
 		self:_clearNonVisibleBranches()
 	else
 		frame.Arrow.Image = self.theme.icons.downArrow
+	end
+end
+
+function Tree:_rebuildVisibleIndexes(preallocationSize: number)
+	self._visibleIndexes = table.create(preallocationSize)
+
+	local visibleStack = { true }
+	local currentDepth = 0
+	for i, branch in self._flatBranches do
+		local depth = self._flatDepths[i]
+		if depth < currentDepth then
+			for i = depth + 1, currentDepth do
+				table.remove(visibleStack)
+			end
+		end
+
+		local isVisible = visibleStack[#visibleStack]
+		if isVisible then
+			table.insert(self._visibleIndexes, i)
+
+			if branch[3] ~= nil then
+				currentDepth = depth + 1
+				table.insert(visibleStack, branch[3])
+			end
+		end
 	end
 end
 
@@ -1936,7 +2006,7 @@ function Tree:_updateBranchFrame(frame, branch, index)
 		return
 	end
 
-	self:_updateBranchFrameBackgroundColor(index, frame)
+	self:_updateBranchFrameSelectStyle(index, frame)
 
 	local keyColor = nil
 	if Settings.get("useAlternatingKeyColors") then
@@ -2037,6 +2107,10 @@ function Tree:_updateBranchFrame(frame, branch, index)
 			frame.Value.TextColor3 = colors.null
 			font = ITALIC_FONT
 		end
+	end
+
+	if self._isSearching then
+		arrowVisible = false
 	end
 
 	frame.Arrow.Visible = arrowVisible
@@ -2845,51 +2919,53 @@ function Tree:_promptEditValue(index: number)
 		self.uiMessages:warn("Cannot edit this value.")
 	end
 
-	self._modalState:push()
-
 	local userResponse, newValue, newValueIsArray
 
-	if typeof(branch[2]) == "string" and branch[2]:find("\n") then
-		-- Read-only not supported so abort.
-		if locked then
-			return
-		end
+	self._modalState:wrap(function()
+		if typeof(branch[2]) == "string" and branch[2]:find("\n") then
+			-- Read-only not supported so abort.
+			if locked then
+				return
+			end
 
-		self:_promptEditMenu(index, {
-			captureValueTextBox = true,
-			position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
-		})
+			self:_promptEditMenu(index, {
+				captureValueTextBox = true,
+				position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
+			})
+		elseif (typeof(branch[2]) == "string" and branch[2]:find("\n")) or (typeof(branch[2]) == "buffer") then
+			-- Read-only not supported so abort.
+			if locked then
+				return
+			end
+
+			local newBuffer = self:_promptEditBuffer({
+				name = branch[1],
+				position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
+				buffer = branch[2],
+			})
+
+			userResponse = if newBuffer then "submit" else "cancel"
+			newValue = newBuffer
+			newValueIsArray = false
+		else
+			userResponse, newValue, newValueIsArray = self:_promptModalTextBox(frame, "value", {
+				defaultText = JSONHelper.toInputString(
+					branch[2],
+					if branch[2] == ARRAY_SENTINEL
+						then "array"
+						elseif branch[2] == OBJECT_SENTINEL then "object"
+						elseif typeof(branch[2]) == "nil" then "null"
+						else typeof(branch[2])
+				),
+				locked = locked,
+			})
+		end
+	end)
+
+	-- this could be if they used the prompt edit menu which will edit on its own
+	if not userResponse then
 		return
-	elseif (typeof(branch[2]) == "string" and branch[2]:find("\n")) or (typeof(branch[2]) == "buffer") then
-		-- Read-only not supported so abort.
-		if locked then
-			return
-		end
-
-		local newBuffer = self:_promptEditBuffer({
-			name = branch[1],
-			position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
-			buffer = branch[2],
-		})
-
-		userResponse = if newBuffer then "submit" else "cancel"
-		newValue = newBuffer
-		newValueIsArray = false
-	else
-		userResponse, newValue, newValueIsArray = self:_promptModalTextBox(frame, "value", {
-			defaultText = JSONHelper.toInputString(
-				branch[2],
-				if branch[2] == ARRAY_SENTINEL
-					then "array"
-					elseif branch[2] == OBJECT_SENTINEL then "object"
-					elseif typeof(branch[2]) == "nil" then "null"
-					else typeof(branch[2])
-			),
-			locked = locked,
-		})
 	end
-
-	self._modalState:pop()
 
 	if userResponse == "empty" then
 		self.uiMessages:error("Value was empty.")
@@ -2952,9 +3028,10 @@ function Tree:_promptInsertInto(index: number, position: Vector2)
 				insertResult.branch.ISUSERID = true
 			end
 
-			self:_redrawBranches()
-
-			self:_focusBranch(insertResult.index)
+			if not self._isSearching then
+				self:_redrawBranches()
+				self:_focusBranch(insertResult.index)
+			end
 		end
 	end
 end
@@ -3012,7 +3089,6 @@ function Tree:_promptInsertAfter(index: number, position: Vector2)
 				end
 
 				self:_redrawBranches()
-
 				self:_focusBranch(insertResult.index)
 			end
 		end
@@ -3057,6 +3133,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			return
 		end
 		if self.readOnly then
+			return
+		end
+		if self._isSearching then
 			return
 		end
 
@@ -3313,8 +3392,13 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			return
 		end
 
-		-- wait for the previous right click to close if it is there
-		task.wait()
+		-- hack since you can open a context menu while one is still open
+		if self._inRightClick then
+			local start = os.clock()
+			repeat
+				task.wait()
+			until (not self._inRightClick) or (os.clock() - start >= 0.5)
+		end
 
 		self:_setInRightClick(true)
 
@@ -3345,7 +3429,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 		-- Expand/collapse options
 		if branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL then
-			if self:_doesBranchHaveChildren(index) then
+			if (not self._isSearching) and self:_doesBranchHaveChildren(index) then
 				table.insert(options, ContextMenuStyleState.SEPARATOR)
 				--[[if (not branch.ISTIME) and self:_getUniversalTimeTable(index) then
 					table.insert(options, "Display as Time")
@@ -3494,7 +3578,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		end),
 	}
 
-	self:_updateBranchFrameBackgroundColor(index, frame)
+	self:_updateBranchFrameSelectStyle(index, frame)
 	if self._selectingBranchIndex == index then
 		setBranchWraps(frame, true)
 	else
@@ -3540,9 +3624,9 @@ end
 -- This actually updates if it is open, not if it is visible...
 -- TODO: change the name of this function
 function Tree:_updateBranchVisible(index)
-	local startVisibleIndex = table.find(self._visibleIndexes, index)
+	local startVisibleIndex = searchVisibleIndex(self._visibleIndexes, index)
 	if not startVisibleIndex then
-		warn("Branch opened that is not visible. How!?")
+		warn("Branch opened that is not visible. How!?", debug.traceback())
 		return
 	end
 
@@ -3556,7 +3640,7 @@ function Tree:_updateBranchVisible(index)
 		while i <= len do
 			local depth = self._flatDepths[i]
 			if depth <= startDepth then
-				endVisibleIndex = table.find(self._visibleIndexes, i)
+				endVisibleIndex = searchVisibleIndex(self._visibleIndexes, i)
 				if endVisibleIndex then
 					endVisibleIndex -= 1
 				end
@@ -3588,7 +3672,7 @@ function Tree:_updateBranchVisible(index)
 		while i <= len do
 			local depth = self._flatDepths[i]
 			if depth <= startDepth then
-				endVisibleIndex = table.find(self._visibleIndexes, i)
+				endVisibleIndex = searchVisibleIndex(self._visibleIndexes, i)
 				break
 			end
 
@@ -3627,7 +3711,7 @@ function Tree:_updateBranchVisible(index)
 		self._visibleIndexes = newVisibleIndexes
 
 		if self._selectingBranchIndex and not self._selectingBranchVisibleIndex then
-			self._selectingBranchVisibleIndex = table.find(self._visibleIndexes, self._selectingBranchIndex)
+			self._selectingBranchVisibleIndex = searchVisibleIndex(self._visibleIndexes, self._selectingBranchIndex)
 		end
 	end
 
@@ -3636,7 +3720,7 @@ end
 
 function Tree:_clearNonVisibleBranches()
 	for index, frame in self._frames do
-		if not table.find(self._visibleIndexes, index) then
+		if not searchVisibleIndex(self._visibleIndexes, index) then
 			self:_removeFrame(index, frame)
 		end
 	end
@@ -3645,7 +3729,7 @@ end
 -- Redraws branches to only render which ones the user can see.
 -- The `forceRefresh` option is for things like search which mess with the
 -- visibleIndexes and require refreshing all branches.
-function Tree:_redrawBranches(forceRefresh: boolean)
+function Tree:_redrawBranches()
 	local startOffset = SIZE_PER_BRANCH * math.floor(self.frame.CanvasPosition.Y / SIZE_PER_BRANCH)
 	local branchesToRender = math.ceil(self.frame.AbsoluteWindowSize.Y / SIZE_PER_BRANCH) + 1
 
@@ -3682,21 +3766,15 @@ function Tree:_redrawBranches(forceRefresh: boolean)
 	local endVisibleIndex = startVisibleIndex + branchesToRender
 	local tempPool = table.create(8)
 
-	if forceRefresh then
-		for i, frame in self._frames do
-			self:_removeFrame(i, frame)
-		end
-	else
-		local startIndex = self._visibleIndexes[startVisibleIndex]
-		local endIndex = self._visibleIndexes[endVisibleIndex]
+	local startIndex = self._visibleIndexes[startVisibleIndex]
+	local endIndex = self._visibleIndexes[endVisibleIndex]
 
-		if startIndex then
-			for i, frame in self._frames do
-				if i < startIndex then
-					table.insert(tempPool, { i, frame })
-				elseif endIndex and (i > endIndex) then
-					table.insert(tempPool, { i, frame })
-				end
+	if startIndex then
+		for i, frame in self._frames do
+			if i < startIndex then
+				table.insert(tempPool, { i, frame })
+			elseif endIndex and (i > endIndex) then
+				table.insert(tempPool, { i, frame })
 			end
 		end
 	end
@@ -3704,16 +3782,14 @@ function Tree:_redrawBranches(forceRefresh: boolean)
 	for visibleI = startVisibleIndex, endVisibleIndex do
 		local i = self._visibleIndexes[visibleI]
 		if not i then
-			if not forceRefresh then
-				-- May not exist if startVisibleIndex does not exist
-				local endIndex = self._visibleIndexes[visibleI - 1]
+			-- May not exist if startVisibleIndex does not exist
+			local endIndex = self._visibleIndexes[visibleI - 1]
 
-				-- forceRefresh already has them all in the tempPool
-				if endIndex then
-					for i, frame in self._frames do
-						if i > endIndex then
-							table.insert(tempPool, { i, frame })
-						end
+			-- forceRefresh already has them all in the tempPool
+			if endIndex then
+				for i, frame in self._frames do
+					if i > endIndex then
+						table.insert(tempPool, { i, frame })
 					end
 				end
 			end
@@ -3778,11 +3854,11 @@ function Tree:_setInRightClick(inRightClick)
 	if self._hoveringBranchIndex and not inRightClick then
 		local hoveringIndex = self._hoveringBranchIndex
 		self._hoveringBranchIndex = nil
-		self:_updateBranchFrameBackgroundColor(hoveringIndex)
+		self:_updateBranchFrameSelectStyle(hoveringIndex)
 	end
 end
 
-function Tree:_updateBranchFrameBackgroundColor(index: boolean, frame: Frame?)
+function Tree:_updateBranchFrameSelectStyle(index: boolean, frame: Frame?)
 	frame = frame or self._frames[index]
 	if frame then
 		if self._selectingBranchIndex == index then
@@ -3827,10 +3903,10 @@ function Tree:_setHovering(index: number?)
 	if index ~= lastIndex then
 		self._hoveringBranchIndex = index
 		if lastIndex then
-			self:_updateBranchFrameBackgroundColor(lastIndex)
+			self:_updateBranchFrameSelectStyle(lastIndex)
 		end
 		if index then
-			self:_updateBranchFrameBackgroundColor(index)
+			self:_updateBranchFrameSelectStyle(index)
 		end
 	end
 end
@@ -3849,11 +3925,11 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 
 	if index ~= lastIndex then
 		self._selectingBranchIndex = index
-		self._selectingBranchVisibleIndex = table.find(self._visibleIndexes, index)
+		self._selectingBranchVisibleIndex = searchVisibleIndex(self._visibleIndexes, index)
 		self._selectingBranchOffset = 0
 
 		if lastIndex then
-			self:_updateBranchFrameBackgroundColor(lastIndex)
+			self:_updateBranchFrameSelectStyle(lastIndex)
 
 			local frame = self._frames[lastIndex]
 			if frame then
@@ -3861,7 +3937,7 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 				setBranchWraps(frame, false)
 			end
 		end
-		self:_updateBranchFrameBackgroundColor(index)
+		self:_updateBranchFrameSelectStyle(index)
 
 		local frame = self._frames[index]
 		if frame then
@@ -3875,7 +3951,7 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 		self._selectingBranchIndex = nil
 		self._selectingBranchVisualIndex = nil
 		self._selectingBranchOffset = 0
-		self:_updateBranchFrameBackgroundColor(lastIndex)
+		self:_updateBranchFrameSelectStyle(lastIndex)
 
 		local frame = self._frames[index]
 		if frame then
@@ -3910,6 +3986,13 @@ end
 function Tree:_makeDirty()
 	self.isDirty = true
 	self._dirtyChanged:Fire(true)
+
+	if self._isSearching then
+		self._isSearchDirty = true
+
+		-- rebuild visible indexes since they are going to be messed up if search is active
+		self:_startSearchTask()
+	end
 end
 
 function Tree:setDisabled(disabled: boolean)
@@ -4105,6 +4188,9 @@ function Tree:tryOpenSelected(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
+	if self._isSearching then
+		return
+	end
 
 	local branch = self._flatBranches[self._selectingBranchIndex]
 	if branch[2] ~= ARRAY_SENTINEL and branch[2] ~= OBJECT_SENTINEL then
@@ -4126,6 +4212,9 @@ end
 function Tree:tryCloseSelected(): boolean
 	if not self._selectingBranchIndex then
 		return false
+	end
+	if self._isSearching then
+		return
 	end
 
 	local branch = self._flatBranches[self._selectingBranchIndex]
@@ -4212,11 +4301,12 @@ end
 
 function Tree:_initSearch()
 	self._isSearching = true
+	self._isSearchDirty = false
 	self._originalVisibleIndexes = self._visibleIndexes
+	self._visibleIndexes = {}
 	self._searchedIndexes = {}
 end
 
-local BUFFER_TEXT = "buffer"
 function Tree:setSearch(searchTerm: string)
 	if not self._isSearching then
 		self:_initSearch()
@@ -4228,6 +4318,19 @@ function Tree:setSearch(searchTerm: string)
 			kind = "none",
 		} :: Types.SearchResult)
 	else
+		self._searchTerm = searchTerm
+		self:_startSearchTask()
+	end
+end
+
+local ITERATIONS_PER_PAUSE = 15_000
+local BUFFER_TEXT = "buffer"
+function Tree:_startSearchTask()
+	if self._searchTask then
+		task.cancel(self._searchTask)
+	end
+
+	self._searchTask = task.spawn(function()
 		self._visibleIndexes = {}
 		self._searchedIndexes = {}
 
@@ -4236,7 +4339,8 @@ function Tree:setSearch(searchTerm: string)
 		local addedBranches = {}
 		local adding = table.create(3)
 
-		local normalizedSearchTerm = searchTerm:lower()
+		local normalizedSearchTerm = self._searchTerm:lower()
+		local counter = 0
 		for i, branch in self._flatBranches do
 			local valueType = type(branch[2])
 			local searched = tostring(branch[1]):lower():find(normalizedSearchTerm, 1, true)
@@ -4271,6 +4375,22 @@ function Tree:setSearch(searchTerm: string)
 					addedBranches[got] = true
 				end
 			end
+
+			counter += 1
+			if counter == ITERATIONS_PER_PAUSE then
+				counter = 0
+
+				self._searchResultsChanged:Fire({
+					type = "success",
+					matches = #self._visibleIndexes,
+				} :: Types.SearchResult)
+
+				self:_clearFrames()
+				self:_redrawBranches()
+				self:_updateCanvasSize()
+
+				task.wait(1 / 30)
+			end
 		end
 
 		if #self._visibleIndexes == 0 then
@@ -4284,24 +4404,40 @@ function Tree:setSearch(searchTerm: string)
 			matches = #self._visibleIndexes,
 		} :: Types.SearchResult)
 
-		print("search time", os.clock() - startTime)
+		--print("search time", os.clock() - startTime)
 
-		self:_redrawBranches(true)
+		self:_clearFrames()
+		self:_redrawBranches()
 		self:_updateCanvasSize()
-	end
+	end)
 end
 
 function Tree:endSearch()
+	if self._searchTask then
+		task.cancel(self._searchTask)
+		self._searchTask = nil
+	end
+
 	if self._isSearching then
 		self:_deleteNoResultsLabel()
 
 		self._isSearching = false
-		self._visibleIndexes = self._originalVisibleIndexes
-		self._originalVisibleIndexes = nil
 		self._searchedIndexes = nil
+		self._searchTerm = nil
 
-		self:_redrawBranches(true)
+		if self._isSearchDirty then
+			self._isSearchDirty = false
+
+			-- good enough estimate size: #self._originalVisibleIndexes. Should pay for most allocations.
+			self:_rebuildVisibleIndexes(#self._originalVisibleIndexes)
+		else
+			self._visibleIndexes = self._originalVisibleIndexes
+		end
+		self._originalVisibleIndexes = nil
+
 		self:_updateCanvasSize()
+		self:_clearFrames()
+		self:_redrawBranches()
 	end
 end
 
@@ -4323,6 +4459,8 @@ end
 function Tree:destroy()
 	self._dirtyChanged:Destroy()
 
+	self:endSearch()
+
 	self:_clearFrames()
 	for _, connection in self._connections do
 		connection:Disconnect()
@@ -4341,7 +4479,6 @@ function Tree:destroy()
 		end
 	end
 
-	self:_deleteNoResultsLabel()
 	self.frame:Destroy()
 	self.branchContainer:Destroy()
 	self.shadow:Destroy()

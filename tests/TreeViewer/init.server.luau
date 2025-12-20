@@ -260,15 +260,19 @@ local function runOperation(tree, operation: Operation)
 			pushAction = not operation.onlyChildren,
 		})
 	elseif operation.type == "insertAfter" then
+		local index = searchFor(tree, operation.searchFor)
+		tree:_digExpand(index)
 		tree:_tryInsertAfter({
-			index = searchFor(tree, operation.searchFor),
+			index = index,
 			key = operation.key,
 			value = { value = operation.value, isArray = operation.isArray },
 			pushAction = true,
 		})
 	elseif operation.type == "insertInto" then
+		local index = searchFor(tree, operation.searchFor)
+		tree:_digExpand(index)
 		tree:_tryInsertInto({
-			index = searchFor(tree, operation.searchFor),
+			index = index,
 			key = operation.key,
 			value = { value = operation.value, isArray = operation.isArray },
 			pushAction = true,
@@ -276,6 +280,7 @@ local function runOperation(tree, operation: Operation)
 	elseif operation.type == "move" then
 		local moveIndex = searchFor(tree, operation.move)
 		local beforeIndex = searchFor(tree, operation.before)
+		tree:_digExpand(moveIndex)
 		tree:_moveArrayElement({
 			branchIndex = moveIndex,
 			branchVisibleIndex = table.find(tree._visibleIndexes, moveIndex),
@@ -285,14 +290,17 @@ local function runOperation(tree, operation: Operation)
 		})
 	elseif operation.type == "moveEnd" then
 		local moveIndex = searchFor(tree, operation.move)
+		tree:_digExpand(moveIndex)
 		tree:_moveArrayElementToEnd({
 			branchIndex = moveIndex,
 			branchVisibleIndex = table.find(tree._visibleIndexes, moveIndex),
 			pushAction = true,
 		})
 	elseif operation.type == "edit" then
+		local index = searchFor(tree, operation.searchFor)
+		tree:_digExpand(index)
 		tree:_editValue({
-			index = searchFor(tree, operation.searchFor),
+			index = index,
 			value = { value = operation.value, isArray = operation.isArray },
 			pushAction = true,
 		})
@@ -300,7 +308,8 @@ local function runOperation(tree, operation: Operation)
 end
 
 local function testOutput(name: string, data, expected, operations: { Operation })
-	for _, showKeyInfo in { true, false } do
+	local function aux(showKeyInfo, searchTerm)
+		local name = `{name} showKeyInfo:{showKeyInfo} searchTerm:{searchTerm}`
 		local viewer
 		local passed = false
 		local success = xpcall(function()
@@ -320,22 +329,11 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 				isTesting = true,
 				showKeyInfo = showKeyInfo,
 			})
-			for _, operation in operations do
-				if typeof(operation) ~= "table" then
-					continue
-				end
 
-				if
-					operation.type == "insertInto"
-					or operation.type == "insertAfter"
-					or operation.type == "move"
-					or operation.type == "moveEnd"
-					or operation.type == "edit"
-				then
-					viewer:_expandAll(viewer:_getRootIndex()) -- "move" doesn't work if the branch you moved is not visible
-					break
-				end
+			if searchTerm then
+				viewer:setSearch(searchTerm)
 			end
+
 			for _, operation in operations do
 				if typeof(operation) ~= "table" then
 					continue
@@ -380,8 +378,8 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			end
 
 			passed = true
-		end, function()
-			warn(`{name} errored. Show Key Info: {showKeyInfo}`, debug.traceback(nil, 2))
+		end, function(err)
+			warn(`{name} errored. Show Key Info: {showKeyInfo}`, err, debug.traceback(nil, 2))
 		end)
 
 		if not success then
@@ -407,6 +405,15 @@ local function testOutput(name: string, data, expected, operations: { Operation 
 			end
 		end
 	end
+
+	aux(true, nil)
+	aux(false, nil)
+
+	aux(true, "test")
+	aux(false, "test")
+
+	aux(true, "..................")
+	aux(false, "..................")
 end
 
 -- Tests
