@@ -283,11 +283,11 @@ function VersionsView.from(params: VersionsViewFromParams)
 			self.styleStates.order.button,
 			`Order\nToggle between newest-to-oldest or oldest-to-newest.`
 		),
-		Tooltip.bindButtonGeneric(
+		--[[Tooltip.bindButtonGeneric(
 			self.theme,
 			self.styleStates.list.button,
 			`Lists versions. Equivalent to {rfmt.code("ListVersionsAsync")}.`
-		),
+		),]]
 	}
 
 	task.spawn(function()

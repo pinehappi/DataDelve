@@ -85,6 +85,50 @@ local function getCodeEditorTheme(theme: Theme.Theme): EditorTypes.Theme
 	}
 end
 
+local function enhanceErrorMessage(message: string): string
+	return message
+		:gsub("doubleQuotedString", [["]])
+		:gsub("leftCurlyBracket", "'{'")
+		:gsub("leftSquareBracket", "'['")
+		:gsub("rightCurlyBracket", "'}'")
+		:gsub("rightSquareBracket", "']'")
+		:gsub("singleQuotedString", [[']])
+		:gsub("colon", "':'")
+		:gsub("equals", "'='")
+		:gsub("comma", "','")
+end
+
+local function collectDecodeErrors(result: json5.DecodeResult): { EditorTypes.Error }
+	local errors = {}
+	if result.kind == "failure" then
+		for _, err in result.errors do
+			if err.token then
+				table.insert(errors, {
+					line = err.token.startLine,
+					column = err.token.startColumn,
+					message = err.message or (err.token :: json5.ErrorToken).message,
+				})
+			else
+				table.insert(
+					errors,
+					{
+						message = err.message,
+					} :: any
+				)
+			end
+		end
+	end
+	return errors
+end
+
+local function formatError(err: EditorTypes.Error): string
+	if err.line then
+		return `[line {err.line} col {err.column}] {err.message}`
+	else
+		return err.message
+	end
+end
+
 function CodeViewer.new(
 	theme: Theme.Theme,
 	uiMessages: UIMessages.UIMessages,
@@ -140,13 +184,34 @@ function CodeViewer:getValue()
 	local text = self._editor:getText()
 	local result = json5.decode(text, {
 		mode = "permissive",
+		doesRecover = false,
 	})
 
 	if result.kind == "failure" then
-		return {
-			kind = "failure",
-			message = "Failed to parse.",
-		}
+		local errors = collectDecodeErrors(result)
+		if #result.errors == 1 then
+			return {
+				kind = "failure",
+				message = enhanceErrorMessage(formatError(errors[1])),
+			}
+		else
+			local lineSet = {}
+			for _, err in errors do
+				lineSet[err.line] = true
+			end
+
+			local lines = {}
+			for line in lineSet do
+				table.insert(lines, line)
+			end
+
+			table.sort(lines)
+
+			return {
+				kind = "failure",
+				message = `Errors on lines {table.concat(lines, ", ", 1, #lines - 1)} and {lines[#lines]}`,
+			}
+		end
 	else
 		return {
 			kind = "success",
@@ -189,7 +254,7 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 		self._cachedData = data
 		text = json5.encode(data :: any, {
 			mode = "readable",
-			tabSize = 2,
+			tab = "\t",
 		})
 	end)
 
@@ -208,7 +273,7 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 		self._container.Error.TextLabel.Text = if isTooLarge
 			then "Data is too large. Use the tree viewer."
 			elseif
-				typeof(err) == "string" and err:match("unexpected type: buffer")
+				typeof(err) == "string" and err:match("unexpected type buffer")
 			then "Buffers are not supported. Use the tree viewer."
 			else `There was an error. Try using the tree viewer. Error: {err}`
 
@@ -246,27 +311,10 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 
 					local result = json5.decode(editor:getText(), {
 						mode = "permissive",
+						doesRecover = false,
 					})
 
-					local errors = {}
-					if result.kind == "failure" then
-						for _, err in result.errors do
-							if err.token then
-								table.insert(errors, {
-									line = err.token.startLine,
-									column = err.token.startColumn,
-									message = err.message or (err.token :: json5.ErrorToken).message,
-								})
-							else
-								table.insert(
-									errors,
-									{
-										message = err.message,
-									} :: any
-								)
-							end
-						end
-					end
+					local errors = collectDecodeErrors(result)
 
 					editor:setErrors(errors)
 					analysisThread = nil
@@ -280,14 +328,11 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 			else
 				local text = {}
 				for _, err in errors do
-					if err.line then
-						table.insert(text, `[line {err.line} col {err.column}] {err.message}`)
-					else
-						table.insert(text, err.message)
-					end
+					table.insert(text, formatError(err))
 				end
+
 				self._container.Error.Visible = true
-				self._container.Error.TextLabel.Text = table.concat(text, " and ")
+				self._container.Error.TextLabel.Text = enhanceErrorMessage(table.concat(text, " and "))
 			end
 		end)
 

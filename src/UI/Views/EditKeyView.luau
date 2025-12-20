@@ -481,8 +481,8 @@ function EditKeyView:_initializeInteraction()
 				+ Vector2.new(0, 6)
 
 			local viewModeOptions = {
-				{ icon = self._theme.icons.tree, text = "Tree" },
-				{ icon = self._theme.icons.brackets, text = "Code" },
+				{ icon = if self._viewerMode == "Tree" then self._theme.icons.check else "", text = "Tree" },
+				{ icon = if self._viewerMode == "Code" then self._theme.icons.check else "", text = "Code" },
 				--[[ContextMenuStyleState.SEPARATOR,
 				{ icon = self._theme.icons.hex, text = "Hex" },
 				{ icon = self._theme.icons.script, text = "Deserializer" },]]
@@ -519,18 +519,17 @@ function EditKeyView:_initializeInteraction()
 					local valueResult = self._viewer:getValue()
 					if valueResult.kind == "failure" then
 						self._uiMessages:error(valueResult.message)
-						return
-					end
-
-					local name = if self._session.connection.scope
-						then `{self._session.connection.scope}_{self._session.connection.name}_{self._session.currentKey}`
-						else `{self._session.connection.name}_{self._session.currentKey}`
-					local exported, err = ExportImportHelper.export(name, valueResult.value)
-
-					if exported then
-						self._uiMessages:success("Exported to file.")
 					else
-						self._uiMessages:error(err or "Export cancelled.")
+						local name = if self._session.connection.scope
+							then `{self._session.connection.scope}_{self._session.connection.name}_{self._session.currentKey}`
+							else `{self._session.connection.name}_{self._session.currentKey}`
+						local exported, err = ExportImportHelper.export(name, valueResult.value)
+
+						if exported then
+							self._uiMessages:success("Exported to file.")
+						else
+							self._uiMessages:error(err or "Export cancelled.")
+						end
 					end
 				elseif result == "Import from File" then
 					local passed = true
@@ -577,10 +576,7 @@ function EditKeyView:_initializeInteraction()
 								local valueResult = self._viewer:getValue()
 								if valueResult.kind == "failure" then
 									self._uiMessages:error(valueResult.message)
-									return
-								end
-
-								if valueResult.value == nil then
+								elseif valueResult.value == nil then
 									self._uiMessages:error("Cannot duplicate empty key.")
 								else
 									local userIds, metadata = self:_getKeyInfo()
@@ -622,16 +618,15 @@ function EditKeyView:_initializeInteraction()
 					local valueResult = self._viewer:getValue()
 					if valueResult.kind == "failure" then
 						self._uiMessages:error(valueResult.message)
-						return
+					else
+						self:_runOperation(function()
+							keyUsage = #(JSONHelper.encode(valueResult.value))
+							local _, metadata = self:_getKeyInfo()
+							metadataUsage = #(JSONHelper.encode(metadata))
+						end)
+
+						self:_createDataUsageCard(keyUsage, metadataUsage)
 					end
-
-					self:_runOperation(function()
-						keyUsage = #(JSONHelper.encode(valueResult.value))
-						local _, metadata = self:_getKeyInfo()
-						metadataUsage = #(JSONHelper.encode(metadata))
-					end)
-
-					self:_createDataUsageCard(keyUsage, metadataUsage)
 				elseif typeof(result) == "table" and result[1] == "View Mode" then
 					if result[2] == "Tree" then
 						self:_switchViewerMode("Tree")
@@ -889,15 +884,15 @@ function EditKeyView:_switchViewerMode(mode: ViewerTypes.ViewerMode)
 		return
 	end
 
-	self._viewerMode = mode
-	Settings.data.viewerMode = mode -- Synchronize. Saving might behave funky with multiple views open.
-
 	-- TODO: retain key info changes
 	local valueResult = self._viewer:getValue()
 	if valueResult.kind == "failure" then
 		self._uiMessages:error(valueResult.message)
 		return
 	end
+
+	self._viewerMode = mode
+	Settings.data.viewerMode = mode -- Synchronize. Saving might behave funky with multiple views open.
 
 	local userIds, metadata = self:_getKeyInfo()
 	self:_setViewer(valueResult.value, userIds, metadata, self._viewer.isDirty)

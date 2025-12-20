@@ -123,7 +123,7 @@ local function testEncodesReadable(name: string, value: json5.Json, expected: st
 	assert(options, "???")
 	options.encodeOptions = {
 		mode = "readable",
-		tabSize = 2,
+		tab = "  ",
 	}
 
 	testEncodes(name, value, expected, options)
@@ -161,9 +161,9 @@ function testDecodes(name: string, source: string, expected: json5.Json, options
 		if not equals(result.json, expected) then
 			reportError(`TEST {name} DECODE FAIL: not equals`)
 			reportInfo(
-				`GOT:{json5.encode(result.json, { mode = "readable", tabSize = 2 })}\nEXPECTED:{json5.encode(
+				`GOT:{json5.encode(result.json, { mode = "readable", tab = "  " })}\nEXPECTED:{json5.encode(
 					expected,
-					{ mode = "readable", tabSize = 2 }
+					{ mode = "readable", tab = "  " }
 				)}`
 			)
 			failed += 1
@@ -171,9 +171,9 @@ function testDecodes(name: string, source: string, expected: json5.Json, options
 			if result.isArray ~= options.shouldBeArray then
 				reportError(`TEST {name} DECODE FAIL: not array`)
 				reportInfo(
-					`GOT:{json5.encode(result.json, { mode = "readable", tabSize = 2 })}\nEXPECTED:{json5.encode(
+					`GOT:{json5.encode(result.json, { mode = "readable", tab = "  " })}\nEXPECTED:{json5.encode(
 						expected,
-						{ mode = "readable", tabSize = 2 }
+						{ mode = "readable", tab = "  " }
 					)}`
 				)
 				failed += 1

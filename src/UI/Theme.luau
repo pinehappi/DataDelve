@@ -49,6 +49,7 @@ local defaultIcons = {
 	error = "rbxassetid://18829614103",
 	warn = "rbxassetid://18829786614",
 	success = "rbxassetid://18829818279",
+	check = "rbxassetid://17650916717",
 	datastore = "rbxassetid://17650834077",
 	orderedDatastore = "rbxassetid://18467184552",
 	allScopesDatastore = "rbxassetid://18807231111",

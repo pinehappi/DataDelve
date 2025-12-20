@@ -57,6 +57,9 @@ export type DecodeOptions = {
 
 	-- Default false. Whether or not to collect the tokens in the result.
 	collectTokens: boolean?,
+
+	-- Default true.
+	doesRecover: boolean?,
 }
 
 export type DecodeError =
@@ -79,7 +82,7 @@ export type CompactOptions = {
 }
 export type ReadableOptions = {
 	mode: "readable",
-	tabSize: number,
+	tab: string,
 }
 
 -- == Implementation ==
@@ -926,6 +929,10 @@ local function decode(source: string, options: DecodeOptions?): DecodeResult
 					})
 				end
 
+				if options.doesRecover == false then
+					break
+				end
+
 				-- Find good spot to recover
 				if not expectedEnd then
 					openingTokens = {}
@@ -1015,7 +1022,7 @@ end
 local encodeInternal: (builder: { string }, value: Json, depth: number, EncodeOptions) -> ()
 
 local function tabs(depth: number, options: EncodeOptions)
-	return string.rep(" ", depth * (options :: ReadableOptions).tabSize)
+	return string.rep((options :: any).tab, depth)
 end
 
 local function encodeObject(builder: { string }, object: Object, depth: number, options: EncodeOptions)
