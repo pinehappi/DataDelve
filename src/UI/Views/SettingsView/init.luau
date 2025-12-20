@@ -1,5 +1,9 @@
 --!strict
 
+local SelectionService = game:GetService("Selection")
+local ServerScriptService = game:GetService("ServerScriptService")
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
+
 local rfmt = require(script.Parent.Parent.Parent.rfmt)
 
 local StyleState = script.Parent.Parent.StyleState
@@ -156,6 +160,7 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 			useAlternatingKeysSwitch = SwitchStyleState.from(theme, frame.Content.UseAlternatingKeyColors.Switch, {
 				default = Settings.get("useAlternatingKeyColors"),
 			}),
+			cloneButton = ButtonStyleState.from(theme, frame.Content.ClonePlugin.Button),
 
 			settingLabels = settingLabels,
 			separators = SeparatorStyleState.fromDescendants(theme, frame),
@@ -236,6 +241,25 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 
 	self.styleStates.clickToOpenSwitch.toggled:Connect(function(value)
 		Settings.set("clickToOpen", value)
+	end)
+
+	self.styleStates.cloneButton.button.Activated:Connect(function()
+		local folder = script
+		repeat
+			folder = folder.Parent
+		until folder == nil or folder.Name:match("DataDelve")
+
+		local recordingId = ChangeHistoryService:TryBeginRecording("Clone DataDelve")
+		if not recordingId then
+			return
+		end
+
+		local clone = folder:Clone()
+		clone.Parent = ServerScriptService
+
+		SelectionService:Set({ clone })
+
+		ChangeHistoryService:FinishRecording(recordingId, Enum.FinishRecordingOperation.Commit)
 	end)
 
 	return self
