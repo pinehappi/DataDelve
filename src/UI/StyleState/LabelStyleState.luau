@@ -6,6 +6,7 @@ LabelStyleState.__index = LabelStyleState
 
 export type LabelStyleStateFromOptions = {
 	style: "text" | "error" | nil,
+	emphasis: "normal" | "light" | nil,
 }
 function LabelStyleState.from(theme, label: GuiLabel, options: LabelStyleStateFromOptions?)
 	options = options or {}
@@ -15,6 +16,7 @@ function LabelStyleState.from(theme, label: GuiLabel, options: LabelStyleStateFr
 		label = label,
 		theme = theme,
 		style = options.style or "text",
+		emphasis = options.emphasis or "normal",
 
 		overridenColor = nil :: Color3?,
 	}, LabelStyleState)
@@ -45,8 +47,12 @@ function LabelStyleState:update(speed: StyleStateHelper.TransitionSpeed)
 	local color = self.overridenColor
 		or self.theme.colors[if self.style == "text" then "text" elseif self.style == "error" then "error" else "text"]
 
+	local property2 = if self.label:IsA("ImageLabel") then "ImageTransparency" else "TextTransparency"
+	local transparency = if self.emphasis == "normal" then 0 else 0.1
+
 	StyleStateHelper.tween(self.label, tweenInfo, {
 		[property] = color,
+		[property2] = transparency,
 	})
 end
 

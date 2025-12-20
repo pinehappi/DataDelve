@@ -107,11 +107,17 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 
 	local settingLabels = {}
 	for _, child in frame.Content:GetChildren() do
-		local label = child:FindFirstChild("Title")
-		if label then
-			settingLabels[child.Name .. "Label"] = LabelStyleState.from(theme, label)
+		local title = child:FindFirstChild("Title")
+		if title then
+			settingLabels[child.Name .. "Title"] = LabelStyleState.from(theme, title)
 		elseif child:IsA("TextLabel") then
 			settingLabels[child.Name] = LabelStyleState.from(theme, child)
+		end
+
+		local description = child:FindFirstChild("Description")
+		if description then
+			settingLabels[child.Name .. "Description"] =
+				LabelStyleState.from(theme, description, { emphasis = "light" })
 		end
 	end
 
@@ -161,48 +167,6 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 	}, SettingsView)
 
 	self:loadFrom(Settings.data)
-
-	-- Tooltips
-
-	--[[ disable these for now since they don't work well
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.HideGameName,
-		"Whether to show the game name in the breadcrumbs. This is useful if you have a long game name."
-	)
-
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.UseAlternatingKeyColors,
-		"Turn this on to have key and index names alternate colors based on their depth in the tree."
-	)
-
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.AllScopes,
-		`When this is turned on, keys will be accessed as {rfmt.code("scope/key")}. The default scope is {rfmt.code(
-			"global"
-		)}.`
-	)
-
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.ListDeletedKeys,
-		`Whether deleted keys should appear when you are listing keys for a DataStore. Note that there is no way to tell if a key is deleted without first loading it.`
-	)
-
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.AutomaticallyList,
-		`When this is enabled, items will be listed automatically without you having to press the {rfmt.code("List")} button, if possible.`
-	)
-
-	bindSettingTooltip(
-		self.theme,
-		self.frame.Content.ClickToOpen,
-		`Whether clicking a branch should open it in the tree viewer.`
-	)
-	]]
 
 	-- Events
 
