@@ -8,10 +8,16 @@ local json5 = require(script.Parent.Parent.Parent.json5)
 local JSONHelper = require(script.Parent.Parent.Parent.JSONHelper)
 
 local Types = require(script.Parent.Types)
+local EditorTypes = require(script.Types)
 
 local CodeEditor = require(script.CodeEditor)
+local DumbEditor = require(script.DumbEditor)
 
 local getHighlightColors = require(script.Parent.Parent.Utilities.getHighlightColors)
+
+-- after this many characters, switch from the CodeEditor to the DumbEditor
+local CODE_EDITOR_CUTOFF = 20_000
+local MAX_TEXTBOX_CHARACTERS = 200_000
 
 export type CodeViewerFields = {
 	isHistoryCapable: false,
@@ -26,9 +32,10 @@ export type CodeViewerFields = {
 	idLookedUp: RBXScriptSignal,
 
 	_container: typeof(script.Container),
-	_editor: CodeEditor.CodeEditor,
+	_editor: EditorTypes.TextEditorObject?,
 	_theme: Theme.Theme,
 	_connections: { RBXScriptConnection },
+	_cachedData: unknown,
 }
 
 export type CodeViewerImplementation = {
@@ -40,6 +47,7 @@ export type CodeViewerImplementation = {
 	undirty: (CodeViewer) -> (),
 
 	_updateTheme: (CodeViewer) -> (),
+	_updateTextEditorFrom: (CodeViewer, data: unknown) -> (),
 
 	destroy: (CodeViewer) -> (),
 }
@@ -49,7 +57,7 @@ type CodeViewer = typeof(setmetatable({} :: CodeViewerFields, {} :: CodeViewerIm
 local CodeViewer: CodeViewerImplementation = {} :: CodeViewerImplementation
 CodeViewer.__index = CodeViewer
 
-local function getCodeEditorTheme(theme: Theme.Theme): CodeEditor.Theme
+local function getCodeEditorTheme(theme: Theme.Theme): EditorTypes.Theme
 	local highlightColors = getHighlightColors(theme)
 	local tokenColors = {}
 
@@ -92,15 +100,6 @@ function CodeViewer.new(
 	self._container = script.Container:Clone()
 	self._container.Parent = container
 
-	self._editor = CodeEditor.new({
-		doLex = function(source: string)
-			return json5.lex(source, {
-				mode = "strict",
-			}) :: any
-		end,
-		theme = getCodeEditorTheme(theme),
-	})
-
 	-- events
 	self._dirtyChanged = Instance.new("BindableEvent")
 	self.dirtyChanged = self._dirtyChanged.Event :: any
@@ -121,76 +120,18 @@ function CodeViewer.new(
 		end),
 	}
 
-	-- setup the editor
-	local lastTextChange = 0
-	local analysisThread: thread?
-	self._editor.textChanged:Connect(function()
-		lastTextChange = os.clock()
-		if not analysisThread then
-			analysisThread = task.spawn(function()
-				while os.clock() - lastTextChange <= 1 do
-					task.wait()
-				end
-
-				local result = json5.decode(self._editor:getText(), {
-					mode = "permissive",
-				})
-
-				local errors = {}
-				if result.kind == "failure" then
-					for _, err in result.errors do
-						if err.token then
-							table.insert(errors, {
-								line = err.token.startLine,
-								column = err.token.startColumn,
-								message = err.message,
-							})
-						else
-							table.insert(
-								errors,
-								{
-									message = err.message,
-								} :: any
-							)
-						end
-					end
-				end
-
-				self._editor:setErrors(errors)
-				analysisThread = nil
-			end)
-		end
-	end)
-
-	self._editor.activeErrorsChanged:Connect(function(errors: { CodeEditor.Error })
-		if #errors == 0 then
-			self._container.Error.Visible = false
-		else
-			local text = {}
-			for _, err in errors do
-				if err.line then
-					table.insert(text, `[line {err.line} col {err.column}] {err.message}`)
-				else
-					table.insert(text, err.message)
-				end
-			end
-			self._container.Error.Visible = true
-			self._container.Error.TextLabel.Text = table.concat(text, " and ")
-		end
-	end)
-
-	self._editor:setText(json5.encode(options.data, {
-		mode = "readable",
-		tabSize = 2,
-	}))
-
 	self:_updateTheme()
-	self._editor:setParent(self._container.EditorContainer)
+
+	self:_updateTextEditorFrom(options.data)
 
 	return self
 end
 
 function CodeViewer:getValue()
+	if not self._editor then
+		return { kind = "success", value = self._cachedData, hasNil = false }
+	end
+
 	local text = self._editor:getText()
 	local result = json5.decode(text, {
 		mode = "permissive",
@@ -211,7 +152,9 @@ function CodeViewer:getValue()
 end
 
 function CodeViewer:setDisabled(disabled: boolean)
-	self._editor:setDisabled(disabled)
+	if self._editor then
+		self._editor:setDisabled(disabled)
+	end
 end
 
 function CodeViewer:undirty()
@@ -219,7 +162,10 @@ function CodeViewer:undirty()
 end
 
 function CodeViewer:_updateTheme()
-	self._editor:setTheme(getCodeEditorTheme(self._theme))
+	if self._editor then
+		self._editor:setTheme(getCodeEditorTheme(self._theme))
+	end
+
 	self._container.Error.BackgroundColor3 = self._theme.colors.message.background
 	self._container.Error.UIStroke.Color = self._theme.colors.message.outline
 	self._container.Error.TextLabel.TextColor3 = self._theme.colors.message.text
@@ -227,13 +173,138 @@ function CodeViewer:_updateTheme()
 	self._container.Error.ImageLabel.Image = self._theme.icons.error
 end
 
+function CodeViewer:_updateTextEditorFrom(data: unknown)
+	if self._editor then
+		self._editor:destroy()
+	end
+
+	local editorTheme = getCodeEditorTheme(self._theme)
+	local text: string
+	local success, err = pcall(function()
+		self._cachedData = data
+		text = json5.encode(data :: any, {
+			mode = "readable",
+			tabSize = 2,
+		})
+	end)
+
+	self._container.Error.Visible = false
+	self._container.Error.Size = UDim2.fromScale(1, 0)
+	self._container.Error.AutomaticSize = Enum.AutomaticSize.Y
+	self._container.EditorContainer.Visible = true
+
+	local isTooLarge = text and #text > MAX_TEXTBOX_CHARACTERS
+	if (not success) or isTooLarge then
+		self._container.Error.Visible = true
+		self._container.Error.Size = UDim2.fromScale(1, 1)
+		self._container.Error.AutomaticSize = Enum.AutomaticSize.None
+		self._container.EditorContainer.Visible = false
+
+		self._container.Error.TextLabel.Text = if isTooLarge
+			then "Data is too large. Use the tree viewer."
+			elseif
+				typeof(err) == "string" and err:match("unexpected type: buffer")
+			then "Buffers are not supported. Use the tree viewer."
+			else `There was an error. Try using the tree viewer. Error: {err}`
+
+		self._editor = nil
+	elseif #text > CODE_EDITOR_CUTOFF then
+		local editor = DumbEditor({
+			theme = editorTheme,
+		})
+
+		editor:setText(text)
+
+		self._container.Error.Visible = true
+		self._container.Error.TextLabel.Text = "Editor features disabled due to large size of data."
+
+		self._editor = editor
+	else
+		local editor = CodeEditor({
+			doLex = function(source: string)
+				return json5.lex(source, {
+					mode = "strict",
+				}) :: any
+			end,
+			theme = editorTheme,
+		})
+
+		local lastTextChange = 0
+		local analysisThread: thread?
+		editor.textChanged:Connect(function()
+			lastTextChange = os.clock()
+			if not analysisThread then
+				analysisThread = task.spawn(function()
+					while os.clock() - lastTextChange <= 1 do
+						task.wait()
+					end
+
+					local result = json5.decode(editor:getText(), {
+						mode = "permissive",
+					})
+
+					local errors = {}
+					if result.kind == "failure" then
+						for _, err in result.errors do
+							if err.token then
+								table.insert(errors, {
+									line = err.token.startLine,
+									column = err.token.startColumn,
+									message = err.message or (err.token :: json5.ErrorToken).message,
+								})
+							else
+								table.insert(
+									errors,
+									{
+										message = err.message,
+									} :: any
+								)
+							end
+						end
+					end
+
+					editor:setErrors(errors)
+					analysisThread = nil
+				end)
+			end
+		end)
+
+		editor.activeErrorsChanged:Connect(function(errors: { EditorTypes.Error })
+			if #errors == 0 then
+				self._container.Error.Visible = false
+			else
+				local text = {}
+				for _, err in errors do
+					if err.line then
+						table.insert(text, `[line {err.line} col {err.column}] {err.message}`)
+					else
+						table.insert(text, err.message)
+					end
+				end
+				self._container.Error.Visible = true
+				self._container.Error.TextLabel.Text = table.concat(text, " and ")
+			end
+		end)
+
+		editor:setText(text)
+
+		self._editor = editor
+	end
+
+	if self._editor then
+		self._editor:setParent(self._container.EditorContainer)
+	end
+end
+
 function CodeViewer:destroy()
 	for _, connection in self._connections do
 		connection:Disconnect()
 	end
 
-	self._editor:destroy()
-	self._editor = nil :: any
+	if self._editor then
+		self._editor:destroy()
+		self._editor = nil
+	end
 
 	self._container:Destroy()
 

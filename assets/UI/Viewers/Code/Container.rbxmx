@@ -465,7 +465,7 @@
           <G>1</G>
           <B>1</B>
         </Color3>
-        <float name="BackgroundTransparency">0</float>
+        <float name="BackgroundTransparency">1</float>
         <Color3 name="BorderColor3">
           <R>0</R>
           <G>0</G>

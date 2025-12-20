@@ -646,6 +646,15 @@ testEncodesReadable(
 testEncodesReadable("encodes short arrays on one line", { 1, 2, 3, 4, 5, 6 }, "[1, 2, 3, 4, 5, 6]", {
 	assertOneline = true,
 })
+testEncodesReadable("encodes short arrays on one line 2", { 1 }, "[1]", {
+	assertOneline = true,
+})
+testEncodesReadable("encodes short arrays on one line 3", { "hey" }, '["hey"]', {
+	assertOneline = true,
+})
+testEncodesReadable("encodes short arrays on one line 4", { true }, "[true]", {
+	assertOneline = true,
+})
 testEncodesReadable("encodes empty objects on one line", {}, "{}", {
 	assertOneline = true,
 })

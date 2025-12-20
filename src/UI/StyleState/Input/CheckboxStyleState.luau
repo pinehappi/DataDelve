@@ -70,9 +70,12 @@ function CheckboxStyleState.from(
 	self.checkbox.Check.Visible = self.value
 
 	if options.inputPair then
-		self._inputPairClickedConnection = options.inputPair.Activated:Connect(function()
-			self:setValue(not self.value)
-		end)
+		table.insert(
+			self._connections,
+			options.inputPair.Activated:Connect(function()
+				self:setValue(not self.value)
+			end)
+		)
 	end
 
 	self:update("instant")
@@ -112,19 +115,13 @@ function CheckboxStyleState:setValue(value)
 end
 
 function CheckboxStyleState:destroy(completely: boolean)
-	self.buttonStyleState:destroy(completely)
-
 	for _, connection in self._connections do
 		connection:Disconnect()
 	end
 
-	if self._inputPairClickedConnection then
-		self._inputPairClickedConnection:Disconnect()
-	end
-
 	self._toggled:Destroy()
 	if completely then
-		-- it will be destroyed by the button style state
+		self.checkbox:Destroy()
 	end
 end
 

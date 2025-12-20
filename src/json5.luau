@@ -1098,6 +1098,10 @@ local function encodeArray(builder: { string }, array: Array, depth: number, opt
 				end
 			end
 
+			if (not probablyShort) and (#array == 1) and (typeof(array[1]) == "string") then
+				probablyShort = true
+			end
+
 			if probablyShort then
 				table.insert(builder, "[")
 
