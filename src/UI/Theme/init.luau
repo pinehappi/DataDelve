@@ -341,7 +341,7 @@ function Theme.generatePreset(preset: string, accent: string)
 				number = Color3.fromRGB(241, 190, 36),
 				string = Color3.fromRGB(78, 199, 243),
 				null = Color3.fromRGB(243, 243, 243),
-				buffer = Color3.fromRGB(223, 99, 28),
+				buffer = Color3.fromRGB(15, 200, 154),
 			},
 		}
 		colors.button.input = {
@@ -495,7 +495,7 @@ function Theme.generatePreset(preset: string, accent: string)
 				number = Color3.fromRGB(147, 116, 22),
 				string = Color3.fromRGB(44, 113, 138),
 				null = Color3.fromRGB(29, 29, 29),
-				buffer = Color3.fromRGB(157, 83, 18),
+				buffer = Color3.fromRGB(30, 157, 115),
 			},
 		}
 		colors.button.input = {
@@ -866,7 +866,7 @@ function Theme.generatePreset(preset: string, accent: string)
 					number = Color3.fromRGB(255, 198, 0),
 					string = Color3.fromRGB(173, 241, 149),
 					null = Color3.fromRGB(204, 204, 204),
-					buffer = Color3.fromRGB(253, 160, 129),
+					buffer = Color3.fromRGB(86, 214, 188),
 				}
 				else {
 					root = Color3.fromRGB(0, 0, 127),
@@ -881,7 +881,7 @@ function Theme.generatePreset(preset: string, accent: string)
 					number = Color3.fromRGB(0, 127, 127),
 					string = Color3.fromRGB(127, 0, 127),
 					null = Color3.fromRGB(127, 127, 0),
-					buffer = Color3.fromRGB(127, 63, 0),
+					buffer = Color3.fromRGB(19, 127, 100),
 				},
 		}
 	else
