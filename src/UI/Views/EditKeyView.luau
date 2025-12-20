@@ -1032,8 +1032,7 @@ function EditKeyView:_promptSwitchingError(errMessage)
 
 	repeat
 		task.wait()
-	until shouldContinue ~= nil
-;
+	until shouldContinue ~= nil;
 	(popup :: any):destroy(true)
 	modal:destroy()
 
