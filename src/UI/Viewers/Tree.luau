@@ -47,7 +47,7 @@ local promptKeyValueForm = require(Utilities.promptKeyValueForm)
 local getHighlightColors = require(Utilities.getHighlightColors)
 local lockObjectWithoutResize = require(Utilities.lockObjectWithoutResize)
 local checkTrulyVisible = require(Utilities.checkTrulyVisible)
-local shortStringFromBuffer = require(Utilities.shortStringFromBuffer)
+local byteLengthToReadableString = require(Utilities.byteLengthToReadableString)
 local showShadowOnScroll = require(Utilities.showShadowOnScroll)
 
 local SIZE_PER_BRANCH = script.Branch.AbsoluteSize.Y
@@ -1997,7 +1997,7 @@ function Tree:_updateBranchFrame(frame, branch, index)
 			frame.Value.Text = tostring(value)
 			frame.Value.TextColor3 = colors.boolean
 		elseif typeof(value) == "buffer" then
-			frame.Value.Text = shortStringFromBuffer(value)
+			frame.Value.Text = `<buffer {byteLengthToReadableString(buffer.len(value))}>`
 			frame.Value.TextColor3 = colors.buffer
 		elseif typeof(value) == "nil" then
 			frame.Value.Text = "null"
@@ -2243,7 +2243,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 				autoFollowTheme = false,
 			})
 			wrapper.styleStates.value = styleState
-			frame.BufferLabel.Text = shortStringFromBuffer(defaultValues["buffer"])
+			frame.BufferLabel.Text = byteLengthToReadableString(buffer.len(defaultValues["buffer"]))
 			frame.Parent = editFrame.Form.Value
 
 			frame.Link.Activated:Connect(function()
@@ -2286,7 +2286,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 					local copy = bufferWidget:getFreshBuffer()
 					lastValue = copy
 					defaultValues["buffer"] = lastValue
-					frame.BufferLabel.Text = shortStringFromBuffer(lastValue)
+					frame.BufferLabel.Text = byteLengthToReadableString(buffer.len(lastValue))
 				end
 
 				modal:destroy(true)

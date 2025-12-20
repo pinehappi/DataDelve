@@ -159,7 +159,7 @@ export type HexEditorImplementation = {
 
 	-- Cursor stuff
 	_cycleCursorMode: (HexEditor) -> (),
-	_setCursorState: (HexEditor, offset: number?, view: CursorView, mode: CursorMode?) -> (),
+	_setCursorState: (HexEditor, offset: number?, view: CursorView, mode: CursorMode?, isInactive: boolean?) -> (),
 	_incrementCursor: (HexEditor, amount: number?) -> (),
 
 	-- Edits
@@ -269,7 +269,7 @@ export type HexEditorFields = {
 	_undoList: { Action },
 	_undoPosition: number,
 
-	_cursorState: { offset: number?, view: CursorView?, mode: CursorMode },
+	_cursorState: { offset: number?, view: CursorView?, mode: CursorMode, isInactive: boolean },
 	_selectionAnchor: number?, -- offset
 	_selectionPhase: "mousedown" | "selecting" | nil,
 
@@ -416,7 +416,7 @@ function HexEditor.new(b: buffer, params: HexEditorNewParams, dependencies: HexE
 	self._undoList = {}
 	self._undoPosition = 0
 
-	self._cursorState = { offset = nil, view = nil, mode = "replace" }
+	self._cursorState = { offset = nil, view = nil, mode = "replace", isInactive = false }
 	self._selectionAnchor = nil
 	self._selectionPhase = nil
 
@@ -650,7 +650,7 @@ function HexEditor:_setTheme(theme)
 	end
 end
 
-function HexEditor:_setCursorState(offset, view, mode)
+function HexEditor:_setCursorState(offset, view, mode, isInactive)
 	if self:_isTyping() then
 		self:_finishTyping()
 	end
@@ -672,13 +672,18 @@ function HexEditor:_setCursorState(offset, view, mode)
 		if not self._cursor then
 			self:_buildCursor()
 		end
-		if not self._hiddenTextBox then
+		if self._cursorState.isInactive then
+			self:_destroyHiddenTextBox()
+		elseif not self._hiddenTextBox then
 			self:_createHiddenTextBox()
 		end
 
-		self._cursorState = { offset = offset, view = view, mode = mode or self._cursorState.mode } :: any
-
-		self:_updateCursorPosition()
+		self._cursorState = {
+			offset = offset,
+			view = view,
+			mode = mode or self._cursorState.mode,
+			isInactive = if isInactive ~= nil then isInactive else false,
+		} :: any
 
 		-- Make sure cursor always in view
 		local scrollingFrame = self.scrollingFrame
@@ -702,6 +707,7 @@ function HexEditor:_setCursorState(offset, view, mode)
 		self:_updateRowStyle(offset // self._layout.columns)
 
 		self:_updateCursorStyle()
+		self:_updateCursorPosition()
 
 		local header = self._header
 		if header then
@@ -951,7 +957,7 @@ function HexEditor:_createHiddenTextBox()
 			then
 				resetText()
 			else
-				self:_setCursorState(nil, self._cursorState.view :: CursorView)
+				self:_setCursorState(self._cursorState.offset, self._cursorState.view :: CursorView, nil, true)
 			end
 		end
 	end)
@@ -981,6 +987,10 @@ end
 function HexEditor:_typeCharacter(character: string)
 	assert(#character == 1)
 	assert(self._cursorState.offset)
+
+	if self._cursorState.isInactive then
+		return
+	end
 
 	self:_clearSelection()
 
@@ -1719,7 +1729,11 @@ function HexEditor:_updateCell(offset)
 							)
 						then
 							if self._selectionPhase == "mousedown" then
-								if previousState.offset == offset and self._cursorState.view == view then
+								if
+									previousState.offset == offset
+									and self._cursorState.view == view
+									and not previousState.isInactive
+								then
 									self:_cycleCursorMode()
 								end
 								self._selectionPhase = nil
@@ -1910,6 +1924,8 @@ function HexEditor:_updateCursorStyle(mode, state)
 			cursor.BackgroundColor3 = self._theme.cell.cursor
 		end
 
+		cursor.Visible = not self._cursorState.isInactive
+
 		if mode == "insert" then
 			if self._cursorState.view == "hex" then
 				cursor.Size = UDim2.fromOffset(2, self._cellHeight)
@@ -1966,7 +1982,7 @@ function HexEditor:_buildCursor()
 			if self._inModal then
 				cursor.Visible = false
 			else
-				cursor.Visible = not cursor.Visible
+				cursor.Visible = (not self._cursorState.isInactive) and not cursor.Visible
 			end
 		end
 	end)
