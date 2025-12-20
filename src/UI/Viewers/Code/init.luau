@@ -261,6 +261,8 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 	self._container.Error.Visible = false
 	self._container.Error.Size = UDim2.fromScale(1, 0)
 	self._container.Error.AutomaticSize = Enum.AutomaticSize.Y
+	self._container.Error.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	self._container.Error.TextLabel.UIFlexItem.FlexMode = Enum.UIFlexMode.Fill
 	self._container.EditorContainer.Visible = true
 
 	local isTooLarge = text and #text > MAX_TEXTBOX_CHARACTERS
@@ -268,14 +270,16 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 		self._container.Error.Visible = true
 		self._container.Error.Size = UDim2.fromScale(1, 1)
 		self._container.Error.AutomaticSize = Enum.AutomaticSize.None
+		self._container.Error.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		self._container.Error.TextLabel.UIFlexItem.FlexMode = Enum.UIFlexMode.None
 		self._container.EditorContainer.Visible = false
 
 		self._container.Error.TextLabel.Text = if isTooLarge
-			then "Data is too large. Use the tree viewer."
+			then "Data is too large. Use the tree view mode."
 			elseif
 				typeof(err) == "string" and err:match("unexpected type buffer")
-			then "Buffers are not supported. Use the tree viewer."
-			else `There was an error. Try using the tree viewer. Error: {err}`
+			then "Buffers are not supported. Use the tree view mode."
+			else `There was an error. Try using the tree view mode. Error: {err}`
 
 		self._editor = nil
 	elseif #text > CODE_EDITOR_CUTOFF then

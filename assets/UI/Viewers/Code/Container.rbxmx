@@ -304,7 +304,7 @@
           </Vector2>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <bool name="AutoLocalize">true</bool>
-          <token name="AutomaticSize">2</token>
+          <token name="AutomaticSize">3</token>
           <Color3 name="BackgroundColor3">
             <R>1</R>
             <G>1</G>
@@ -361,7 +361,7 @@
           <Ref name="SelectionImageObject">null</Ref>
           <int name="SelectionOrder">0</int>
           <UDim2 name="Size">
-            <XS>1</XS>
+            <XS>0</XS>
             <XO>0</XO>
             <YS>0</YS>
             <YO>0</YO>

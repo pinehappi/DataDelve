@@ -729,62 +729,37 @@ function Theme.generatePreset(preset: string, accent: string)
 				},
 
 			floatingAction = {
-				background = StudioTheme:GetColor(
-					Enum.StudioStyleGuideColor.Button,
-					Enum.StudioStyleGuideModifier.Default
-				),
-				outline = StudioTheme
-					:GetColor(Enum.StudioStyleGuideColor.MainBackground, Enum.StudioStyleGuideModifier.Default)
+				background = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Button),
+				outline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground)
 					:Lerp(Color3.new(0, 0, 0), if isDark then 0 else 0.15),
 			},
 
-			error = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ErrorText, Enum.StudioStyleGuideModifier.Default),
-			warn = StudioTheme:GetColor(Enum.StudioStyleGuideColor.WarningText, Enum.StudioStyleGuideModifier.Default),
+			error = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ErrorText),
+			warn = StudioTheme:GetColor(Enum.StudioStyleGuideColor.WarningText),
 			success = accentColor,
 
-			text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText, Enum.StudioStyleGuideModifier.Default),
-			disabledText = StudioTheme:GetColor(
-				Enum.StudioStyleGuideColor.DimmedText,
-				Enum.StudioStyleGuideModifier.Default
-			),
+			text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
+			disabledText = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DimmedText),
 
-			headerBackground = StudioTheme:GetColor(
-				Enum.StudioStyleGuideColor.Titlebar,
-				Enum.StudioStyleGuideModifier.Default
-			),
+			headerBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
 
-			background = StudioTheme:GetColor(
-				Enum.StudioStyleGuideColor.MainBackground,
-				Enum.StudioStyleGuideModifier.Default
-			),
-			backgroundOutline = StudioTheme:GetColor(
-				Enum.StudioStyleGuideColor.MainBackground,
-				Enum.StudioStyleGuideModifier.Default
-			),
+			background = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
+			backgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
 
-			popupBackground = StudioTheme:GetColor(
-				Enum.StudioStyleGuideColor.MainBackground,
-				Enum.StudioStyleGuideModifier.Default
-			),
-			popupBackgroundOutline = StudioTheme:GetColor(
-				Enum.StudioStyleGuideColor.MainBackground,
-				Enum.StudioStyleGuideModifier.Default
-			):Lerp(Color3.new(0, 0, 0), if isDark then 0.3 else 0.12),
+			popupBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
+			popupBackgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground)
+				:Lerp(Color3.new(0, 0, 0), if isDark then 0.3 else 0.12),
 
 			scrollbar = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DimmedText),
 
 			scrimTransparency = 0.6,
 
-			imageBackground = StudioTheme:GetColor(
-				Enum.StudioStyleGuideColor.ViewPortBackground,
-				Enum.StudioStyleGuideModifier.Default
-			),
-			imageBackgroundOutline = StudioTheme:GetColor(
-				Enum.StudioStyleGuideColor.ViewPortBackground,
-				Enum.StudioStyleGuideModifier.Default
-			),
+			imageBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ViewPortBackground),
+			imageBackgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ViewPortBackground),
 
-			separator = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Border, Enum.StudioStyleGuideModifier.Default),
+			separator = if isDark and not isOld
+				then Color3.fromRGB(37, 40, 45)
+				else StudioTheme:GetColor(Enum.StudioStyleGuideColor.Separator),
 
 			mainAccent = accentColor,
 
