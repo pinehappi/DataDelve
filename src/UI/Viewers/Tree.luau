@@ -96,9 +96,12 @@ local FLAGS = {
 function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOptions)
 	-- setup instances
 	local frame = script.TreeScrollingFrame:Clone()
+	local branchContainer = script.BranchContainer:Clone()
 	local shadow = script.Shadow:Clone()
+	branchContainer.Size = UDim2.new(1, -frame.ScrollBarThickness, 1, 0)
 
 	frame.Parent = container
+	branchContainer.Parent = container
 	shadow.Parent = container
 
 	-- setup object
@@ -106,6 +109,7 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 		theme = theme,
 		uiMessages = uiMessages,
 		frame = frame,
+		branchContainer = branchContainer,
 		shadow = shadow,
 		gui = frame:FindFirstAncestorWhichIsA("PluginGui"),
 
@@ -133,10 +137,6 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 		_frameConnections = {},
 
 		_maxKeyWidth = math.max(101, frame.AbsoluteSize.X * 0.5),
-
-		-- Overflow predictively based on scroll speed to render branches that will appear
-		_overflowOffset = 0,
-		_overflowDirection = false, -- False is up (negative), true is down (positive)
 
 		-- Bars to help see hierarchy.
 		_hierarchyBarFolder = Instance.new("Folder", frame),
@@ -178,24 +178,9 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 	self:_updateBranchVisible(rootIndex)
 	self:_redrawBranches()
 
-	local lastCanvasPosition = self.frame.CanvasPosition.Y
 	local lastAbsoluteSizeUpdate = 0
 	self._connections = {
 		self.frame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-			local delta = self.frame.CanvasPosition.Y - lastCanvasPosition
-			if math.abs(delta) < 300 then -- Overflow orks better when scrolling with wheel (smoother), rather than jumping around wiht scroll bar
-				if delta > 0 then
-					self._overflowOffset = math.abs(delta)
-					self._overflowDirection = true
-				else
-					self._overflowOffset = math.abs(delta)
-					self._overflowDirection = false
-				end
-			else
-				self._overflowOffset = 0
-			end
-			lastCanvasPosition = self.frame.CanvasPosition.Y
-
 			self:_redrawBranches()
 		end),
 		self.frame:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(function()
@@ -3538,12 +3523,6 @@ function Tree:_redrawBranches()
 	local startOffset = SIZE_PER_BRANCH * math.floor(self.frame.CanvasPosition.Y / SIZE_PER_BRANCH)
 	local branchesToRender = math.ceil(self.frame.AbsoluteWindowSize.Y / SIZE_PER_BRANCH) + 1
 
-	if not self._overflowDirection then
-		startOffset = math.max(0, startOffset - (SIZE_PER_BRANCH * math.floor(self._overflowOffset / SIZE_PER_BRANCH)))
-	end
-	-- Always increase branchesToRender because for upwards overflow, it will need to render more to fill the frame
-	branchesToRender += math.floor(self._overflowOffset / SIZE_PER_BRANCH)
-
 	-- Stuff to adjust for selecting branch being bigger
 	if self._selectingBranchVisibleIndex then
 		-- Keep the selecting frame visible when its going to go out of frame
@@ -3556,7 +3535,7 @@ function Tree:_redrawBranches()
 				startOffset - SIZE_PER_BRANCH * (self._selectingBranchVisibleIndex - 1)
 			)
 			startOffset -= distanceFromSelectingBranch
-			self.frame.UIPadding.PaddingTop = UDim.new(0, startOffset)
+			self.branchContainer.UIPadding.PaddingTop = UDim.new(0, startOffset - self.frame.CanvasPosition.Y)
 			-- Simulate the offset as if the selecting branch were rendered when it goes out of frame
 		elseif self.frame.CanvasPosition.Y > selectingBranchTop then
 			startOffset = SIZE_PER_BRANCH
@@ -3564,12 +3543,13 @@ function Tree:_redrawBranches()
 					math.floor((self.frame.CanvasPosition.Y - selectingBranchTop) / SIZE_PER_BRANCH)
 					+ self._selectingBranchVisibleIndex
 				)
-			self.frame.UIPadding.PaddingTop = UDim.new(0, startOffset + self._selectingBranchOffset)
+			self.branchContainer.UIPadding.PaddingTop =
+				UDim.new(0, startOffset - self.frame.CanvasPosition.Y + self._selectingBranchOffset)
 		else
-			self.frame.UIPadding.PaddingTop = UDim.new(0, startOffset)
+			self.branchContainer.UIPadding.PaddingTop = UDim.new(0, startOffset - self.frame.CanvasPosition.Y)
 		end
 	else
-		self.frame.UIPadding.PaddingTop = UDim.new(0, startOffset)
+		self.branchContainer.UIPadding.PaddingTop = UDim.new(0, startOffset - self.frame.CanvasPosition.Y)
 	end
 
 	local startVisibleIndex = math.floor(startOffset / SIZE_PER_BRANCH) + 1
@@ -3618,10 +3598,10 @@ function Tree:_redrawBranches()
 			elseif #self._framePool > 0 then
 				frame = table.remove(self._framePool)
 				--frame.Visible = true
-				frame.Parent = self.frame
+				frame.Parent = self.branchContainer
 			else
 				frame = script.Branch:Clone()
-				frame.Parent = self.frame
+				frame.Parent = self.branchContainer
 			end
 			self._frames[i] = frame
 
@@ -4082,6 +4062,7 @@ function Tree:destroy()
 	end
 
 	self.frame:Destroy()
+	self.branchContainer:Destroy()
 	self.shadow:Destroy()
 end
 
