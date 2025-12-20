@@ -1038,11 +1038,24 @@ local function encodeObject(builder: { string }, object: Object, depth: number, 
 
 		table.insert(builder, "}")
 	elseif options.mode == "readable" then
+		if next(object) == nil then
+			table.insert(builder, "{}")
+			return
+		end
+
 		table.insert(builder, "{\n")
 
-		for k, v in object do
+		local keys = {}
+		for k in object do
+			table.insert(keys, k)
+		end
+
+		table.sort(keys)
+
+		for _, k in keys do
+			local v = object[k]
 			table.insert(builder, tabs(depth + 1, options))
-			if k:find(tokenPatterns.identifier :: string) == 1 then
+			if select(2, k:find(tokenPatterns.identifier :: string)) == #k then
 				table.insert(builder, k)
 			else
 				encodeString(builder, k)

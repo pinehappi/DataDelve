@@ -583,6 +583,17 @@ testEncodesReadable(
 }]]
 )
 testEncodesReadable(
+	"encodes object keys in sorted order",
+	{ z = 123, b = 123, a = 123, gh = 123, abc = 123 },
+	[[{
+  a: 123,
+  abc: 123,
+  b: 123,
+  gh: 123,
+  z: 123,
+}]]
+)
+testEncodesReadable(
 	"encodes empty key 2",
 	{ [""] = 5 },
 	[[{
@@ -603,8 +614,39 @@ testEncodesReadable(
   $abc_123$: 5,
 }]]
 )
+testEncodesReadable(
+	"does not escape keys that are identifiers",
+	{ test = 5 },
+	[[{
+  test: 5,
+}]]
+)
+testEncodesReadable(
+	"escapes keys that aren't identifiers",
+	{ ["test::dog"] = "hey" },
+	[[{
+  "test::dog": "hey",
+}]]
+)
+testEncodesReadable(
+	"escapes keys that aren't identifiers 2",
+	{ ["test dog"] = "hey" },
+	[[{
+  "test dog": "hey",
+}]]
+)
+testEncodesReadable(
+	"escapes keys that aren't identifiers 3",
+	{ ["5test"] = "hey" },
+	[[{
+  "5test": "hey",
+}]]
+)
 
 testEncodesReadable("encodes short arrays on one line", { 1, 2, 3, 4, 5, 6 }, "[1, 2, 3, 4, 5, 6]", {
+	assertOneline = true,
+})
+testEncodesReadable("encodes empty objects on one line", {}, "{}", {
 	assertOneline = true,
 })
 testEncodesReadable(
