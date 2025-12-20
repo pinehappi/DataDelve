@@ -195,21 +195,14 @@ function CodeViewer:getValue()
 				message = enhanceErrorMessage(formatError(errors[1])),
 			}
 		else
-			local lineSet = {}
+			local text = {}
 			for _, err in errors do
-				lineSet[err.line] = true
+				table.insert(text, formatError(err))
 			end
-
-			local lines = {}
-			for line in lineSet do
-				table.insert(lines, line)
-			end
-
-			table.sort(lines)
 
 			return {
 				kind = "failure",
-				message = `Errors on lines {table.concat(lines, ", ", 1, #lines - 1)} and {lines[#lines]}`,
+				message = enhanceErrorMessage(table.concat(text, "\n")),
 			}
 		end
 	else
@@ -336,7 +329,7 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 				end
 
 				self._container.Error.Visible = true
-				self._container.Error.TextLabel.Text = enhanceErrorMessage(table.concat(text, " and "))
+				self._container.Error.TextLabel.Text = enhanceErrorMessage(table.concat(text, "\n"))
 			end
 		end)
 

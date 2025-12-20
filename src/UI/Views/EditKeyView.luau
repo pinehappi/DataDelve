@@ -23,6 +23,7 @@ local BackgroundStyleState = require(StyleState.BackgroundStyleState)
 local ButtonStyleState = require(StyleState.ButtonStyleState)
 local LabelStyleState = require(StyleState.LabelStyleState)
 
+local TextBoxStyleState = require(StyleState.Input.TextBoxStyleState)
 local CheckboxStyleState = require(StyleState.Input.CheckboxStyleState)
 local ShortcutsTextBoxStyleState = require(StyleState.Input.ShortcutsTextBoxStyleState)
 
@@ -126,6 +127,7 @@ export type EditKeyViewImplementation = {
 		position: Vector2,
 		isAllScopes: boolean
 	) -> { key: string, shouldDelete: boolean }?,
+	_promptSwitchingError: (EditKeyView, message: string) -> boolean,
 }
 
 export type EditKeyViewFields = {
@@ -154,6 +156,7 @@ export type EditKeyViewFields = {
 	_viewerMode: ViewerTypes.ViewerMode,
 	_viewer: ViewerTypes.Viewer,
 	_versionsView: VersionsView.VersionsView?,
+	_cachedData: unknown,
 
 	_dead: boolean,
 }
@@ -186,6 +189,8 @@ function EditKeyView.from(params)
 	self._viewerMode = Settings.data.viewerMode :: any
 	self._viewer = nil :: any
 	self._versionsView = nil
+
+	self._cachedData = self._session.currentValue
 
 	-- UI
 
@@ -850,7 +855,7 @@ function EditKeyView:_promptDuplicateMoveKey(position, isAllScopes)
 
 	local shouldSubmit = resultEvent.Event:Wait()
 
-	do -- Wrap indo because of ambiguity with the cast
+	do -- Wrap in do because of ambiguity with the cast
 		(popup :: any):destroy(true)
 		modal:destroy()
 	end
@@ -865,6 +870,61 @@ function EditKeyView:_promptDuplicateMoveKey(position, isAllScopes)
 	else
 		return nil
 	end
+end
+
+-- returns if they should go through with the switch or not
+function EditKeyView:_promptSwitchingError(errMessage)
+	local popup, modal = PopupFormStyleState.createPopup(self._theme, self._widget, Vector2.zero, {
+		title = "Error With Data",
+		buttons = {
+			{ text = "Discard and Continue" },
+			{ text = "Cancel" },
+		},
+		addContents = function(parent)
+			local message = Assets.Forms.Message:Clone()
+			message.Text = "Do you want to continue switching and discard your changes?"
+			message.Parent = parent
+
+			local textArea = Assets.Forms.TextArea:Clone()
+			textArea.TextEditable = false
+			textArea.Text = errMessage
+			textArea.Size = UDim2.new(1, 0, 0, 100)
+			textArea.Parent = parent
+
+			return {
+				message = LabelStyleState.from(self._theme, message),
+				textArea = TextBoxStyleState.from(self._theme, textArea),
+			}
+		end,
+	})
+
+	popup.frame.Position = UDim2.fromScale(0.5, 0.5)
+	popup.frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	popup.frame.Size = UDim2.fromOffset(320, 0)
+	popup.frame.AutomaticSize = Enum.AutomaticSize.Y
+
+	PopupHelper.clamp(popup.frame, self._widget, {
+		boundaryDistance = 5,
+	})
+
+	local shouldContinue: boolean? = nil
+
+	popup.interacted:Connect(function(action)
+		if action == "Discard and Continue" then
+			shouldContinue = true
+		else
+			shouldContinue = false
+		end
+	end)
+
+	repeat
+		task.wait()
+	until shouldContinue ~= nil
+;
+	(popup :: any):destroy(true)
+	modal:destroy()
+
+	return shouldContinue :: boolean
 end
 
 function EditKeyView:_updateUndoRedoButtons(speed: StyleStateHelper.TransitionSpeed)
@@ -886,22 +946,31 @@ function EditKeyView:_switchViewerMode(mode: ViewerTypes.ViewerMode)
 
 	-- TODO: retain key info changes
 	local valueResult = self._viewer:getValue()
+	local data: unknown
 	if valueResult.kind == "failure" then
-		self._uiMessages:error(valueResult.message)
-		return
+		local shouldContinue = self:_promptSwitchingError(valueResult.message)
+		if not shouldContinue then
+			return
+		else
+			data = self._cachedData
+		end
+	else
+		data = valueResult.value
 	end
 
 	self._viewerMode = mode
 	Settings.data.viewerMode = mode -- Synchronize. Saving might behave funky with multiple views open.
 
 	local userIds, metadata = self:_getKeyInfo()
-	self:_setViewer(valueResult.value, userIds, metadata, self._viewer.isDirty)
+	self:_setViewer(data, userIds, metadata, self._viewer.isDirty)
 end
 
 function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unknown?, isDirty: boolean?)
 	if self._viewer then
 		self._viewer:destroy()
 	end
+
+	self._cachedData = data
 
 	local options = {
 		data = data,

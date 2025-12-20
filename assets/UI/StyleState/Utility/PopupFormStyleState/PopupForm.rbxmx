@@ -523,6 +523,20 @@
           <int name="ZIndex">1</int>
         </Properties>
       </Item>
+      <Item class="UIFlexItem" referent="11">
+        <Properties>
+          <string name="Name">UIFlexItem</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <token name="FlexMode">0</token>
+          <float name="GrowRatio">0</float>
+          <token name="ItemLineAlignment">0</token>
+          <float name="ShrinkRatio">0</float>
+          <int64 name="SourceAssetId">-1</int64>
+          <BinaryString name="Tags"></BinaryString>
+        </Properties>
+      </Item>
     </Item>
   </Item>
 </roblox>

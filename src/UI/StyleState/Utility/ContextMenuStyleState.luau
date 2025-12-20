@@ -356,7 +356,7 @@ function ContextMenuStyleState:animate(xOffset: number?, yOffset: number?)
 		task.wait()
 	end
 
-	if self.frame then
+	if self.frame and self.frame.Parent then
 		self.frame.Position = originalPosition
 		self.frame.AnchorPoint = originalAnchor
 		self.frame.Parent = originalParent
