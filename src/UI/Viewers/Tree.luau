@@ -273,6 +273,10 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 	return self
 end
 
+function Tree:getDirtyCapability()
+	return self
+end
+
 function Tree:getHistoryCapability()
 	return self
 end

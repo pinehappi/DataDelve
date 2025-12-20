@@ -20,11 +20,6 @@ local CODE_EDITOR_CUTOFF = 20_000
 local MAX_TEXTBOX_CHARACTERS = 200_000
 
 export type CodeViewerFields = {
-	_dirtyChanged: BindableEvent,
-	dirtyChanged: RBXScriptSignal,
-
-	isDirty: boolean,
-
 	_idLookedUp: BindableEvent,
 	idLookedUp: RBXScriptSignal,
 
@@ -39,13 +34,13 @@ export type CodeViewerImplementation = {
 	__index: CodeViewerImplementation,
 	new: (Theme.Theme, UIMessages.UIMessages, GuiObject, Types.NewOptions) -> CodeViewer,
 
+	getDirtyCapability: (CodeViewer) -> Types.DirtyCapability?,
 	getHistoryCapability: (CodeViewer) -> Types.HistoryCapability?,
 	getKeyInfoCapability: (CodeViewer) -> Types.KeyInfoCapability?,
 	getSearchCapability: (CodeViewer) -> Types.SearchCapability?,
 
 	getValue: (CodeViewer) -> Types.GetValueResult,
 	setDisabled: (CodeViewer, disabled: boolean) -> (),
-	undirty: (CodeViewer) -> (),
 
 	_updateTheme: (CodeViewer) -> (),
 	_updateTextEditorFrom: (CodeViewer, data: unknown) -> (),
@@ -143,13 +138,8 @@ function CodeViewer.new(
 	self._container.Parent = container
 
 	-- events
-	self._dirtyChanged = Instance.new("BindableEvent")
-	self.dirtyChanged = self._dirtyChanged.Event :: any
-
 	self._idLookedUp = Instance.new("BindableEvent")
 	self.idLookedUp = self._idLookedUp.Event :: any
-
-	self.isDirty = true -- always dirty
 
 	self._connections = {
 		theme.colorsChanged:Connect(function()
@@ -167,6 +157,10 @@ function CodeViewer.new(
 	self:_updateTextEditorFrom(options.data)
 
 	return self
+end
+
+function CodeViewer:getDirtyCapability()
+	return nil
 end
 
 function CodeViewer:getHistoryCapability()
@@ -223,10 +217,6 @@ function CodeViewer:setDisabled(disabled: boolean)
 	if self._editor then
 		self._editor:setDisabled(disabled)
 	end
-end
-
-function CodeViewer:undirty()
-	-- always dirty, do nothing
 end
 
 function CodeViewer:_updateTheme()
@@ -360,7 +350,6 @@ function CodeViewer:destroy()
 
 	self._container:Destroy()
 
-	self._dirtyChanged:Destroy()
 	self._idLookedUp:Destroy()
 end
 

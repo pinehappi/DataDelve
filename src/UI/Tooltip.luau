@@ -112,9 +112,9 @@ function Tooltip.bind(
 	end)
 
 	return function()
-		tooltip:clear()
 		inputBeganConnection:Disconnect()
 		inputEndedConnection:Disconnect()
+		tooltip:kill()
 	end
 end
 
@@ -122,6 +122,8 @@ end
 
 function Tooltip.new(theme: any, message: string)
 	local self = setmetatable({
+		dead = false,
+
 		theme = theme,
 		message = message,
 
@@ -139,8 +141,8 @@ export type ShowOptions = {
 	offsetOnX: boolean?,
 }
 function Tooltip:show(options: ShowOptions)
-	if self.object then
-		self:clear()
+	if self.dead then
+		return
 	end
 
 	local params = Instance.new("GetTextBoundsParams")
@@ -151,6 +153,11 @@ function Tooltip:show(options: ShowOptions)
 	params.RichText = true
 
 	local textBounds = TextService:GetTextBoundsAsync(params)
+
+	if self.object then
+		self:clear()
+	end
+
 	local frameBounds = textBounds + Vector2.new(2 * TOOLTIP_PADDING_X, 2 * TOOLTIP_PADDING_Y)
 	local objectBounds = frameBounds + Vector2.new(SHADOW_EXTRA_SIZE_X, SHADOW_EXTRA_SIZE_Y)
 
@@ -236,9 +243,9 @@ function Tooltip:show(options: ShowOptions)
 			frame.Parent = newObject
 
 			object:Destroy()
-			object = newObject
-			object.Parent = container
-			self.object = object
+
+			newObject.Parent = container
+			self.object = newObject
 			updatePosition(1)
 		end
 	end)
@@ -249,6 +256,11 @@ function Tooltip:clear()
 		self.object:Destroy()
 		self.object = nil :: any
 	end
+end
+
+function Tooltip:kill()
+	self.dead = true
+	self:clear()
 end
 
 return Tooltip

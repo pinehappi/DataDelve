@@ -718,7 +718,7 @@ end
 function App._trySwapEditKeyView(
 	self: App,
 	keyName: string,
-	options: { version: string?, popCurrentCrumb: boolean?, openVersionsView: boolean? }
+	options: { version: string?, popCurrentCrumb: boolean?, session: Session.Session? }
 ): (boolean, string?)
 	if self._isGettingKey then
 		return false, "Already getting another key."
@@ -731,7 +731,7 @@ function App._trySwapEditKeyView(
 	options = options or {}
 
 	local success: boolean, err: string?
-	local forkedSession = self.session:fork()
+	local forkedSession = options.session or self.session:fork()
 	if options.version then
 		success, err = forkedSession:tryLoadVersion(keyName, options.version)
 	else
@@ -758,15 +758,16 @@ function App._trySwapEditKeyView(
 		inputReceiver = self.ui.gui.HotkeyInputReceiver,
 		session = forkedSession,
 		transactor = self._keyTransactor,
-		swapCallback = function(keyName, version, openVersionsView)
+		swapCallback = function(keyName, version, session)
 			return self:_trySwapEditKeyView(keyName, {
 				popCurrentCrumb = true,
 				version = version,
-				openVersionsView = (openVersionsView :: any) :: boolean,
+				session = session,
 			})
 		end,
 		isVersionLoaded = not not options.version,
-		openWithVersionsView = options.openVersionsView,
+		-- if the session is preserved, they have the drawer open
+		openWithVersionsView = not not options.session,
 	})
 
 	editKeyView.deleted:Connect(function()

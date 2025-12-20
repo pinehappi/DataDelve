@@ -84,11 +84,7 @@ export type Transaction = () -> ()
 
 -- Callback to swap this edit key view with one for newKey.
 -- Returns `true` for success and `false` for fail with error message
-export type SwapCallback = (
-	newKey: string,
-	version: string?,
-	openWithVersionsView: "openVersionsView"?
-) -> (boolean, string?)
+export type SwapCallback = (newKey: string, version: string?, session: Session.Session?) -> (boolean, string?)
 
 export type EditKeyViewFromParams = {
 	theme: Theme.Theme,
@@ -117,6 +113,10 @@ export type EditKeyViewImplementation = {
 
 	_initializeInteraction: (EditKeyView) -> (),
 	_runOperation: (EditKeyView, Transactor.Transaction) -> (),
+
+	_isDirty: (EditKeyView) -> (),
+	_updateSaveDisabled: (EditKeyView, speed: StyleStateHelper.TransitionSpeed) -> (),
+	_shouldPromptConfirmation: (EditKeyView) -> boolean,
 
 	_shouldDeleteBeDisabled: (EditKeyView) -> boolean,
 	_updateDisabled: (EditKeyView) -> (),
@@ -167,6 +167,7 @@ export type EditKeyViewFields = {
 	_viewerMode: ViewerTypes.ViewerMode,
 	_viewer: ViewerTypes.Viewer,
 
+	_isVersionLoaded: boolean,
 	_versionsView: VersionsView.VersionsView?,
 	_searchView: SearchView.SearchView?,
 	_searchResultsConnection: RBXScriptConnection?,
@@ -188,6 +189,7 @@ EditKeyView.__index = EditKeyView
 function EditKeyView.from(params)
 	local self = setmetatable({}, EditKeyView)
 	self._dead = false
+	self._isVersionLoaded = params.isVersionLoaded
 
 	-- Events
 
@@ -307,7 +309,7 @@ function EditKeyView.from(params)
 	)
 
 	local userIds, metadata = self:_getKeyInfo()
-	self:_setViewer(self._session.currentValue, userIds, metadata, params.isVersionLoaded)
+	self:_setViewer(self._session.currentValue, userIds, metadata)
 
 	-- fix ui update race condition
 	task.delay(0, function()
@@ -432,7 +434,11 @@ function EditKeyView:_initializeInteraction()
 				if not success then
 					self._uiMessages:reportDataStoreError(err)
 				else
-					self._viewer:undirty()
+					local dirtyCapability = self._viewer:getDirtyCapability()
+					if dirtyCapability then
+						dirtyCapability:undirty()
+					end
+
 					self._uiMessages:success("Save successful!")
 				end
 			end)
@@ -443,7 +449,7 @@ function EditKeyView:_initializeInteraction()
 				return
 			end
 
-			if self._viewer.isDirty then
+			if self:_shouldPromptConfirmation() then
 				local confirmed = ConfirmDialogStyleState.confirm(
 					self._theme,
 					self._widget,
@@ -634,7 +640,7 @@ function EditKeyView:_initializeInteraction()
 					end
 				elseif result == "Import from File" then
 					local passed = true
-					if self._viewer.isDirty then
+					if self:_shouldPromptConfirmation() then
 						local confirmed = self._modalState:wrap(function()
 							return ConfirmDialogStyleState.confirm(self._theme, self._widget, position, {
 								title = "Import from file?",
@@ -765,7 +771,7 @@ function EditKeyView:_updateDisabled()
 		self._styleStates.versions:setDisabled(true):update()
 	else
 		self._viewer:setDisabled(false)
-		self._styleStates.save:setDisabled(if self._viewer then not self._viewer.isDirty else false):update()
+		self:_updateSaveDisabled()
 		self._styleStates.refresh:setDisabled(false):update()
 		self._styleStates.delete:setDisabled(self:_shouldDeleteBeDisabled()):update()
 		self._styleStates.more:setDisabled(false):update()
@@ -955,6 +961,8 @@ function EditKeyView:_promptDuplicateMoveKey(position, isAllScopes)
 		end
 	end)
 
+	styleStates.contents.keyTextBox.textBox:CaptureFocus()
+
 	local shouldSubmit = resultEvent.Event:Wait()
 
 	do -- Wrap in do because of ambiguity with the cast
@@ -1041,6 +1049,27 @@ function EditKeyView:_updateUndoRedoButtons(speed: StyleStateHelper.TransitionSp
 	end
 end
 
+function EditKeyView:_shouldPromptConfirmation()
+	local dirtyCapability = self._viewer:getDirtyCapability()
+	if dirtyCapability then
+		return dirtyCapability.isDirty
+	else
+		return false
+	end
+end
+
+function EditKeyView:_isDirty()
+	local dirtyCapability = self._viewer and self._viewer:getDirtyCapability()
+	-- if no dirtyCapability, just count as dirty always
+	return (not dirtyCapability) or dirtyCapability.isDirty
+end
+
+function EditKeyView:_updateSaveDisabled(speed)
+	self._styleStates.save
+		:setDisabled(self._transactor.locked or ((not self._isVersionLoaded) and (not self:_isDirty())))
+		:update(speed)
+end
+
 function EditKeyView:_switchViewerMode(mode: ViewerTypes.ViewerMode)
 	if self._viewerMode == mode then
 		return
@@ -1064,10 +1093,10 @@ function EditKeyView:_switchViewerMode(mode: ViewerTypes.ViewerMode)
 	Settings.data.viewerMode = mode -- Synchronize. Saving might behave funky with multiple views open.
 
 	local userIds, metadata = self:_getKeyInfo()
-	self:_setViewer(data, userIds, metadata, self._viewer.isDirty)
+	self:_setViewer(data, userIds, metadata, self:_isDirty())
 end
 
-function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unknown?, isDirty: boolean?)
+function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unknown?, isStartDirty: boolean?)
 	if self._viewer then
 		self._viewer:destroy()
 	end
@@ -1086,7 +1115,7 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 			Metadata = metadata,
 		},
 
-		dirty = isDirty,
+		dirty = isStartDirty,
 		readOnly = false,
 
 		inputReceiver = self._inputReceiver,
@@ -1108,11 +1137,14 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 		end)
 	end
 
-	self._styleStates.save:setDisabled((not self._viewer.isDirty) or self._transactor.locked):update("instant")
+	local dirtyCapability = self._viewer:getDirtyCapability()
+	if dirtyCapability then
+		dirtyCapability.dirtyChanged:Connect(function(dirty)
+			self:_updateSaveDisabled()
+		end)
+	end
 
-	self._viewer.dirtyChanged:Connect(function(dirty)
-		self._styleStates.save:setDisabled(self._transactor.locked or not dirty):update()
-	end)
+	self:_updateSaveDisabled("instant")
 
 	self._viewer.idLookedUp:Connect(function(key)
 		self._idLookedUp:Fire(key)
@@ -1144,15 +1176,13 @@ function EditKeyView:_tryOpenVersionsView()
 						swapResult = self._swapCallback(
 							self._session.currentKey,
 							version,
-							if self._versionsView and self._versionsView.mode == "drawer"
-								then "openVersionsView"
-								else nil
+							if self._versionsView and self._versionsView.mode == "drawer" then self._session else nil
 						)
 					end)
 					return swapResult
 				end
 
-				if not self._viewer.isDirty then
+				if not self:_shouldPromptConfirmation() then
 					return true, continueCallback
 				else
 					local confirmed = ConfirmDialogStyleState.confirm(

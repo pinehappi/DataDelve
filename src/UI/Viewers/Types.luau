@@ -44,20 +44,24 @@ export type ViewerClass = {
 export type GetValueResult = | { kind: "success", value: unknown, hasNil: boolean } | { kind: "failure", message: string }
 
 export type Viewer = {
-	dirtyChanged: RBXScriptSignal,
-	isDirty: boolean,
 	idLookedUp: RBXScriptSignal,
 
 	setDisabled: (Viewer, disabled: boolean) -> (),
-	undirty: (Viewer) -> (),
 
 	getValue: (Viewer) -> GetValueResult,
 
+	getDirtyCapability: (Viewer) -> DirtyCapability?,
 	getHistoryCapability: (Viewer) -> HistoryCapability?,
 	getKeyInfoCapability: (Viewer) -> KeyInfoCapability?,
 	getSearchCapability: (Viewer) -> SearchCapability?,
 
 	destroy: (Viewer) -> (),
+}
+
+export type DirtyCapability = {
+	dirtyChanged: RBXScriptSignal,
+	isDirty: boolean,
+	undirty: (DirtyCapability) -> (),
 }
 
 export type HistoryCapability = {

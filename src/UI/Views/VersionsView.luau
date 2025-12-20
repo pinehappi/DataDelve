@@ -63,7 +63,7 @@ function VersionsView.from(params: VersionsViewFromParams)
 	self._loadVersionCallback = params.loadVersion
 	self._transactor = Transactor.new()
 
-	self.order = Enum.SortDirection.Descending
+	self.order = params.session.versionPagesOrder or Enum.SortDirection.Descending
 	self.minDate = nil
 	self.maxDate = nil
 
@@ -177,11 +177,11 @@ function VersionsView.from(params: VersionsViewFromParams)
 		self.styleStates.order.button.Activated:Connect(function()
 			if self.order == Enum.SortDirection.Ascending then
 				self.order = Enum.SortDirection.Descending
-				self.styleStates.order.button.ImageLabel.Image = DESCENDING_ICON
 			else
 				self.order = Enum.SortDirection.Ascending
-				self.styleStates.order.button.ImageLabel.Image = ASCENDING_ICON
 			end
+
+			self:_updateOrderIcon()
 			self:_reload()
 		end)
 	)
@@ -291,7 +291,8 @@ function VersionsView.from(params: VersionsViewFromParams)
 	}
 
 	task.spawn(function()
-		self:_reload()
+		self:_updateOrderIcon()
+		self:_reload(true)
 	end)
 
 	return self
@@ -407,12 +408,27 @@ function VersionsView:_deleteVersion(version: string)
 	end)
 end
 
-function VersionsView:_reload()
+function VersionsView:_updateOrderIcon()
+	if self.order == Enum.SortDirection.Ascending then
+		self.styleStates.order.button.ImageLabel.Image = ASCENDING_ICON
+	else
+		self.styleStates.order.button.ImageLabel.Image = DESCENDING_ICON
+	end
+end
+
+function VersionsView:_reload(useCache: boolean?)
 	self.styleStates.loadMore:clear()
 	self.styleStates.loadMore:setLoadMoreVisible(false)
 
 	self:_runOperation(function()
-		local success, err = self._session:tryCreateVersionPages(self.order, self.minDate, self.maxDate)
+		local success, err
+		if not (useCache and self._session.versionPages) then
+			success, err = self._session:tryCreateVersionPages(self.order, self.minDate, self.maxDate)
+		else
+			-- wait a little for tweenservice race conditions :(
+			task.wait()
+			success, err = true, nil
+		end
 
 		if not success then
 			self.uiMessages:reportDataStoreError(err)

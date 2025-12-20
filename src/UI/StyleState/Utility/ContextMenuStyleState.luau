@@ -5,7 +5,7 @@ local TweenService = game:GetService("TweenService")
 local StyleStateHelper = require(script.Parent.Parent.StyleStateHelper)
 local PopupHelper = require(script.Parent.Parent.Parent.PopupHelper)
 
-local TRY_CLOSE_SUBMENU_DELAY = 0.175
+local TRY_CLOSE_SUBMENU_DELAY = 0.275
 
 local ContextMenuStyleState = {}
 ContextMenuStyleState.__index = ContextMenuStyleState

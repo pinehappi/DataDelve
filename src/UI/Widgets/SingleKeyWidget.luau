@@ -44,7 +44,7 @@ export type SingleKeyWidgetImplementation = {
 		SingleKeyWidget,
 		keyName: string,
 		version: string?,
-		openVersionsView: boolean
+		session: Session.Session?
 	) -> (boolean, string?),
 }
 
@@ -128,9 +128,9 @@ function SingleKeyWidget.new(params)
 	return self
 end
 
-function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?, openVersionsView: boolean?)
+function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?, session: Session.Session?)
 	local success: boolean, err: string?
-	local forkedSession = self._session:fork()
+	local forkedSession = session or self._session:fork()
 	if version then
 		success, err = forkedSession:tryLoadVersion(keyName, version)
 	else
@@ -154,11 +154,11 @@ function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?, 
 		inputReceiver = self._frame.HotkeyInputReceiver,
 		session = forkedSession,
 		transactor = self._transactor,
-		swapCallback = function(keyName, version, openVersionsView)
-			return self:_trySwapEditKeyView(keyName, version, (openVersionsView :: any) :: boolean)
+		swapCallback = function(keyName, version, session)
+			return self:_trySwapEditKeyView(keyName, version, session)
 		end,
 		isVersionLoaded = not not version,
-		openWithVersionsView = openVersionsView,
+		openWithVersionsView = not not session,
 	})
 
 	editKeyView.deleted:Connect(function()
