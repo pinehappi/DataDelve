@@ -2029,6 +2029,70 @@ function Tree:_updateBranchFrame(frame, branch, index)
 	self:_updateBranchFrameSize(frame, branch)
 end
 
+export type EditBufferOptions = {
+	buffer: buffer,
+	position: Vector2,
+	onInitialize: (() -> ())?,
+}
+
+-- returns nil on cancel
+function Tree:_promptEditBuffer(options: EditBufferOptions): buffer?
+	local resultEvent = Instance.new("BindableEvent")
+
+	local copy = buffer.create(buffer.len(options.buffer))
+	buffer.copy(copy, 0, options.buffer)
+
+	local bufferWidget = BufferWidget.new(self.theme, copy)
+
+	local editingFrame = script.EditingBufferPage:Clone()
+	local editingWrapper = StyleStateWrapper.new(self.theme, {
+		background = BackgroundStyleState.from(self.theme, editingFrame),
+		cancel = ButtonStyleState.from(self.theme, editingFrame.Cancel),
+		label = LabelStyleState.from(self.theme, editingFrame.TextLabel),
+	})
+	editingFrame.Position = UDim2.fromOffset(options.position.X, options.position.Y)
+
+	local modal = PopupHelper.modal(editingFrame, self.gui)
+
+	editingWrapper.styleStates.cancel.button.Activated:Connect(function()
+		resultEvent:Fire(nil)
+	end)
+
+	bufferWidget.interacted:Connect(function(submit)
+		if submit then
+			resultEvent:Fire("submit")
+		else
+			resultEvent:Fire(nil)
+		end
+	end)
+
+	if options.onInitialize then
+		options.onInitialize()
+	end
+
+	task.wait(0.5) -- A little debounce in case the user clicks again because they don't see the widget
+	local shouldSubmit: boolean
+	if not bufferWidget.dead then
+		shouldSubmit = resultEvent.Event:Wait()
+	else
+		shouldSubmit = false
+	end
+
+	modal:destroy()
+	editingWrapper:destroy()
+	editingFrame:Destroy()
+
+	-- Wait for result instruction then act on it
+	if shouldSubmit then
+		local copy = bufferWidget:getFreshBuffer()
+		bufferWidget:destroy()
+		return bufferWidget:getFreshBuffer()
+	end
+
+	bufferWidget:destroy()
+	return nil
+end
+
 type ExtraSecretTypes = "UserId" | "empty array" | "empty object"
 type PrecisionMenuOptions = {
 	position: Vector2,
@@ -2069,6 +2133,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 	local editFrame = Assets.EditKey:Clone()
 	editFrame.Position = UDim2.fromOffset(position.X, position.Y)
 	local modal = PopupHelper.modal(editFrame, self.gui)
+	local isEditingBuffer = false
 
 	local wrapper = StyleStateWrapper.new(self.theme, {
 		background = BackgroundStyleState.from(self.theme, editFrame, {
@@ -2234,7 +2299,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 		elseif valueType == "buffer" then
 			defaultValues["buffer"] = defaultValues["buffer"] or buffer.create(0)
 
-			local frame = script.EditMenuInputTemplates.BufferEditor:Clone()
+			local frame = script.EditMenuInputTemplates.Buffer:Clone()
 			local styleState = StyleStateWrapper.new(self.theme, {
 				frame = BackgroundStyleState.from(self.theme, frame), -- just so it gets destroyed...
 				label = LabelStyleState.from(self.theme, frame.BufferLabel),
@@ -2247,50 +2312,35 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 			frame.Parent = editFrame.Form.Value
 
 			frame.Link.Activated:Connect(function()
-				local bufferWidget = BufferWidget.new(self.theme, defaultValues["buffer"])
+				if isEditingBuffer then
+					return
+				end
 
-				-- Make a dummy object to get a modal up
-				local dummyObject = Instance.new("Frame")
-				dummyObject.BackgroundTransparency = 1
-				dummyObject.Size = UDim2.fromOffset(0, 0)
+				isEditingBuffer = true
 
-				local modal = PopupHelper.modal(dummyObject, self.gui, {
-					zIndex = PopupHelper.DEFAULT_MODAL_ZINDEX + 5,
+				local newBuffer = self:_promptEditBuffer({
+					position = options.position,
+					buffer = defaultValues["buffer"],
+					onInitialize = function()
+						modal:hide()
+					end,
 				})
 
-				-- Set up result connections
-				local resultInstructionEvent = Instance.new("BindableEvent")
-
-				modal.cancelled:Connect(function()
-					resultInstructionEvent:Fire(nil)
-				end)
-
-				bufferWidget.interacted:Connect(function(submit)
-					if submit then
-						resultInstructionEvent:Fire("submit")
-					else
-						resultInstructionEvent:Fire(nil)
-					end
-				end)
-
-				task.wait(0.5) -- A little debounce in case the user clicks again because they don't see the widget
-				local shouldSubmit: boolean
-				if not bufferWidget.dead then
-					shouldSubmit = resultInstructionEvent.Event:Wait()
-				else
-					shouldSubmit = false
-				end
-
 				-- Wait for result instruction then act on it
-				if shouldSubmit then
-					local copy = bufferWidget:getFreshBuffer()
-					lastValue = copy
-					defaultValues["buffer"] = lastValue
-					frame.BufferLabel.Text = byteLengthToReadableString(buffer.len(lastValue))
+				if newBuffer then
+					lastValue = newBuffer
+					defaultValues["buffer"] = newBuffer
+					frame.BufferLabel.Text = byteLengthToReadableString(buffer.len(newBuffer))
 				end
 
-				modal:destroy(true)
-				bufferWidget:destroy()
+				if editFrame.Parent then
+					wrapper.styleStates.unexpand.button.Visible = options.showUnexpand
+					editFrame.Form.Visible = true
+					editFrame.Title.Visible = true
+				end
+
+				isEditingBuffer = false
+				modal:reveal()
 			end)
 
 			editFrame.Form.Value.Visible = true
@@ -2306,8 +2356,8 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 
 	local function cleanup()
 		modal:destroy()
-		editFrame:Destroy()
 		wrapper:destroy()
+		editFrame:Destroy()
 
 		doneEvent:Fire()
 	end
@@ -2331,7 +2381,11 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 		end
 	end
 
-	modal.cancelled:Connect(cleanup)
+	modal.cancelled:Connect(function()
+		if not isEditingBuffer then
+			cleanup()
+		end
+	end)
 	wrapper.styleStates.confirm.button.Activated:Connect(submit)
 	wrapper.styleStates.cancel.button.Activated:Connect(cleanup)
 	wrapper.styleStates.keyTextBox.textBox.FocusLost:Connect(function(entered)
@@ -2758,8 +2812,10 @@ function Tree:_promptEditValue(index: number)
 
 	self:_setInModal(true)
 
-	if (typeof(branch[2]) == "string" and branch[2]:find("\n")) or (typeof(branch[2]) == "buffer") then
-		-- Read-only edit menu not supported so abort.
+	local userResponse, newValue, newValueIsArray
+
+	if typeof(branch[2]) == "string" and branch[2]:find("\n") then
+		-- Read-only not supported so abort.
 		if locked then
 			return
 		end
@@ -2769,19 +2825,33 @@ function Tree:_promptEditValue(index: number)
 			position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
 		})
 		return
-	end
+	elseif (typeof(branch[2]) == "string" and branch[2]:find("\n")) or (typeof(branch[2]) == "buffer") then
+		-- Read-only not supported so abort.
+		if locked then
+			return
+		end
 
-	local userResponse, newValue, newValueIsArray = self:_promptModalTextBox(frame, "value", {
-		defaultText = JSONHelper.toInputString(
-			branch[2],
-			if branch[2] == ARRAY_SENTINEL
-				then "array"
-				elseif branch[2] == OBJECT_SENTINEL then "object"
-				elseif typeof(branch[2]) == "nil" then "null"
-				else typeof(branch[2])
-		),
-		locked = locked,
-	})
+		local newBuffer = self:_promptEditBuffer({
+			position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
+			buffer = branch[2],
+		})
+
+		userResponse = if newBuffer then "submit" else "cancel"
+		newValue = newBuffer
+		newValueIsArray = false
+	else
+		userResponse, newValue, newValueIsArray = self:_promptModalTextBox(frame, "value", {
+			defaultText = JSONHelper.toInputString(
+				branch[2],
+				if branch[2] == ARRAY_SENTINEL
+					then "array"
+					elseif branch[2] == OBJECT_SENTINEL then "object"
+					elseif typeof(branch[2]) == "nil" then "null"
+					else typeof(branch[2])
+			),
+			locked = locked,
+		})
+	end
 
 	self:_setInModal(false)
 
@@ -2945,6 +3015,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 
 	local function tryStartDrag(input: InputObject)
 		if self.disabled then
+			return
+		end
+		if self._inModal then
 			return
 		end
 		if self.readOnly then
@@ -3180,6 +3253,10 @@ function Tree:_initializeBranchFrame(frame, index: number)
 	end
 
 	local function onSingleClick()
+		if self._inModal then
+			return
+		end
+
 		self:_selectBranch(index)
 		if Settings.get("clickToOpen") then
 			self:_toggleOpen(index)
@@ -3191,6 +3268,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			return
 		end
 		if self.readOnly then
+			return
+		end
+		if self._inModal then
 			return
 		end
 		if self._selectingIsDragging then
@@ -3341,6 +3421,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			if self.disabled then
 				return
 			end
+			if self._inModal then
+				return false
+			end
 
 			count = count % 2
 
@@ -3353,6 +3436,9 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		frame.Value.Activated:Connect(function(_, count)
 			if self.disabled then
 				return
+			end
+			if self._inModal then
+				return false
 			end
 
 			count = count % 2
@@ -3937,6 +4023,9 @@ function Tree:tryDeleteSelected(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
+	if self._inModal then
+		return false
+	end
 
 	self:_deleteBranch({ index = self._selectingBranchIndex, pushAction = true })
 	self:_redrawBranches()
@@ -3946,6 +4035,9 @@ end
 
 function Tree:tryOpenSelected(): boolean
 	if not self._selectingBranchIndex then
+		return false
+	end
+	if self._inModal then
 		return false
 	end
 
@@ -3970,6 +4062,9 @@ function Tree:tryCloseSelected(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
+	if self._inModal then
+		return false
+	end
 
 	local branch = self._flatBranches[self._selectingBranchIndex]
 	if branch[2] ~= ARRAY_SENTINEL and branch[2] ~= OBJECT_SENTINEL then
@@ -3988,6 +4083,9 @@ function Tree:trySelectNext(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
+	if self._inModal then
+		return false
+	end
 
 	local nextVisibleIndex = self._selectingBranchVisibleIndex + 1
 	local nextIndex = self._visibleIndexes[nextVisibleIndex]
@@ -4002,6 +4100,9 @@ end
 
 function Tree:trySelectPrevious(): boolean
 	if not self._selectingBranchIndex then
+		return false
+	end
+	if self._inModal then
 		return false
 	end
 
@@ -4020,6 +4121,9 @@ function Tree:tryEditKeySelected(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
+	if self._inModal then
+		return false
+	end
 
 	self:_promptEditKey(self._selectingBranchIndex)
 	return true
@@ -4027,6 +4131,9 @@ end
 
 function Tree:tryInsertSelected(): boolean
 	if not self._selectingBranchIndex then
+		return false
+	end
+	if self._inModal then
 		return false
 	end
 

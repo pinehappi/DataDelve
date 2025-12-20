@@ -1,7 +1,7 @@
 <roblox version="4">
   <Item class="Frame" referent="0">
     <Properties>
-      <string name="Name">BufferEditor</string>
+      <string name="Name">Buffer</string>
       <bool name="Active">false</bool>
       <Vector2 name="AnchorPoint">
         <X>0</X>
