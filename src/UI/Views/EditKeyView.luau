@@ -156,7 +156,10 @@ export type EditKeyViewFields = {
 	_viewerMode: ViewerTypes.ViewerMode,
 	_viewer: ViewerTypes.Viewer,
 	_versionsView: VersionsView.VersionsView?,
-	_cachedData: unknown,
+
+	_cachedData: unknown?,
+	_cachedMetadata: unknown?,
+	_cachedUserIds: { number }?,
 
 	_dead: boolean,
 }
@@ -191,6 +194,8 @@ function EditKeyView.from(params)
 	self._versionsView = nil
 
 	self._cachedData = self._session.currentValue
+	self._cachedMetadata = self._session.currentKeyInfo and self._session.currentKeyInfo:GetMetadata()
+	self._cachedUserIds = self._session.currentKeyInfo and self._session.currentKeyInfo:GetUserIds()
 
 	-- UI
 
@@ -971,6 +976,8 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 	end
 
 	self._cachedData = data
+	self._cachedUserIds = userIds
+	self._cachedMetadata = metadata
 
 	local options = {
 		data = data,
@@ -1102,8 +1109,8 @@ function EditKeyView:_getKeyInfo()
 	local keyInfoCapability = self._viewer and self._viewer:getKeyInfoCapability()
 	if keyInfoCapability then
 		return keyInfoCapability:getKeyInfo()
-	elseif self._session.currentKeyInfo then
-		return self._session.currentKeyInfo:GetUserIds(), self._session.currentKeyInfo:GetMetadata()
+	elseif self._cachedUserIds and self._cachedMetadata then
+		return self._cachedUserIds, self._cachedMetadata
 	else
 		return nil, nil
 	end
