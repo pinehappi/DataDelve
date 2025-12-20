@@ -104,9 +104,10 @@ function OrderedDataStoreView.from(
 					end -- It's disabled
 
 					local gui = frame:FindFirstAncestorWhichIsA("PluginGui")
+					local mousePosition = gui:GetRelativeMousePosition()
 
 					local resetSelecting = loadMoreListStyleState:setSelectingStyleState(styleState)
-					local option = ContextMenuStyleState.prompt(theme, gui, gui:GetRelativeMousePosition(), {
+					local option = ContextMenuStyleState.prompt(theme, gui, mousePosition, {
 						options = {
 							{ icon = self.theme.icons.insert, text = "Insert" },
 							{ icon = self.theme.icons.delete, text = "Delete" },
@@ -115,13 +116,13 @@ function OrderedDataStoreView.from(
 
 					if option == "Delete" then
 						if
-							ConfirmDialogStyleState.confirm(theme, gui, gui:GetRelativeMousePosition(), {
+							ConfirmDialogStyleState.confirm(theme, gui, mousePosition, {
 								title = "Delete key?",
 								message = "Are you sure you want to do this?",
 							})
 						then
 							if
-								ConfirmDialogStyleState.confirm(theme, gui, gui:GetRelativeMousePosition(), {
+								ConfirmDialogStyleState.confirm(theme, gui, mousePosition, {
 									title = "Confirm again",
 									message = `You are going to delete the key <b>{info.key}</b>. This CANNOT be undone.`,
 								})
@@ -130,7 +131,7 @@ function OrderedDataStoreView.from(
 							end
 						end
 					elseif option == "Insert" then
-						self:_promptInsert()
+						self:_promptInsert(mousePosition)
 					end
 
 					resetSelecting()
@@ -244,14 +245,15 @@ function OrderedDataStoreView.from(
 		self.styleStates.loadMore:setSelectingStyleState(nil)
 
 		local gui = self.frame:FindFirstAncestorWhichIsA("LayerCollector")
-		local option = ContextMenuStyleState.prompt(self.theme, gui, gui:GetRelativeMousePosition(), {
+		local mousePosition = gui:GetRelativeMousePosition()
+		local option = ContextMenuStyleState.prompt(self.theme, gui, mousePosition, {
 			options = {
 				{ icon = self.theme.icons.insert, text = "Insert" },
 			},
 		})
 
 		if option == "Insert" then
-			self:_promptInsert()
+			self:_promptInsert(mousePosition)
 		end
 	end)
 
@@ -507,12 +509,13 @@ function OrderedDataStoreView:_promptModalTextBox(key: string, options: PromptMo
 	return result
 end
 
-function OrderedDataStoreView:_promptInsert()
+function OrderedDataStoreView:_promptInsert(position: Vector2)
 	local result = promptKeyValueForm(self.theme, self.frame:FindFirstAncestorWhichIsA("PluginGui"), {
 		title = "Insert Key",
 		includeKey = true,
 		includeValue = true,
 		constraint = "orderedDataStore",
+		position = position,
 	})
 	if result then
 		self._keyAdded:Fire(result.key, result.value)
