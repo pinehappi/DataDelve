@@ -10,10 +10,10 @@ local TweenService = game:GetService("TweenService")
 
 local StyleStateHelper = {}
 
-StyleStateHelper.superDuperFastTween = TweenInfo.new(0.05, Enum.EasingStyle.Sine)
-StyleStateHelper.veryFastTween = TweenInfo.new(0.2, Enum.EasingStyle.Quad)
-StyleStateHelper.fastTween = TweenInfo.new(0.35, Enum.EasingStyle.Sine)
-StyleStateHelper.slowTween = TweenInfo.new(0.5, Enum.EasingStyle.Quad)
+StyleStateHelper.superDuperFastTween = TweenInfo.new(0.04, Enum.EasingStyle.Sine)
+StyleStateHelper.veryFastTween = TweenInfo.new(0.075, Enum.EasingStyle.Quad)
+StyleStateHelper.fastTween = TweenInfo.new(0.1, Enum.EasingStyle.Sine)
+StyleStateHelper.slowTween = TweenInfo.new(0.3, Enum.EasingStyle.Quad)
 StyleStateHelper.instantTween = TweenInfo.new(0, Enum.EasingStyle.Linear)
 
 function StyleStateHelper.getTweenInfoForSpeed(speed: TransitionSpeed)
