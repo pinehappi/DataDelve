@@ -208,12 +208,14 @@ export type HexEditorImplementation = {
 	-- UI
 	_updateSelectionCellStyles: (HexEditor, anchor: number?, cursor: number?) -> (),
 	_updateCursorStyle: (HexEditor, CursorMode?, state: "modified" | "add" | nil) -> (),
+	_updateCursorPosition: (HexEditor) -> (),
 	_updateCellStyle: (HexEditor, offset: number, state: ButtonState?) -> (),
-	_updateHeaderPosition: (HexEditor) -> (),
+	_updateRowStyle: (HexEditor, row: number) -> (),
 	_buildHeader: (HexEditor) -> (),
-	_buildRow: (HexEditor, row: number) -> (),
-	_rebuildCell: (HexEditor, offset: number, rowFrame: Frame?) -> (),
-	_rebuildVisibleRows: (HexEditor, overflow: number, forceAfterOffset: number?) -> (),
+	_buildRow: (HexEditor, rowFromTop: number) -> (),
+	_updateRow: (HexEditor, row: number) -> (),
+	_updateCell: (HexEditor, offset: number) -> (),
+	_rebuildVisibleRows: (HexEditor, forceAfterOffset: number?) -> (),
 	_buildCursor: (HexEditor) -> (),
 	_buildGutter: (HexEditor) -> (),
 	_buildUi: (HexEditor) -> (),
@@ -225,6 +227,7 @@ export type HexEditorFields = {
 
 	-- Access at your own risk.
 	scrollingFrame: ScrollingFrame?,
+	scrollingFrameContent: Frame?,
 
 	-- Events
 
@@ -275,8 +278,22 @@ export type HexEditorFields = {
 
 	_cursor: Frame?,
 	_header: Frame?,
-	_cells: { { hex: TextButton, ascii: TextButton? } },
-	_rows: { [number]: Frame },
+	_rows: {
+		[number]: {
+			frame: Frame,
+			gutter: TextLabel?,
+			cells: {
+				[number]: {
+					hex: TextButton,
+					ascii: TextButton?,
+					connections: { RBXScriptConnection },
+				},
+			},
+		},
+	},
+	_rowIdentities: { [number]: number },
+	_startRow: number,
+	_scrollOffset: number,
 
 	_connections: { RBXScriptConnection },
 }
@@ -407,9 +424,12 @@ function HexEditor.new(b: buffer, params: HexEditorNewParams, dependencies: HexE
 	self._gutterOffset = 0
 
 	self._rows = {}
-	self._cells = {}
+	self._rowIdentities = {}
 
 	self._container = params.container
+
+	self._startRow = 0
+	self._scrollOffset = 0
 
 	self._layout = params.layout
 	self:_setTheme(params.theme)
@@ -462,7 +482,7 @@ end
 function HexEditor:setBuffer(b)
 	self._buffer = b
 	self._bufferSize = buffer.len(b)
-	self:_rebuildVisibleRows(0, 0)
+	self:_rebuildVisibleRows(0)
 end
 
 function HexEditor:getBuffer()
@@ -646,13 +666,6 @@ function HexEditor:_setCursorState(offset, view, mode)
 				cell.TextColor3 = self._theme.headerText or self._theme.cell.text
 			end
 		end
-		local row = self._rows[lastOffset // self._layout.columns]
-		if row then
-			local gutterText = row:FindFirstChild("Gutter") :: TextLabel
-			if gutterText then
-				gutterText.TextColor3 = self._theme.gutterText or self._theme.cell.text
-			end
-		end
 	end
 
 	if offset then
@@ -665,21 +678,7 @@ function HexEditor:_setCursorState(offset, view, mode)
 
 		self._cursorState = { offset = offset, view = view, mode = mode or self._cursorState.mode } :: any
 
-		local cursor = self._cursor :: Frame
-		if self._cursorState.view == "hex" then
-			cursor.Position = UDim2.fromOffset(
-				self._gutterOffset + offset % self._layout.columns * self._cellWidth,
-				self._headerOffset + (offset // self._layout.columns + 1) * self._cellHeight
-			)
-		elseif self._cursorState.view == "ascii" then
-			cursor.Position = UDim2.fromOffset(
-				self._gutterOffset
-					+ self._cellWidth * self._layout.columns
-					+ self._theme.sectionGap
-					+ offset % self._layout.columns * self._halfCellWidth,
-				self._headerOffset + (offset // self._layout.columns + 1) * self._cellHeight
-			)
-		end
+		self:_updateCursorPosition()
 
 		-- Make sure cursor always in view
 		local scrollingFrame = self.scrollingFrame
@@ -700,6 +699,7 @@ function HexEditor:_setCursorState(offset, view, mode)
 		end
 
 		self:_updateCellStyle(offset)
+		self:_updateRowStyle(offset // self._layout.columns)
 
 		self:_updateCursorStyle()
 
@@ -708,13 +708,6 @@ function HexEditor:_setCursorState(offset, view, mode)
 			local cell = header:FindFirstChild(tostring(offset % self._layout.columns)) :: TextLabel
 			if cell then
 				cell.TextColor3 = self._theme.headerActiveText or self._theme.headerText or self._theme.cell.text
-			end
-		end
-		local row = self._rows[offset // self._layout.columns]
-		if row then
-			local gutterText = row:FindFirstChild("Gutter") :: TextLabel
-			if gutterText then
-				gutterText.TextColor3 = self._theme.gutterActiveText or self._theme.gutterText or self._theme.cell.text
 			end
 		end
 	else
@@ -731,7 +724,10 @@ function HexEditor:_setCursorState(offset, view, mode)
 		self._cursorState.view = nil
 	end
 
-	self:_updateCellStyle(lastOffset)
+	if lastOffset then
+		self:_updateCellStyle(lastOffset)
+		self:_updateRowStyle(lastOffset // self._layout.columns)
+	end
 
 	if lastOffset ~= self._cursorState.offset then
 		self._cursorMoved:Fire(self._cursorState.offset)
@@ -1005,26 +1001,14 @@ function HexEditor:_typeCharacter(character: string)
 		else
 			if self._cursorState.mode == "replace" then
 				self._typed = character
-				local cell = self._cells[self._cursorState.offset]
-				if cell then
-					cell.hex.Text = self._typed .. "_"
-				end
 			elseif self._cursorState.mode == "insert" then
 				self:_insertAt(self._cursorState.offset)
 				self._typed = character
-
-				local cell = self._cells[self._cursorState.offset]
-				if cell then
-					cell.hex.Text = self._typed .. "_"
-					self:_updateCursorStyle(self._cursorState.mode, "modified")
-
-					-- Move it to the middle so it looks like ur typing
-					local cursor = self._cursor
-					if cursor then
-						cursor.Position += UDim2.fromOffset(self._cellWidth / 2, 0)
-					end
-				end
+				self:_updateCursorStyle(self._cursorState.mode, "modified")
 			end
+
+			self:_updateCursorPosition()
+			self:_updateCell(self._cursorState.offset)
 		end
 	elseif self._cursorState.view == "ascii" then
 		self._typed = character
@@ -1047,6 +1031,8 @@ function HexEditor:_finishTyping()
 			if self._cursorState.view == "hex" then tonumber(self._typed, 16) else string.byte(self._typed)
 		) :: number
 
+		self._typed = ""
+
 		if self._cursorState.mode == "insert" then
 			self:_replaceAt(self._cursorState.offset, value)
 			self:_pushAction({
@@ -1057,8 +1043,6 @@ function HexEditor:_finishTyping()
 		else
 			self:_replaceAtWithAction(self._cursorState.offset, value)
 		end
-
-		self._typed = ""
 	end
 end
 
@@ -1070,7 +1054,7 @@ function HexEditor:_cancelTyping()
 			self:_setCursorState(self._cursorState.offset, self._cursorState.view :: CursorView) -- Reset the cursor visually
 		else
 			self._typed = ""
-			self:_rebuildCell(self._cursorState.offset)
+			self:_updateCell(self._cursorState.offset)
 		end
 	end
 end
@@ -1088,7 +1072,7 @@ function HexEditor:_insertAt(offset: number, value: number?)
 	self:_incrementModifiedCount(offset, 1)
 	self._bufferSize += 1
 
-	self:_rebuildVisibleRows(0, offset)
+	self:_rebuildVisibleRows(offset)
 end
 
 function HexEditor:_insertBuffer(offset, b)
@@ -1106,7 +1090,7 @@ function HexEditor:_insertBuffer(offset, b)
 	end
 	self._bufferSize += buffer.len(b)
 
-	self:_rebuildVisibleRows(0, offset)
+	self:_rebuildVisibleRows(offset)
 
 	self:_updateCursorStyle()
 end
@@ -1124,7 +1108,7 @@ function HexEditor:_deleteAt(offset: number)
 		self:_setCursorState(self._cursorState.offset - 1, self._cursorState.view :: CursorView)
 	end
 
-	self:_rebuildVisibleRows(0, offset)
+	self:_rebuildVisibleRows(offset)
 end
 
 function HexEditor:_deleteRegion(offset: number, length: number)
@@ -1137,7 +1121,7 @@ function HexEditor:_deleteRegion(offset: number, length: number)
 		self._modifiedOffsets[offset] = nil
 	end
 	self:_bumpModifiedOffsetsAfter(offset, -length)
-	self:_rebuildVisibleRows(0, offset)
+	self:_rebuildVisibleRows(offset)
 end
 
 function HexEditor:_replaceAt(offset, value, doNotModifyCount)
@@ -1152,9 +1136,9 @@ function HexEditor:_replaceAt(offset, value, doNotModifyCount)
 
 	if offset == self._bufferSize then
 		self._bufferSize += 1
-		self:_rebuildVisibleRows(0, offset)
+		self:_rebuildVisibleRows(offset)
 	else
-		self:_rebuildCell(offset)
+		self:_updateCell(offset)
 	end
 end
 
@@ -1169,7 +1153,7 @@ function HexEditor:_replaceBuffer(offset, b, modifyIncrement)
 
 	for i = offset, offset + buffer.len(b) - 1 do
 		self:_incrementModifiedCount(i, modifyIncrement)
-		self:_rebuildCell(i)
+		self:_updateCell(i)
 	end
 
 	-- The cursor may have been inside the replaced region
@@ -1180,7 +1164,7 @@ end
 
 function HexEditor:_insertBufferWithAction(offset: number, b: buffer)
 	self:_insertBuffer(offset, b)
-	self:_rebuildVisibleRows(0, offset)
+	self:_rebuildVisibleRows(offset)
 	self:_pushAction({
 		type = "regionInsert",
 		offset = offset,
@@ -1243,7 +1227,7 @@ function HexEditor:_deleteSelectionWithAction(keepCursor)
 
 	self:_clearSelection()
 	self:_setCursorState(if keepCursor then start else nil, self._cursorState.view :: CursorView)
-	self:_rebuildVisibleRows(0, start)
+	self:_rebuildVisibleRows(start)
 
 	self:_pushAction({
 		type = "regionDelete",
@@ -1461,9 +1445,17 @@ function HexEditor:_updateCellStyle(offset, state)
 		elseif self._modifiedOffsets[offset] then self._theme.modifiedCell
 		else self._theme.cell
 
-	local cells = self._cells[offset]
+	local row = self._rows[offset // self._layout.columns - self._startRow]
+	if not row then
+		return
+	end
 
-	if cells then
+	local cell = row.cells[offset % self._layout.columns]
+	if not cell then
+		return
+	end
+
+	if cell then
 		local selected = self:_isCellSelected(offset)
 
 		local backgroundColor = if self._cursorState.offset == offset
@@ -1479,16 +1471,28 @@ function HexEditor:_updateCellStyle(offset, state)
 			elseif state == "select" then cellThemeData.selectText
 			else self._theme.cell.text
 
-		cells.hex.BackgroundColor3 = backgroundColor
-		cells.hex.TextColor3 = textColor
-		cells.hex.FontFace = self._theme.font
-		cells.hex.TextSize = self._theme.textSize
+		cell.hex.BackgroundColor3 = backgroundColor
+		cell.hex.TextColor3 = textColor
+		cell.hex.FontFace = self._theme.font
+		cell.hex.TextSize = self._theme.textSize
 
-		if cells.ascii then
-			cells.ascii.BackgroundColor3 = backgroundColor
-			cells.ascii.TextColor3 = textColor
-			cells.ascii.FontFace = self._theme.font
-			cells.ascii.TextSize = self._theme.textSize
+		if cell.ascii then
+			cell.ascii.BackgroundColor3 = backgroundColor
+			cell.ascii.TextColor3 = textColor
+			cell.ascii.FontFace = self._theme.font
+			cell.ascii.TextSize = self._theme.textSize
+		end
+	end
+end
+
+function HexEditor:_updateRowStyle(rowNumber: number)
+	local row = self._rows[rowNumber - self._startRow]
+	if row and row.gutter then
+		local active = self._cursorState.offset and self._cursorState.offset // self._layout.columns == rowNumber
+		if active then
+			row.gutter.TextColor3 = self._theme.gutterActiveText or self._theme.gutterText or self._theme.cell.text
+		else
+			row.gutter.TextColor3 = self._theme.gutterText or self._theme.cell.text
 		end
 	end
 end
@@ -1503,13 +1507,6 @@ function HexEditor.isCharacterPrintable(asciiCode: number): boolean
 	end
 end
 
-function HexEditor:_updateHeaderPosition()
-	assert(self._header)
-	assert(self.scrollingFrame)
-
-	self._header.Position = UDim2.fromOffset(0, self.scrollingFrame.CanvasPosition.Y)
-end
-
 function HexEditor:_buildHeader()
 	assert(not self._header)
 
@@ -1522,7 +1519,7 @@ function HexEditor:_buildHeader()
 	)
 	header.ZIndex = 3
 	header.Name = "Header"
-	header.Parent = self.scrollingFrame
+	header.Parent = self.scrollingFrameContent
 
 	for i = 0, self._layout.columns - 1 do
 		local cell = Instance.new("TextLabel")
@@ -1553,67 +1550,36 @@ function HexEditor:_buildHeader()
 
 	self._header = header
 	self._headerOffset = self._cellHeight
-	self:_updateHeaderPosition()
 end
 
-function HexEditor:_buildRow(row: number)
-	local rowOffset = self._layout.columns * row
+function HexEditor:_buildRow(rowFromTop: number)
 	local frame = Instance.new("Frame")
 	frame.BackgroundTransparency = 1
 	frame.Size = UDim2.fromOffset(self._cellWidth * self._layout.columns, self._cellHeight)
-	frame.Position = UDim2.fromOffset(0, self._headerOffset + row * self._cellHeight)
-	frame.Name = tostring(row)
+	frame.Name = tostring(rowFromTop)
 
+	local gutter: TextLabel
 	if self._layout.showGutter then
-		local gutterText = Instance.new("TextLabel")
-		gutterText.BackgroundColor3 = self._theme.gutterBackground or self._theme.cell.background
-		gutterText.BorderSizePixel = 0
-		gutterText.TextColor3 = self._theme.gutterText or self._theme.cell.text
-		gutterText.TextSize = self._theme.textSize
-		gutterText.FontFace = Font.new(self._theme.font.Family, Enum.FontWeight.Bold, self._theme.font.Style)
-		gutterText.Position = UDim2.fromOffset(0, 0)
-		gutterText.Size = UDim2.fromOffset(self._gutterOffset - self._theme.sectionGap, self._cellHeight)
-		gutterText.Text = string.format("%0" .. tostring(self._layout.gutterColumns) .. "X", row * self._layout.columns)
-		gutterText.Name = "Gutter"
-		gutterText.Parent = frame
+		gutter = Instance.new("TextLabel")
+		gutter.BackgroundColor3 = self._theme.gutterBackground or self._theme.cell.background
+		gutter.BorderSizePixel = 0
+		gutter.TextColor3 = self._theme.gutterText or self._theme.cell.text
+		gutter.TextSize = self._theme.textSize
+		gutter.FontFace = Font.new(self._theme.font.Family, Enum.FontWeight.Bold, self._theme.font.Style)
+		gutter.Position = UDim2.fromOffset(0, 0)
+		gutter.Size = UDim2.fromOffset(self._gutterOffset - self._theme.sectionGap, self._cellHeight)
+		gutter.Name = "Gutter"
+		gutter.Parent = frame
 	end
 
-	for i = 0, self._layout.columns - 1 do
-		local offset = rowOffset + i
-		if offset > self._bufferSize then
-			break
-		end
-
-		self:_rebuildCell(offset, frame)
-	end
-
-	frame.Parent = self.scrollingFrame
-	self._rows[row] = frame
-end
-
-function HexEditor:_rebuildCell(offset, frame)
-	local row = offset // self._layout.columns
-	if not frame then
-		frame = self._rows[row]
-	end
-
-	local previousCell = self._cells[offset]
-	if previousCell then
-		previousCell.hex:Destroy()
-		if previousCell.ascii then
-			previousCell.ascii:Destroy()
-		end
-	end
-
-	if frame then
-		local column = offset % self._layout.columns
-		-- A cell will be rebuilt when it is modified so we don't have to worry about updating this
-
+	local cells = table.create(self._layout.columns)
+	for column = 0, self._layout.columns - 1 do
 		local cell = Instance.new("TextButton")
 		cell.BorderSizePixel = 0
 		cell.AutoButtonColor = false
 		cell.Position = UDim2.fromOffset(self._gutterOffset + column * self._cellWidth, 0)
 		cell.Size = UDim2.fromOffset(self._cellWidth, self._cellHeight)
+		cell.Visible = false
 		cell.Parent = frame
 
 		local asciiCell
@@ -1628,134 +1594,215 @@ function HexEditor:_rebuildCell(offset, frame)
 				0
 			)
 			asciiCell.Size = UDim2.fromOffset(self._halfCellWidth, self._cellHeight)
+			asciiCell.Visible = false
 			asciiCell.Parent = frame
 		end
 
-		local isAddCell = offset == self._bufferSize
-		if isAddCell then
-			cell.Text = "+"
-			if asciiCell then
-				asciiCell.Text = "+"
-			end
+		cells[column] = {
+			hex = cell,
+			ascii = asciiCell,
+			connections = {},
+		}
+	end
+
+	frame.Parent = self.scrollingFrameContent
+	self._rows[rowFromTop] = {
+		frame = frame,
+		gutter = gutter,
+		cells = cells,
+	}
+end
+
+function HexEditor:_updateRow(rowNumber: number)
+	local rowFromTop = rowNumber - self._startRow
+	local row = self._rows[rowFromTop]
+	if not row then
+		return
+	end
+
+	self._rowIdentities[rowFromTop] = rowNumber
+
+	local gutter = row.gutter
+	if gutter then
+		gutter.Text =
+			string.format("%0" .. tostring(self._layout.gutterColumns) .. "X", rowNumber * self._layout.columns)
+	end
+
+	local startOffset = self._layout.columns * rowNumber
+
+	row.frame.Visible = startOffset <= self._bufferSize + 1
+
+	self:_updateRowStyle(rowNumber)
+
+	for column = 0, self._layout.columns - 1 do
+		local offset = startOffset + column
+		if offset <= self._bufferSize then
+			self:_updateCell(offset)
 		else
-			local asciiCode = buffer.readu8(self._buffer, offset)
-			cell.Text = ("%02X"):format(asciiCode)
+			row.cells[column].hex.Visible = false
+
+			local asciiCell = row.cells[column].ascii
 			if asciiCell then
-				asciiCell.Text = if HexEditor.isCharacterPrintable(asciiCode) then string.char(asciiCode) else "·"
+				asciiCell.Visible = false
 			end
 		end
+	end
+end
 
-		local function generateInputBegan(view: CursorView)
-			return function(input: InputObject)
-				if input.UserInputType == Enum.UserInputType.MouseMovement then
-					if (self._selectionPhase == "mousedown") and self._cursorState.offset and not isAddCell then
-						self:_startSelection(self._cursorState.offset, self._cursorState.view :: CursorView)
-						self:_updateSelection(offset, view)
-					elseif (self._selectionPhase == "selecting") and not isAddCell then
-						self:_updateSelection(offset, view)
-					elseif self._cursorState.offset ~= offset then
-						self:_updateCellStyle(offset, "hover")
-					end
-				elseif input.UserInputType == Enum.UserInputType.MouseButton1 and not isAddCell then
-					if self._selectionPhase == nil then
-						self._selectionPhase = "mousedown"
+function HexEditor:_updateCell(offset)
+	local row = self._rows[offset // self._layout.columns - self._startRow]
+	if not row then
+		return
+	end
 
-						local previousState = self._cursorState
-						self:_clearSelection()
-						self:_setCursorState(offset, view)
+	local cell = row.cells[offset % self._layout.columns]
+	if not cell then
+		return
+	end
 
-						local connection: RBXScriptConnection
-						connection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
-							if
-								not (
-									input.UserInputState == Enum.UserInputState.Begin
-									or input.UserInputState == Enum.UserInputState.Change
-								)
-							then
-								if self._selectionPhase == "mousedown" then
-									if previousState.offset == offset and self._cursorState.view == view then
-										self:_cycleCursorMode()
-									end
-									self._selectionPhase = nil
+	for _, connection in cell.connections do
+		connection:Disconnect()
+	end
+	table.clear(cell.connections)
+
+	local hexCell = cell.hex
+	local asciiCell = cell.ascii
+
+	hexCell.Visible = true
+	if asciiCell then
+		asciiCell.Visible = true
+	end
+
+	local isAddCell = offset == self._bufferSize
+	if isAddCell then
+		hexCell.Text = "+"
+		if asciiCell then
+			asciiCell.Text = "+"
+		end
+	else
+		local asciiCode = buffer.readu8(self._buffer, offset)
+		hexCell.Text = ("%02X"):format(asciiCode)
+		if asciiCell then
+			asciiCell.Text = if HexEditor.isCharacterPrintable(asciiCode) then string.char(asciiCode) else "·"
+		end
+	end
+
+	if #self._typed > 0 and self._cursorState.offset == offset then
+		hexCell.Text = self._typed .. "_"
+	end
+
+	local function generateInputBegan(view: CursorView)
+		return function(input: InputObject)
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				if (self._selectionPhase == "mousedown") and self._cursorState.offset and not isAddCell then
+					self:_startSelection(self._cursorState.offset, self._cursorState.view :: CursorView)
+					self:_updateSelection(offset, view)
+				elseif (self._selectionPhase == "selecting") and not isAddCell then
+					self:_updateSelection(offset, view)
+				elseif self._cursorState.offset ~= offset then
+					self:_updateCellStyle(offset, "hover")
+				end
+			elseif input.UserInputType == Enum.UserInputType.MouseButton1 and not isAddCell then
+				if self._selectionPhase == nil then
+					self._selectionPhase = "mousedown"
+
+					local previousState = self._cursorState
+					self:_clearSelection()
+					self:_setCursorState(offset, view)
+
+					local connection: RBXScriptConnection
+					connection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
+						if
+							not (
+								input.UserInputState == Enum.UserInputState.Begin
+								or input.UserInputState == Enum.UserInputState.Change
+							)
+						then
+							if self._selectionPhase == "mousedown" then
+								if previousState.offset == offset and self._cursorState.view == view then
+									self:_cycleCursorMode()
 								end
-
-								self:_endSelection()
-								connection:Disconnect()
+								self._selectionPhase = nil
 							end
-						end)
-					end
+
+							self:_endSelection()
+							connection:Disconnect()
+						end
+					end)
 				end
 			end
 		end
+	end
 
-		local function generateInputEnded(view: CursorView)
-			return function(input: InputObject)
-				if input.UserInputType == Enum.UserInputType.MouseMovement then
-					if self._cursorState.offset ~= offset then
-						self:_updateCellStyle(offset, "default")
-					end
-				elseif (input.UserInputType == Enum.UserInputType.MouseButton2) and self._dependencies.forms then
-					self:_setInModal(true)
-
-					-- Keep a copy of these because they could change in between prompting the user
-					local selectionAnchor = self._selectionAnchor
-					local cursorOffset = self._cursorState.offset
-
-					local action: string?
-					if self:_isCellSelected(offset) then
-						action =
-							self._dependencies.forms.promptContextMenu(input, HexEditor.SELECTION_CONTEXT_MENU_OPTIONS)
-					else
-						self:_clearSelection()
-						self:_setCursorState(offset, view)
-						action = self._dependencies.forms.promptContextMenu(
-							input,
-							if isAddCell
-								then HexEditor.ADD_CELL_CONTEXT_MENU_OPTIONS
-								else HexEditor.SINGLE_BYTE_CONTEXT_MENU_OPTIONS
-						)
-					end
-
-					if action == "Delete Byte" then
-						self:_deleteAtCursorWithAction()
-					elseif action == "Insert Null Bytes" then
-						-- So the user sees where it will insert
-						if self._selectionAnchor then
-							self:_clearSelection()
-							self:_setCursorState(offset, self._cursorState.view :: CursorView)
-						end
-
-						local amount = self._dependencies.forms.promptInsertNullBytes(input)
-						if amount then
-							self:_insertBufferWithAction(offset, buffer.create(amount))
-						end
-					elseif action == "Fill Selection" then
-						local fillPattern = self._dependencies.forms.promptFillWith(input)
-						if fillPattern and (buffer.len(fillPattern) > 0) and selectionAnchor and cursorOffset then
-							local from = math.min(selectionAnchor, cursorOffset)
-							local to = math.max(selectionAnchor, cursorOffset)
-							self:_fillPatternWithAction(from, to - from + 1, fillPattern)
-						end
-					elseif action == "Delete Selection" then
-						self:_deleteSelectionWithAction()
-					elseif action == "Select All" then
-						self:_setSelection(0, self._bufferSize - 1)
-					elseif action == "Select None" then
-						self:_clearSelection()
-					elseif action ~= nil then
-						warn(`Unexpected action: {action}`)
-					end
-
-					self:_setInModal(false)
+	local function generateInputEnded(view: CursorView)
+		return function(input: InputObject)
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				if self._cursorState.offset ~= offset then
+					self:_updateCellStyle(offset, "default")
 				end
+			elseif (input.UserInputType == Enum.UserInputType.MouseButton2) and self._dependencies.forms then
+				self:_setInModal(true)
+
+				-- Keep a copy of these because they could change in between prompting the user
+				local selectionAnchor = self._selectionAnchor
+				local cursorOffset = self._cursorState.offset
+
+				local action: string?
+				if self:_isCellSelected(offset) then
+					action = self._dependencies.forms.promptContextMenu(input, HexEditor.SELECTION_CONTEXT_MENU_OPTIONS)
+				else
+					self:_clearSelection()
+					self:_setCursorState(offset, view)
+					action = self._dependencies.forms.promptContextMenu(
+						input,
+						if isAddCell
+							then HexEditor.ADD_CELL_CONTEXT_MENU_OPTIONS
+							else HexEditor.SINGLE_BYTE_CONTEXT_MENU_OPTIONS
+					)
+				end
+
+				if action == "Delete Byte" then
+					self:_deleteAtCursorWithAction()
+				elseif action == "Insert Null Bytes" then
+					-- So the user sees where it will insert
+					if self._selectionAnchor then
+						self:_clearSelection()
+						self:_setCursorState(offset, self._cursorState.view :: CursorView)
+					end
+
+					local amount = self._dependencies.forms.promptInsertNullBytes(input)
+					if amount then
+						self:_insertBufferWithAction(offset, buffer.create(amount))
+					end
+				elseif action == "Fill Selection" then
+					local fillPattern = self._dependencies.forms.promptFillWith(input)
+					if fillPattern and (buffer.len(fillPattern) > 0) and selectionAnchor and cursorOffset then
+						local from = math.min(selectionAnchor, cursorOffset)
+						local to = math.max(selectionAnchor, cursorOffset)
+						self:_fillPatternWithAction(from, to - from + 1, fillPattern)
+					end
+				elseif action == "Delete Selection" then
+					self:_deleteSelectionWithAction()
+				elseif action == "Select All" then
+					self:_setSelection(0, self._bufferSize - 1)
+				elseif action == "Select None" then
+					self:_clearSelection()
+				elseif action ~= nil then
+					warn(`Unexpected action: {action}`)
+				end
+
+				self:_setInModal(false)
 			end
 		end
+	end
 
-		cell.InputBegan:Connect(generateInputBegan("hex"))
-		cell.InputEnded:Connect(generateInputEnded("hex"))
+	table.insert(cell.connections, hexCell.InputBegan:Connect(generateInputBegan("hex")))
+	table.insert(cell.connections, hexCell.InputEnded:Connect(generateInputEnded("hex")))
 
-		if isAddCell then
-			cell.Activated:Connect(function()
+	if isAddCell then
+		table.insert(
+			cell.connections,
+			hexCell.Activated:Connect(function()
 				if self._cursorState.offset == offset and self._cursorState.view == "hex" then
 					self:_cycleCursorMode()
 				else
@@ -1763,13 +1810,16 @@ function HexEditor:_rebuildCell(offset, frame)
 					self:_setCursorState(offset, "hex")
 				end
 			end)
-		end
+		)
+	end
 
-		if asciiCell then
-			asciiCell.InputBegan:Connect(generateInputBegan("ascii"))
-			asciiCell.InputEnded:Connect(generateInputEnded("ascii"))
+	if asciiCell then
+		table.insert(cell.connections, asciiCell.InputBegan:Connect(generateInputBegan("ascii")))
+		table.insert(cell.connections, asciiCell.InputEnded:Connect(generateInputEnded("ascii")))
 
-			if isAddCell then
+		if isAddCell then
+			table.insert(
+				cell.connections,
 				asciiCell.Activated:Connect(function()
 					if self._cursorState.offset == offset and self._cursorState.view == "ascii" then
 						self:_cycleCursorMode()
@@ -1778,52 +1828,50 @@ function HexEditor:_rebuildCell(offset, frame)
 						self:_setCursorState(offset, "ascii")
 					end
 				end)
+			)
+		end
+	end
+
+	self:_updateCellStyle(offset)
+end
+
+function HexEditor:_rebuildVisibleRows(forceAfterOffset)
+	local scrollingFrame = self.scrollingFrame
+	local scrollingFrameContent = self.scrollingFrameContent
+	if scrollingFrame and scrollingFrameContent then
+		local totalRows = math.ceil((self._bufferSize + 1) / self._layout.columns)
+		scrollingFrame.CanvasSize = UDim2.fromOffset(0, self._headerOffset + self._cellHeight * totalRows)
+
+		local totalVisibleRows = math.ceil(scrollingFrame.AbsoluteWindowSize.Y / self._cellHeight)
+
+		-- delete extra rows
+		for i in self._rows do
+			if i >= totalVisibleRows then
+				self._rows[i].frame:Destroy()
+				self._rows[i] = nil
+				self._rowIdentities[i] = nil
 			end
 		end
 
-		self._cells[offset] = { hex = cell, ascii = asciiCell }
-		self:_updateCellStyle(offset)
-	end
-end
-
-function HexEditor:_rebuildVisibleRows(overflow, forceAfterOffset)
-	local scrollingFrame = self.scrollingFrame
-	if scrollingFrame then
-		local totalRows = math.ceil((self._bufferSize + 1) / self._layout.columns)
-		scrollingFrame.CanvasSize =
-			UDim2.fromOffset(0, self._headerOffset + self._cellHeight * totalRows + scrollingFrame.ScrollBarThickness)
-
-		local min = math.max(
-			math.floor((scrollingFrame.CanvasPosition.Y + (if overflow < 0 then overflow else 0)) / self._cellHeight)
-				- 1,
-			0
-		)
-		local max = math.min(
-			math.ceil(
-				(
-					scrollingFrame.CanvasPosition.Y
-					+ (if overflow > 0 then overflow else 0)
-					+ scrollingFrame.AbsoluteWindowSize.Y
-				) / self._cellHeight
-			) + 1,
-			totalRows - 1
-		)
-
-		for index, row in self._rows do
-			if index < min or index > max then
-				row:Destroy()
-				self._rows[index] = nil
+		-- add more rows if necessary
+		for i = 1, totalVisibleRows do
+			if not self._rows[i - 1] then
+				self:_buildRow(i - 1)
 			end
 		end
 
 		local forceAfterRow = if forceAfterOffset then forceAfterOffset // self._layout.columns else math.huge
 
-		for i = min, max do
-			if not self._rows[i] then
-				self:_buildRow(i)
-			elseif i >= forceAfterRow then
-				self._rows[i]:Destroy()
-				self:_buildRow(i)
+		for rowFromTop = 0, totalVisibleRows - 1 do
+			local rowNumber = self._startRow + rowFromTop
+			if (self._rowIdentities[rowFromTop] ~= rowNumber) or (rowNumber >= forceAfterRow) then
+				self:_updateRow(rowNumber)
+			end
+
+			local row = self._rows[rowFromTop]
+			if row then
+				row.frame.Position =
+					UDim2.fromOffset(0, self._headerOffset + rowFromTop * self._cellHeight - self._scrollOffset)
 			end
 		end
 	end
@@ -1875,13 +1923,39 @@ function HexEditor:_updateCursorStyle(mode, state)
 	end
 end
 
+function HexEditor:_updateCursorPosition()
+	local cursor = self._cursor :: Frame
+	local offset = self._cursorState.offset
+	if cursor and offset then
+		local positionOffset = if #self._typed > 0 and self._cursorState.mode == "insert"
+			then UDim2.fromOffset(self._cellWidth / 2, 0)
+			else UDim2.fromOffset(0, 0)
+		local column = offset % self._layout.columns
+		local row = offset // self._layout.columns - self._startRow
+		if self._cursorState.view == "hex" then
+			cursor.Position = UDim2.fromOffset(
+				self._gutterOffset + column * self._cellWidth,
+				self._headerOffset + (row + 1) * self._cellHeight - self._scrollOffset
+			) + positionOffset
+		elseif self._cursorState.view == "ascii" then
+			cursor.Position = UDim2.fromOffset(
+				self._gutterOffset
+					+ self._cellWidth * self._layout.columns
+					+ self._theme.sectionGap
+					+ column * self._halfCellWidth,
+				self._headerOffset + (row + 1) * self._cellHeight - self._scrollOffset
+			) + positionOffset
+		end
+	end
+end
+
 function HexEditor:_buildCursor()
 	local cursor = Instance.new("Frame")
 	self._cursor = cursor
 	cursor.BorderSizePixel = 0
 	cursor.AnchorPoint = Vector2.new(0, 1)
 	cursor.ZIndex = 2
-	cursor.Parent = self.scrollingFrame
+	cursor.Parent = self.scrollingFrameContent
 
 	self:_updateCursorStyle(self._cursorState.mode)
 
@@ -1904,28 +1978,8 @@ function HexEditor:_buildUi()
 	local scrollingFrame = Instance.new("ScrollingFrame")
 	self.scrollingFrame = scrollingFrame
 	scrollingFrame.BorderSizePixel = 0
-	scrollingFrame.BackgroundColor3 = self._theme.cell.background
+	scrollingFrame.BackgroundTransparency = 1
 	scrollingFrame.Size = UDim2.fromScale(1, 1)
-
-	scrollingFrame.Parent = self._container
-	scrollingFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		self:_rebuildVisibleRows(0)
-	end)
-	local lastPosition = scrollingFrame.CanvasPosition
-	scrollingFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-		local delta = scrollingFrame.CanvasPosition - lastPosition
-		local overflow = 0
-		if math.abs(delta.Y) < 200 then
-			overflow = 1.25 * delta.Y
-		end
-
-		if self._header then
-			self:_updateHeaderPosition()
-		end
-
-		self:_rebuildVisibleRows(overflow)
-		lastPosition = scrollingFrame.CanvasPosition
-	end)
 
 	local scrollingFrameProperties = self._theme.scrollingFrameProperties
 	if scrollingFrameProperties then
@@ -1934,11 +1988,45 @@ function HexEditor:_buildUi()
 		end
 	end
 
+	local scrollingFrameContent = Instance.new("Frame")
+	self.scrollingFrameContent = scrollingFrameContent
+	scrollingFrameContent.BackgroundColor3 = self._theme.cell.background
+	scrollingFrameContent.ClipsDescendants = true
+	scrollingFrameContent.BorderSizePixel = 0
+	scrollingFrameContent.ZIndex = 2
+	scrollingFrameContent.Size = UDim2.new(1, -scrollingFrame.ScrollBarThickness, 1, 0)
+
+	scrollingFrameContent.Parent = self._container
+	scrollingFrame.Parent = self._container
+	scrollingFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		self:_rebuildVisibleRows()
+	end)
+
+	scrollingFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+		local startRow = scrollingFrame.CanvasPosition.Y // self._cellHeight
+		self._startRow = startRow
+
+		local totalRows = math.ceil((self._bufferSize + 1) / self._layout.columns)
+		local extra = (scrollingFrame.AbsoluteWindowSize.Y - self._headerOffset) % self._cellHeight
+		local maxScrollPosition = scrollingFrame.AbsoluteCanvasSize.Y - scrollingFrame.AbsoluteWindowSize.Y
+		local scrollToBottomAfter = (maxScrollPosition // self._cellHeight - 1) * self._cellHeight
+			+ extra
+			+ self._cellHeight / 2
+		if scrollingFrame.CanvasPosition.Y > scrollToBottomAfter then
+			self._scrollOffset = self._cellHeight - extra
+		else
+			self._scrollOffset = 0
+		end
+
+		self:_rebuildVisibleRows()
+		self:_updateCursorPosition()
+	end)
+
 	if self._layout.showHeader then
 		self:_buildHeader()
 	end
 
-	self:_rebuildVisibleRows(0)
+	self:_rebuildVisibleRows()
 
 	self.horizontalSpaceUsed = self._gutterOffset
 		+ self._cellWidth * self._layout.columns
@@ -1952,6 +2040,10 @@ function HexEditor:_buildUi()
 		local sizeConstraint = Instance.new("UISizeConstraint")
 		sizeConstraint.MaxSize = Vector2.new(self.horizontalSpaceUsed, math.huge)
 		sizeConstraint.Parent = scrollingFrame
+
+		local sizeConstraint2 = sizeConstraint:Clone()
+		sizeConstraint2.MaxSize = Vector2.new(self.horizontalSpaceUsed - scrollingFrame.ScrollBarThickness, math.huge)
+		sizeConstraint2.Parent = scrollingFrameContent
 	end
 
 	self._sizeChanged:Fire(self.horizontalSpaceUsed)
@@ -1963,16 +2055,10 @@ function HexEditor:_clearUi()
 		self._cursor = nil
 	end
 
-	for _, cell in self._cells do
-		cell.hex:Destroy()
-		if cell.ascii then
-			cell.ascii:Destroy()
-		end
-	end
-	self._cells = {}
+	self._rowIdentities = {}
 
 	for _, row in self._rows do
-		row:Destroy()
+		row.frame:Destroy()
 	end
 	self._rows = {}
 
@@ -1980,6 +2066,14 @@ function HexEditor:_clearUi()
 		self._header:Destroy()
 		self._headerOffset = 0
 		self._header = nil
+	end
+
+	self._startRow = 0
+	self._scrollOffset = 0
+
+	if self.scrollingFrameContent then
+		self.scrollingFrameContent:Destroy()
+		self.scrollingFrameContent = nil
 	end
 
 	if self.scrollingFrame then
