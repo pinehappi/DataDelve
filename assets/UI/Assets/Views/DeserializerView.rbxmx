@@ -125,7 +125,29 @@
         <bool name="Visible">true</bool>
         <int name="ZIndex">1</int>
       </Properties>
-      <Item class="TextButton" referent="2">
+      <Item class="UIListLayout" referent="2">
+        <Properties>
+          <string name="Name">UIListLayout</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <token name="FillDirection">0</token>
+          <token name="HorizontalAlignment">1</token>
+          <token name="HorizontalFlex">0</token>
+          <token name="ItemLineAlignment">0</token>
+          <UDim name="Padding">
+            <S>0</S>
+            <O>8</O>
+          </UDim>
+          <token name="SortOrder">2</token>
+          <int64 name="SourceAssetId">-1</int64>
+          <BinaryString name="Tags"></BinaryString>
+          <token name="VerticalAlignment">0</token>
+          <token name="VerticalFlex">0</token>
+          <bool name="Wraps">false</bool>
+        </Properties>
+      </Item>
+      <Item class="TextButton" referent="3">
         <Properties>
           <string name="Name">UseSelection</string>
           <bool name="Active">true</bool>
@@ -229,7 +251,96 @@
           <bool name="Visible">true</bool>
           <int name="ZIndex">1</int>
         </Properties>
-        <Item class="TextLabel" referent="3">
+        <Item class="UICorner" referent="4">
+          <Properties>
+            <string name="Name">UICorner</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <UDim name="CornerRadius">
+              <S>0</S>
+              <O>4</O>
+            </UDim>
+            <bool name="DefinesCapabilities">false</bool>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+        </Item>
+        <Item class="UIStroke" referent="5">
+          <Properties>
+            <string name="Name">UIStroke</string>
+            <token name="ApplyStrokeMode">1</token>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <UDim name="BorderOffset">
+              <S>0</S>
+              <O>0</O>
+            </UDim>
+            <token name="BorderStrokePosition">0</token>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <Color3 name="Color">
+              <R>0.24313726</R>
+              <G>0.24313726</G>
+              <B>0.24313726</B>
+            </Color3>
+            <bool name="DefinesCapabilities">false</bool>
+            <bool name="Enabled">true</bool>
+            <token name="LineJoinMode">0</token>
+            <int64 name="SourceAssetId">-1</int64>
+            <token name="StrokeSizingMode">0</token>
+            <BinaryString name="Tags"></BinaryString>
+            <float name="Thickness">1</float>
+            <float name="Transparency">0</float>
+            <int name="ZIndex">1</int>
+          </Properties>
+        </Item>
+        <Item class="UIPadding" referent="6">
+          <Properties>
+            <string name="Name">UIPadding</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="DefinesCapabilities">false</bool>
+            <UDim name="PaddingBottom">
+              <S>0</S>
+              <O>4</O>
+            </UDim>
+            <UDim name="PaddingLeft">
+              <S>0</S>
+              <O>8</O>
+            </UDim>
+            <UDim name="PaddingRight">
+              <S>0</S>
+              <O>8</O>
+            </UDim>
+            <UDim name="PaddingTop">
+              <S>0</S>
+              <O>4</O>
+            </UDim>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+        </Item>
+        <Item class="UIListLayout" referent="7">
+          <Properties>
+            <string name="Name">UIListLayout</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="DefinesCapabilities">false</bool>
+            <token name="FillDirection">0</token>
+            <token name="HorizontalAlignment">1</token>
+            <token name="HorizontalFlex">0</token>
+            <token name="ItemLineAlignment">0</token>
+            <UDim name="Padding">
+              <S>0</S>
+              <O>5</O>
+            </UDim>
+            <token name="SortOrder">2</token>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+            <token name="VerticalAlignment">1</token>
+            <token name="VerticalFlex">0</token>
+            <bool name="Wraps">false</bool>
+          </Properties>
+        </Item>
+        <Item class="TextLabel" referent="8">
           <Properties>
             <string name="Name">TextLabel</string>
             <bool name="Active">false</bool>
@@ -325,97 +436,8 @@
             <int name="ZIndex">1</int>
           </Properties>
         </Item>
-        <Item class="UIListLayout" referent="4">
-          <Properties>
-            <string name="Name">UIListLayout</string>
-            <BinaryString name="AttributesSerialize"></BinaryString>
-            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-            <bool name="DefinesCapabilities">false</bool>
-            <token name="FillDirection">0</token>
-            <token name="HorizontalAlignment">1</token>
-            <token name="HorizontalFlex">0</token>
-            <token name="ItemLineAlignment">0</token>
-            <UDim name="Padding">
-              <S>0</S>
-              <O>5</O>
-            </UDim>
-            <token name="SortOrder">2</token>
-            <int64 name="SourceAssetId">-1</int64>
-            <BinaryString name="Tags"></BinaryString>
-            <token name="VerticalAlignment">1</token>
-            <token name="VerticalFlex">0</token>
-            <bool name="Wraps">false</bool>
-          </Properties>
-        </Item>
-        <Item class="UIPadding" referent="5">
-          <Properties>
-            <string name="Name">UIPadding</string>
-            <BinaryString name="AttributesSerialize"></BinaryString>
-            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-            <bool name="DefinesCapabilities">false</bool>
-            <UDim name="PaddingBottom">
-              <S>0</S>
-              <O>4</O>
-            </UDim>
-            <UDim name="PaddingLeft">
-              <S>0</S>
-              <O>8</O>
-            </UDim>
-            <UDim name="PaddingRight">
-              <S>0</S>
-              <O>8</O>
-            </UDim>
-            <UDim name="PaddingTop">
-              <S>0</S>
-              <O>4</O>
-            </UDim>
-            <int64 name="SourceAssetId">-1</int64>
-            <BinaryString name="Tags"></BinaryString>
-          </Properties>
-        </Item>
-        <Item class="UIStroke" referent="6">
-          <Properties>
-            <string name="Name">UIStroke</string>
-            <token name="ApplyStrokeMode">1</token>
-            <BinaryString name="AttributesSerialize"></BinaryString>
-            <UDim name="BorderOffset">
-              <S>0</S>
-              <O>0</O>
-            </UDim>
-            <token name="BorderStrokePosition">0</token>
-            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-            <Color3 name="Color">
-              <R>0.24313726</R>
-              <G>0.24313726</G>
-              <B>0.24313726</B>
-            </Color3>
-            <bool name="DefinesCapabilities">false</bool>
-            <bool name="Enabled">true</bool>
-            <token name="LineJoinMode">0</token>
-            <int64 name="SourceAssetId">-1</int64>
-            <token name="StrokeSizingMode">0</token>
-            <BinaryString name="Tags"></BinaryString>
-            <float name="Thickness">1</float>
-            <float name="Transparency">0</float>
-            <int name="ZIndex">1</int>
-          </Properties>
-        </Item>
-        <Item class="UICorner" referent="7">
-          <Properties>
-            <string name="Name">UICorner</string>
-            <BinaryString name="AttributesSerialize"></BinaryString>
-            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-            <UDim name="CornerRadius">
-              <S>0</S>
-              <O>4</O>
-            </UDim>
-            <bool name="DefinesCapabilities">false</bool>
-            <int64 name="SourceAssetId">-1</int64>
-            <BinaryString name="Tags"></BinaryString>
-          </Properties>
-        </Item>
       </Item>
-      <Item class="ImageButton" referent="8">
+      <Item class="ImageButton" referent="9">
         <Properties>
           <string name="Name">Help</string>
           <bool name="Active">true</bool>
@@ -526,28 +548,6 @@
           </UDim2>
           <bool name="Visible">true</bool>
           <int name="ZIndex">1</int>
-        </Properties>
-      </Item>
-      <Item class="UIListLayout" referent="9">
-        <Properties>
-          <string name="Name">UIListLayout</string>
-          <BinaryString name="AttributesSerialize"></BinaryString>
-          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-          <bool name="DefinesCapabilities">false</bool>
-          <token name="FillDirection">0</token>
-          <token name="HorizontalAlignment">1</token>
-          <token name="HorizontalFlex">0</token>
-          <token name="ItemLineAlignment">0</token>
-          <UDim name="Padding">
-            <S>0</S>
-            <O>8</O>
-          </UDim>
-          <token name="SortOrder">2</token>
-          <int64 name="SourceAssetId">-1</int64>
-          <BinaryString name="Tags"></BinaryString>
-          <token name="VerticalAlignment">0</token>
-          <token name="VerticalFlex">0</token>
-          <bool name="Wraps">false</bool>
         </Properties>
       </Item>
       <Item class="TextButton" referent="10">
@@ -881,29 +881,7 @@
             <int name="ZIndex">1</int>
           </Properties>
         </Item>
-        <Item class="UIListLayout" referent="14">
-          <Properties>
-            <string name="Name">UIListLayout</string>
-            <BinaryString name="AttributesSerialize"></BinaryString>
-            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-            <bool name="DefinesCapabilities">false</bool>
-            <token name="FillDirection">0</token>
-            <token name="HorizontalAlignment">0</token>
-            <token name="HorizontalFlex">0</token>
-            <token name="ItemLineAlignment">0</token>
-            <UDim name="Padding">
-              <S>0</S>
-              <O>8</O>
-            </UDim>
-            <token name="SortOrder">2</token>
-            <int64 name="SourceAssetId">-1</int64>
-            <BinaryString name="Tags"></BinaryString>
-            <token name="VerticalAlignment">0</token>
-            <token name="VerticalFlex">0</token>
-            <bool name="Wraps">false</bool>
-          </Properties>
-        </Item>
-        <Item class="ImageLabel" referent="15">
+        <Item class="ImageLabel" referent="14">
           <Properties>
             <string name="Name">Icon</string>
             <bool name="Active">false</bool>
@@ -1000,6 +978,28 @@
             </UDim2>
             <bool name="Visible">true</bool>
             <int name="ZIndex">1</int>
+          </Properties>
+        </Item>
+        <Item class="UIListLayout" referent="15">
+          <Properties>
+            <string name="Name">UIListLayout</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="DefinesCapabilities">false</bool>
+            <token name="FillDirection">0</token>
+            <token name="HorizontalAlignment">0</token>
+            <token name="HorizontalFlex">0</token>
+            <token name="ItemLineAlignment">0</token>
+            <UDim name="Padding">
+              <S>0</S>
+              <O>8</O>
+            </UDim>
+            <token name="SortOrder">2</token>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+            <token name="VerticalAlignment">0</token>
+            <token name="VerticalFlex">0</token>
+            <bool name="Wraps">false</bool>
           </Properties>
         </Item>
       </Item>

@@ -2223,8 +2223,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 
 		if valueType == "string" then
 			defaultValues["string"] = defaultValues["string"]
-				or (if typeof(lastValue) == "buffer" then buffer.tostring(lastValue) else tostring(lastValue))
-				or ""
+				or (if typeof(lastValue) == "number" then tostring(lastValue) else "")
 
 			local textArea = script.EditMenuInputTemplates.TextArea:Clone()
 			wrapper.styleStates.value = TextBoxStyleState.from(self.theme, textArea)
