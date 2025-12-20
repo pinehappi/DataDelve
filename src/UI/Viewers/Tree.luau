@@ -245,6 +245,9 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 				if self._modalState.isInside or self._inRightClick then
 					return
 				end
+				if self._selectingIsDragging then
+					return
+				end
 
 				local action: HotkeyAction? = HOTKEYS[input.KeyCode]
 				if action == "DELETE" then
@@ -3651,10 +3654,12 @@ function Tree:_updateBranchVisible(index)
 
 		if self._selectingBranchVisibleIndex then
 			if
-				startVisibleIndex + 1 < self._selectingBranchVisibleIndex
-				and self._selectingBranchVisibleIndex < (endVisibleIndex or #self._visibleIndexes)
+				startVisibleIndex < self._selectingBranchVisibleIndex
+				and self._selectingBranchVisibleIndex <= (endVisibleIndex or #self._visibleIndexes)
 			then
 				self._selectingBranchVisibleIndex = nil
+			elseif endVisibleIndex and self._selectingBranchVisibleIndex > endVisibleIndex then
+				self._selectingBranchVisibleIndex -= endVisibleIndex - startVisibleIndex
 			end
 		end
 		-- Splicing the closed region out
@@ -3920,9 +3925,6 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 	end
 
 	local lastIndex = self._selectingBranchIndex
-
-	local mousePosition = self.gui:GetRelativeMousePosition()
-
 	if index ~= lastIndex then
 		self._selectingBranchIndex = index
 		self._selectingBranchVisibleIndex = searchVisibleIndex(self._visibleIndexes, index)
@@ -3937,7 +3939,6 @@ function Tree:_selectBranch(index: number, dontDeselect: boolean)
 				setBranchWraps(frame, false)
 			end
 		end
-		self:_updateBranchFrameSelectStyle(index)
 
 		local frame = self._frames[index]
 		if frame then
@@ -4231,7 +4232,7 @@ function Tree:tryCloseSelected(): boolean
 end
 
 function Tree:trySelectNext(): boolean
-	if not self._selectingBranchIndex then
+	if (not self._selectingBranchIndex) or not self._selectingBranchVisibleIndex then
 		return false
 	end
 
@@ -4247,7 +4248,7 @@ function Tree:trySelectNext(): boolean
 end
 
 function Tree:trySelectPrevious(): boolean
-	if not self._selectingBranchIndex then
+	if (not self._selectingBranchIndex) or not self._selectingBranchVisibleIndex then
 		return false
 	end
 
@@ -4303,6 +4304,9 @@ function Tree:_initSearch()
 	self._isSearching = true
 	self._isSearchDirty = false
 	self._originalVisibleIndexes = self._visibleIndexes
+	if self._selectingBranchIndex then
+		self._originalSearchingBranch = self._flatBranches[self._selectingBranchIndex]
+	end
 	self._visibleIndexes = {}
 	self._searchedIndexes = {}
 end
@@ -4334,13 +4338,42 @@ function Tree:_startSearchTask()
 		self._visibleIndexes = {}
 		self._searchedIndexes = {}
 
+		self._selectingBranchVisibleIndex = nil
+		self._selectingBranchOffset = 0
+
 		local startTime = os.clock()
 
 		local addedBranches = {}
 		local adding = table.create(3)
 
 		local normalizedSearchTerm = self._searchTerm:lower()
-		local counter = 0
+		local iterations = 0
+		local matches = 0
+
+		local addedSelectedBranch = false
+		local scrolledToSelectedBranch = false
+
+		local function update()
+			self._searchResultsChanged:Fire({
+				type = "success",
+				matches = matches,
+			} :: Types.SearchResult)
+
+			self:_clearFrames()
+			self:_redrawBranches()
+			self:_updateCanvasSize()
+
+			if addedSelectedBranch and not scrolledToSelectedBranch then
+				scrolledToSelectedBranch = true
+
+				local visibleIndex = searchVisibleIndex(self._visibleIndexes, self._selectingBranchIndex)
+				if visibleIndex then
+					self._selectingBranchVisibleIndex = visibleIndex
+					self:_scrollTo(visibleIndex)
+				end
+			end
+		end
+
 		for i, branch in self._flatBranches do
 			local valueType = type(branch[2])
 			local searched = tostring(branch[1]):lower():find(normalizedSearchTerm, 1, true)
@@ -4352,6 +4385,7 @@ function Tree:_startSearchTask()
 				))
 				or ((valueType == "buffer") and BUFFER_TEXT:find(normalizedSearchTerm, 1, true))
 			if searched then
+				matches += 1
 				table.insert(adding, i)
 				self._searchedIndexes[i] = true
 
@@ -4373,21 +4407,18 @@ function Tree:_startSearchTask()
 					local got = table.remove(adding)
 					table.insert(self._visibleIndexes, got)
 					addedBranches[got] = true
+
+					if got == self._selectingBranchIndex then
+						addedSelectedBranch = true
+					end
 				end
 			end
 
-			counter += 1
-			if counter == ITERATIONS_PER_PAUSE then
-				counter = 0
+			iterations += 1
+			if iterations == ITERATIONS_PER_PAUSE then
+				iterations = 0
 
-				self._searchResultsChanged:Fire({
-					type = "success",
-					matches = #self._visibleIndexes,
-				} :: Types.SearchResult)
-
-				self:_clearFrames()
-				self:_redrawBranches()
-				self:_updateCanvasSize()
+				update()
 
 				task.wait(1 / 30)
 			end
@@ -4399,16 +4430,9 @@ function Tree:_startSearchTask()
 			self:_deleteNoResultsLabel()
 		end
 
-		self._searchResultsChanged:Fire({
-			type = "success",
-			matches = #self._visibleIndexes,
-		} :: Types.SearchResult)
-
 		--print("search time", os.clock() - startTime)
 
-		self:_clearFrames()
-		self:_redrawBranches()
-		self:_updateCanvasSize()
+		update()
 	end)
 end
 
@@ -4435,9 +4459,18 @@ function Tree:endSearch()
 		end
 		self._originalVisibleIndexes = nil
 
+		if self._selectingBranchIndex then
+			self._selectingBranchVisibleIndex = searchVisibleIndex(self._visibleIndexes, self._selectingBranchIndex)
+		end
+
 		self:_updateCanvasSize()
 		self:_clearFrames()
 		self:_redrawBranches()
+
+		if self._selectingBranchIndex then
+			self:_focusBranch(self._selectingBranchIndex)
+			self:_redrawBranches()
+		end
 	end
 end
 

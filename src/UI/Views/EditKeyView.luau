@@ -280,22 +280,24 @@ function EditKeyView.from(params)
 			end
 
 			if input.KeyCode == SEARCH_KEYCODE then
-				local searchView = (self :: any)._searchView :: SearchView.SearchView?
-				if searchView then
-					local connection: RBXScriptConnection
-					connection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
-						if input.UserInputState ~= Enum.UserInputState.Change then
-							connection:Disconnect()
-							if (self :: any)._searchView == searchView then
-								-- wait a bit so the `/` doesn't get typed
-								task.delay(0.05, function()
-									searchView:captureFocus()
-								end)
+				if self._viewer:getSearchCapability() then
+					local searchView = (self :: any)._searchView :: SearchView.SearchView?
+					if searchView then
+						local connection: RBXScriptConnection
+						connection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
+							if input.UserInputState ~= Enum.UserInputState.Change then
+								connection:Disconnect()
+								if (self :: any)._searchView == searchView then
+									-- wait a bit so the `/` doesn't get typed
+									task.delay(0.05, function()
+										searchView:captureFocus()
+									end)
+								end
 							end
-						end
-					end)
-				else
-					self:_startSearch()
+						end)
+					else
+						self:_startSearch()
+					end
 				end
 			elseif input.KeyCode == CLOSE_SEARCH_KEYCODE then
 				-- escape doesn't seem to fire an event, so this doesn't work at the moment
