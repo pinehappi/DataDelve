@@ -1,13 +1,14 @@
 <roblox version="4">
-  <Item class="Frame" referent="0">
+  <Item class="TextButton" referent="0">
     <Properties>
-      <string name="Name">FrameTemplate</string>
-      <bool name="Active">false</bool>
+      <string name="Name">ToastTemplate</string>
+      <bool name="Active">true</bool>
       <Vector2 name="AnchorPoint">
         <X>1</X>
         <Y>1</Y>
       </Vector2>
       <BinaryString name="AttributesSerialize"></BinaryString>
+      <bool name="AutoButtonColor">false</bool>
       <bool name="AutoLocalize">true</bool>
       <token name="AutomaticSize">0</token>
       <Color3 name="BackgroundColor3">
@@ -27,21 +28,41 @@
       <bool name="ClipsDescendants">false</bool>
       <bool name="DefinesCapabilities">false</bool>
       <bool name="Draggable">false</bool>
+      <Font name="FontFace">
+        <Family>
+          <url>rbxasset://fonts/families/LegacyArial.json</url>
+        </Family>
+        <Weight>400</Weight>
+        <Style>Normal</Style>
+        <CachedFaceId>
+          <url>rbxasset://fonts/Arimo-Regular.ttf</url>
+        </CachedFaceId>
+      </Font>
+      <Ref name="HoverHapticEffect">null</Ref>
       <bool name="Interactable">true</bool>
       <int name="LayoutOrder">0</int>
+      <float name="LineHeight">1</float>
+      <string name="LocalizationMatchIdentifier"></string>
+      <string name="LocalizationMatchedSourceText"></string>
+      <int name="MaxVisibleGraphemes">-1</int>
+      <bool name="Modal">false</bool>
       <Ref name="NextSelectionDown">null</Ref>
       <Ref name="NextSelectionLeft">null</Ref>
       <Ref name="NextSelectionRight">null</Ref>
       <Ref name="NextSelectionUp">null</Ref>
+      <string name="OpenTypeFeatures"></string>
       <UDim2 name="Position">
         <XS>0</XS>
         <XO>0</XO>
         <YS>0</YS>
         <YO>0</YO>
       </UDim2>
+      <Ref name="PressHapticEffect">null</Ref>
+      <bool name="RichText">false</bool>
       <Ref name="RootLocalizationTable">null</Ref>
       <float name="Rotation">0</float>
       <bool name="Selectable">false</bool>
+      <bool name="Selected">false</bool>
       <token name="SelectionBehaviorDown">0</token>
       <token name="SelectionBehaviorLeft">0</token>
       <token name="SelectionBehaviorRight">0</token>
@@ -59,6 +80,26 @@
       <int64 name="SourceAssetId">-1</int64>
       <token name="Style">0</token>
       <BinaryString name="Tags"></BinaryString>
+      <string name="Text"></string>
+      <Color3 name="TextColor3">
+        <R>0.10588236</R>
+        <G>0.16470589</G>
+        <B>0.20784315</B>
+      </Color3>
+      <token name="TextDirection">0</token>
+      <bool name="TextScaled">false</bool>
+      <float name="TextSize">8</float>
+      <Color3 name="TextStrokeColor3">
+        <R>0</R>
+        <G>0</G>
+        <B>0</B>
+      </Color3>
+      <float name="TextStrokeTransparency">1</float>
+      <float name="TextTransparency">0</float>
+      <token name="TextTruncate">0</token>
+      <bool name="TextWrapped">false</bool>
+      <token name="TextXAlignment">2</token>
+      <token name="TextYAlignment">1</token>
       <bool name="Visible">true</bool>
       <int name="ZIndex">1</int>
     </Properties>

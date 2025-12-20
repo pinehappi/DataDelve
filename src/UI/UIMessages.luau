@@ -12,7 +12,7 @@ local BackgroundStyleState = require(StyleState.BackgroundStyleState)
 local ButtonStyleState = require(StyleState.ButtonStyleState)
 local LabelStyleState = require(StyleState.LabelStyleState)
 
-local FrameTemplate = script.FrameTemplate
+local ToastTemplate = script.ToastTemplate
 local TextLabelTemplate = script.TextLabelTemplate
 local IconTemplate = script.IconTemplate
 local CloseButtonTemplate = script.CloseButtonTemplate
@@ -51,11 +51,11 @@ function UIMessages:setParent(parent: Instance)
 end
 
 function UIMessages:_getMaxToastWidth(): number
-	return math.clamp(math.floor(self.gui.AbsoluteSize.X * 0.4), 200, 500)
+	return math.clamp(math.floor((self.gui :: any).AbsoluteSize.X * 0.4), 200, 500)
 end
 
 type ToastQueueElement = {
-	frame: typeof(FrameTemplate),
+	button: typeof(ToastTemplate),
 	position: UDim2,
 }
 
@@ -70,7 +70,7 @@ function UIMessages:_pushToastElements(amount: number, tweenInfo: TweenInfo, aft
 		end
 
 		element.position -= UDim2.fromOffset(0, amount)
-		local tween = TweenService:Create(element.frame, tweenInfo, {
+		local tween = TweenService:Create(element.button, tweenInfo, {
 			Position = element.position,
 		})
 		tween:Play()
@@ -79,16 +79,16 @@ end
 
 function UIMessages:_removeToastElementAt(index: number)
 	local element: ToastQueueElement = self._toastQueue[index]
-	local disappearTween = TweenService:Create(element.frame, disappearTweenInfo, {
-		Position = element.position + UDim2.fromOffset(element.frame.AbsoluteSize.X + WINDOW_PADDING_X + 4, 0),
+	local disappearTween = TweenService:Create(element.button, disappearTweenInfo, {
+		Position = element.position + UDim2.fromOffset(element.button.AbsoluteSize.X + WINDOW_PADDING_X + 4, 0),
 	})
 	disappearTween:Play()
 
-	self:_pushToastElements(-element.frame.AbsoluteSize.Y - TOAST_PADDING_INBETWEEN, disappearTweenInfo, index)
+	self:_pushToastElements(-element.button.AbsoluteSize.Y - TOAST_PADDING_INBETWEEN, disappearTweenInfo, index)
 	table.remove(self._toastQueue, index)
 
 	disappearTween.Completed:Wait()
-	element.frame:Destroy()
+	element.button:Destroy()
 end
 
 export type ToastOptions = {
@@ -101,9 +101,9 @@ function UIMessages:toast(options: ToastOptions?)
 	options = options or { text = "" }
 	assert(options)
 
-	local frame = FrameTemplate:Clone()
-	frame.BackgroundColor3 = self.theme.colors.message.background
-	frame.UIStroke.Color = self.theme.colors.message.outline
+	local toast = ToastTemplate:Clone()
+	toast.BackgroundColor3 = self.theme.colors.message.background
+	toast.UIStroke.Color = self.theme.colors.message.outline
 
 	local boundsX, boundsY = MIN_TOAST_X, MIN_TOAST_Y
 
@@ -147,36 +147,36 @@ function UIMessages:toast(options: ToastOptions?)
 	local placeX = TOAST_PADDING_X
 	if icon then
 		icon.Position = UDim2.fromOffset(placeX, math.floor(boundsY / 2 - icon.AbsoluteSize.Y / 2) + TOAST_PADDING_Y)
-		icon.Parent = frame
+		icon.Parent = toast
 		placeX += 10 + icon.AbsoluteSize.X
 		boundsX += 10 + icon.AbsoluteSize.X
 	end
 
 	textLabel.Position = UDim2.fromOffset(placeX, math.floor(boundsY / 2 - textBounds.Y / 2) + TOAST_PADDING_Y)
-	textLabel.Parent = frame
+	textLabel.Parent = toast
 
 	closeButton.AnchorPoint = Vector2.new(1, 0.5)
 	closeButton.Position = UDim2.new(1, 0, 0.5, 0)
 	closeButton.Size += UDim2.fromOffset(TOAST_PADDING_X, 0)
-	closeButton.Parent = frame
+	closeButton.Parent = toast
 
-	frame.Size = UDim2.fromOffset(
+	toast.Size = UDim2.fromOffset(
 		boundsX + 2 * TOAST_PADDING_X + CloseButtonTemplate.AbsoluteSize.X,
 		boundsY + 2 * TOAST_PADDING_Y
 	)
-	frame.Position = UDim2.new(1, -WINDOW_PADDING_X, 1, boundsY + 2 * TOAST_PADDING_Y + 4)
-	frame.Parent = self.gui
-	PopupHelper.attachDropShadow(frame)
+	toast.Position = UDim2.new(1, -WINDOW_PADDING_X, 1, boundsY + 2 * TOAST_PADDING_Y + 4)
+	toast.Parent = self.gui
+	PopupHelper.attachDropShadow(toast)
 
 	-- Animate in
-	self:_pushToastElements(frame.AbsoluteSize.Y + TOAST_PADDING_INBETWEEN, appearTweenInfo)
+	self:_pushToastElements(toast.AbsoluteSize.Y + TOAST_PADDING_INBETWEEN, appearTweenInfo)
 
 	local element: ToastQueueElement = {
-		frame = frame,
+		button = toast,
 		position = UDim2.new(1, -WINDOW_PADDING_X, 1, -WINDOW_PADDING_Y),
 	}
 
-	local appearTween = TweenService:Create(frame, appearTweenInfo, {
+	local appearTween = TweenService:Create(toast, appearTweenInfo, {
 		Position = element.position,
 	})
 
@@ -192,17 +192,18 @@ function UIMessages:toast(options: ToastOptions?)
 		end
 	end
 
-	frame.InputBegan:Connect(function(input)
+	toast.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			closeButton.Visible = true
 		end
 	end)
-	frame.InputEnded:Connect(function(input)
+	toast.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			closeButton.Visible = false
 		end
 	end)
 
+	toast.Activated:Connect(disappear)
 	closeButton.Activated:Connect(disappear)
 	task.delay(options.duration or 5, disappear)
 end
@@ -306,5 +307,5 @@ function UIMessages:destroy()
 	self.gui:Destroy()
 end
 
-export type UIMessages = typeof(UIMessages.new())
+export type UIMessages = typeof(UIMessages.new({} :: any))
 return UIMessages
