@@ -82,6 +82,8 @@ local HOTKEYS: { [Enum.KeyCode]: HotkeyAction } = table.freeze({
 local Tree = {}
 Tree.__index = Tree
 
+local NOT_SEARCHED_TRANSPARENCY = 0.6
+
 local FLAGS = {
 	"ISROOT", -- for the root of the data
 	"ISKEYROOT", -- for the root of key info
@@ -147,6 +149,12 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 		_undoStack = {},
 		_undoStackPosition = 0,
 
+		_isSearching = false,
+		_searchTask = nil,
+		_originalVisibleIndexes = nil,
+		_searchedIndexes = nil,
+		_noResultsLabel = nil,
+
 		_isTesting = options.isTesting,
 	}, Tree)
 
@@ -161,6 +169,9 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 
 	self._idLookedUp = Instance.new("BindableEvent")
 	self.idLookedUp = self._idLookedUp.Event
+
+	self._searchResultsChanged = Instance.new("BindableEvent")
+	self.searchResultsChanged = self._searchResultsChanged.Event
 
 	self.frame.CanvasPosition = Vector2.new(0, 0)
 	self.frame.BackgroundColor3 = self._colors.background
@@ -1896,8 +1907,10 @@ function Tree:_toggleOpen(index: number)
 end
 
 function Tree:_updateCanvasSize()
-	self.frame.CanvasSize =
-		UDim2.fromOffset(0, SIZE_PER_BRANCH * #self._visibleIndexes + (self._selectingBranchOffset or 0))
+	self.frame.CanvasSize = UDim2.fromOffset(
+		0,
+		SIZE_PER_BRANCH * #self._visibleIndexes + (self._selectingBranchOffset or 0) + (self._isSearching and 40 or 0)
+	)
 end
 
 -- NOTE: Ignores utf-8, but should still work OK (rather be bigger than necessary than smaller than necessary)
@@ -3481,7 +3494,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		end),
 	}
 
-	self:_updateBranchFrameBackgroundColor(index)
+	self:_updateBranchFrameBackgroundColor(index, frame)
 	if self._selectingBranchIndex == index then
 		setBranchWraps(frame, true)
 	else
@@ -3497,7 +3510,6 @@ function Tree:_removeFrame(index: number, frame)
 		self._frameConnections[index] = nil
 		return
 	end
-	local frame = self._frames[index]
 	--frame.Visible = false
 	frame.Parent = nil
 	self._frames[index] = nil
@@ -3631,7 +3643,9 @@ function Tree:_clearNonVisibleBranches()
 end
 
 -- Redraws branches to only render which ones the user can see.
-function Tree:_redrawBranches()
+-- The `forceRefresh` option is for things like search which mess with the
+-- visibleIndexes and require refreshing all branches.
+function Tree:_redrawBranches(forceRefresh: boolean)
 	local startOffset = SIZE_PER_BRANCH * math.floor(self.frame.CanvasPosition.Y / SIZE_PER_BRANCH)
 	local branchesToRender = math.ceil(self.frame.AbsoluteWindowSize.Y / SIZE_PER_BRANCH) + 1
 
@@ -3666,37 +3680,49 @@ function Tree:_redrawBranches()
 
 	local startVisibleIndex = math.floor(startOffset / SIZE_PER_BRANCH) + 1
 	local endVisibleIndex = startVisibleIndex + branchesToRender
-	local startIndex = self._visibleIndexes[startVisibleIndex]
-	local endIndex = self._visibleIndexes[endVisibleIndex]
-
 	local tempPool = table.create(8)
-	if startIndex then
+
+	if forceRefresh then
 		for i, frame in self._frames do
-			if i < startIndex then
-				table.insert(tempPool, { i, frame })
-			elseif endIndex and (i > endIndex) then
-				table.insert(tempPool, { i, frame })
+			self:_removeFrame(i, frame)
+		end
+	else
+		local startIndex = self._visibleIndexes[startVisibleIndex]
+		local endIndex = self._visibleIndexes[endVisibleIndex]
+
+		if startIndex then
+			for i, frame in self._frames do
+				if i < startIndex then
+					table.insert(tempPool, { i, frame })
+				elseif endIndex and (i > endIndex) then
+					table.insert(tempPool, { i, frame })
+				end
 			end
 		end
 	end
 
-	local maxDepth = 0
 	for visibleI = startVisibleIndex, endVisibleIndex do
 		local i = self._visibleIndexes[visibleI]
 		if not i then
-			endIndex = self._visibleIndexes[visibleI - 1]
+			if not forceRefresh then
+				-- May not exist if startVisibleIndex does not exist
+				local endIndex = self._visibleIndexes[visibleI - 1]
 
-			if endIndex then -- May not exist if startVisibleIndex does not exist
-				for i, frame in self._frames do
-					if i > endIndex then
-						table.insert(tempPool, { i, frame })
+				-- forceRefresh already has them all in the tempPool
+				if endIndex then
+					for i, frame in self._frames do
+						if i > endIndex then
+							table.insert(tempPool, { i, frame })
+						end
 					end
 				end
 			end
+
 			break
 		end
 
 		local frame = self._frames[i]
+
 		if not frame then
 			if #tempPool > 0 then
 				local v = table.remove(tempPool)
@@ -3722,13 +3748,10 @@ function Tree:_redrawBranches()
 			frame.LayoutOrder = visibleI
 			frame.UIPadding.PaddingLeft = UDim.new(0, 22 * depth)
 			self:_initializeBranchFrame(frame, i)
-
-			maxDepth = math.max(maxDepth, depth)
 		else
 			frame.LayoutOrder = visibleI
 		end
 	end
-	--self:_tryAddHierarchyBarsUpTo(maxDepth) TODO: re-add this later
 
 	for _, v in tempPool do
 		self:_removeFrame(v[1], v[2])
@@ -3764,10 +3787,29 @@ function Tree:_updateBranchFrameBackgroundColor(index: boolean, frame: Frame?)
 	if frame then
 		if self._selectingBranchIndex == index then
 			frame.BackgroundColor3 = self._colors.selectBackground
+
+			frame.Key.TextTransparency = 0
+			frame.Value.TextTransparency = 0
 		elseif self._hoveringBranchIndex == index then
 			frame.BackgroundColor3 = self._colors.hoverBackground
+
+			if self._isSearching and not self._searchedIndexes[index] then
+				frame.Key.TextTransparency = NOT_SEARCHED_TRANSPARENCY
+				frame.Value.TextTransparency = NOT_SEARCHED_TRANSPARENCY
+			else
+				frame.Key.TextTransparency = 0
+				frame.Value.TextTransparency = 0
+			end
 		else
 			frame.BackgroundColor3 = self._colors.background
+
+			if self._isSearching and not self._searchedIndexes[index] then
+				frame.Key.TextTransparency = NOT_SEARCHED_TRANSPARENCY
+				frame.Value.TextTransparency = NOT_SEARCHED_TRANSPARENCY
+			else
+				frame.Key.TextTransparency = 0
+				frame.Value.TextTransparency = 0
+			end
 		end
 	end
 end
@@ -3857,6 +3899,11 @@ function Tree:_updateColors()
 	self._colors = getHighlightColors(self.theme)
 	self.frame.BackgroundColor3 = self._colors.background
 	self.frame.ScrollBarImageColor3 = self._colors.scrollbar
+
+	if self._noResultsLabel then
+		self._noResultsLabel.TextColor3 = self._colors.plain
+	end
+
 	self:_updateAllBranchFrames()
 end
 
@@ -4157,7 +4204,121 @@ function Tree:tryInsertSelected(): boolean
 	return false
 end
 
---[[ HOTKEY OPERATIONS END ]]
+--[[ SEARCH CAPABILITY ]]
+
+function Tree:getSearchCapability()
+	return self
+end
+
+function Tree:_initSearch()
+	self._isSearching = true
+	self._originalVisibleIndexes = self._visibleIndexes
+	self._searchedIndexes = {}
+end
+
+local BUFFER_TEXT = "buffer"
+function Tree:setSearch(searchTerm: string)
+	if not self._isSearching then
+		self:_initSearch()
+	end
+
+	if searchTerm == "" then
+		self:endSearch()
+		self._searchResultsChanged:Fire({
+			kind = "none",
+		} :: Types.SearchResult)
+	else
+		self._visibleIndexes = {}
+		self._searchedIndexes = {}
+
+		local startTime = os.clock()
+
+		local addedBranches = {}
+		local adding = table.create(3)
+
+		local normalizedSearchTerm = searchTerm:lower()
+		for i, branch in self._flatBranches do
+			local valueType = type(branch[2])
+			local searched = tostring(branch[1]):lower():find(normalizedSearchTerm, 1, true)
+				or (valueType == "string" and branch[2]:lower():find(normalizedSearchTerm, 1, true))
+				or ((valueType == "boolean" or valueType == "number") and tostring(branch[2]):find(
+					normalizedSearchTerm,
+					1,
+					true
+				))
+				or ((valueType == "buffer") and BUFFER_TEXT:find(normalizedSearchTerm, 1, true))
+			if searched then
+				table.insert(adding, i)
+				self._searchedIndexes[i] = true
+
+				-- dig back up
+				local currentDepth = self._flatDepths[i]
+				for j = i - 1, 1, -1 do
+					local jDepth = self._flatDepths[j]
+					if jDepth == currentDepth - 1 then
+						if addedBranches[j] then
+							break
+						end
+
+						currentDepth = jDepth
+						table.insert(adding, j)
+					end
+				end
+
+				while #adding > 0 do
+					local got = table.remove(adding)
+					table.insert(self._visibleIndexes, got)
+					addedBranches[got] = true
+				end
+			end
+		end
+
+		if #self._visibleIndexes == 0 then
+			self:_ensureNoResultsLabel()
+		else
+			self:_deleteNoResultsLabel()
+		end
+
+		self._searchResultsChanged:Fire({
+			type = "success",
+			matches = #self._visibleIndexes,
+		} :: Types.SearchResult)
+
+		print("search time", os.clock() - startTime)
+
+		self:_redrawBranches(true)
+		self:_updateCanvasSize()
+	end
+end
+
+function Tree:endSearch()
+	if self._isSearching then
+		self:_deleteNoResultsLabel()
+
+		self._isSearching = false
+		self._visibleIndexes = self._originalVisibleIndexes
+		self._originalVisibleIndexes = nil
+		self._searchedIndexes = nil
+
+		self:_redrawBranches(true)
+		self:_updateCanvasSize()
+	end
+end
+
+function Tree:_ensureNoResultsLabel()
+	if not self._noResultsLabel then
+		self._noResultsLabel = script.NoResults:Clone()
+		self._noResultsLabel.TextColor3 = self._colors.plain
+		self._noResultsLabel.Parent = self.frame
+	end
+end
+
+function Tree:_deleteNoResultsLabel()
+	if self._noResultsLabel then
+		self._noResultsLabel:Destroy()
+		self._noResultsLabel = nil
+	end
+end
 
 function Tree:destroy()
 	self._dirtyChanged:Destroy()
@@ -4180,6 +4341,7 @@ function Tree:destroy()
 		end
 	end
 
+	self:_deleteNoResultsLabel()
 	self.frame:Destroy()
 	self.branchContainer:Destroy()
 	self.shadow:Destroy()

@@ -129,6 +129,7 @@ function Deserializer.from(buf: buffer, container: Frame, options: Types.BufferV
 end
 
 function Deserializer._setError(self: Deserializer, message: string)
+	self._uiMessages:error(message)
 	self._styleStates.errorLabel.label.Text = message
 	self._frame.Container.Error.Visible = true
 	self._frame.Container.Content.Visible = false

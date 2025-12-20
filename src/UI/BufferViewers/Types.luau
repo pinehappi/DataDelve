@@ -3,6 +3,8 @@
 local UIMessages = require(script.Parent.Parent.UIMessages)
 local Theme = require(script.Parent.Parent.Theme)
 
+export type BufferViewerMode = "Hex" | "Deserializer"
+
 export type BufferViewerFromOptions = {
 	uiMessages: UIMessages.UIMessages,
 	theme: Theme.Theme,

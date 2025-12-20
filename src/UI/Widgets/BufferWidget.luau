@@ -3,6 +3,7 @@
 local plugin = script:FindFirstAncestorOfClass("Plugin")
 local StudioService = game:GetService("StudioService")
 
+local Settings = require(script.Parent.Parent.Parent.Settings)
 local UIMessages = require(script.Parent.Parent.UIMessages)
 local Theme = require(script.Parent.Parent.Theme)
 
@@ -52,7 +53,7 @@ function BufferWidget.new(theme: Theme.Theme, name: string, b: buffer)
 	self.wrapper = StyleStateWrapper.new(theme, {
 		background = BackgroundStyleState.from(theme, self.widget.Background),
 		mode = SelectStyleState.from(theme, self.widget.Content.LeftTop.Mode, {
-			default = "Hex",
+			default = Settings.get("bufferViewerMode"),
 			options = {
 				{ icon = self.theme.icons.hex, name = "Hex" },
 				{ icon = self.theme.icons.script, name = "Deserializer" },
@@ -144,7 +145,7 @@ function BufferWidget:_cleanupViewer()
 	end
 end
 
-function BufferWidget:_setMode(mode: "Hex" | "Deserializer", buf: buffer)
+function BufferWidget:_setMode(mode: Types.BufferViewerMode, buf: buffer)
 	self:_cleanupViewer()
 
 	local viewer: Types.BufferViewer
@@ -153,6 +154,8 @@ function BufferWidget:_setMode(mode: "Hex" | "Deserializer", buf: buffer)
 	elseif mode == "Deserializer" then
 		viewer = (DeserializerViewer :: any) :: Types.BufferViewer
 	end
+
+	Settings.set("bufferViewerMode", mode)
 
 	self._mode = mode
 	self._viewer = viewer.from(buf, self.widget.Content.EditorContainer, {

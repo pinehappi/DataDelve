@@ -41,6 +41,7 @@ export type CodeViewerImplementation = {
 
 	getHistoryCapability: (CodeViewer) -> Types.HistoryCapability?,
 	getKeyInfoCapability: (CodeViewer) -> Types.KeyInfoCapability?,
+	getSearchCapability: (CodeViewer) -> Types.SearchCapability?,
 
 	getValue: (CodeViewer) -> Types.GetValueResult,
 	setDisabled: (CodeViewer, disabled: boolean) -> (),
@@ -173,6 +174,10 @@ function CodeViewer:getHistoryCapability()
 end
 
 function CodeViewer:getKeyInfoCapability()
+	return nil
+end
+
+function CodeViewer:getSearchCapability()
 	return nil
 end
 

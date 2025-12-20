@@ -7,6 +7,7 @@ local StyleState = script.Parent.Parent.StyleState
 
 local Theme = require(script.Parent.Parent.Theme)
 local PopupHelper = require(script.Parent.Parent.PopupHelper)
+local ViewerTypes = require(script.Parent.Parent.Viewers.Types)
 
 local StyleStateHelper = require(StyleState.StyleStateHelper)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
@@ -34,6 +35,7 @@ export type SearchViewOptions = {
 	nextClicked: () -> (),
 	prevClicked: () -> (),
 	closeClicked: () -> (),
+	searchChanged: (searchTerm: string) -> (),
 }
 
 type SearchViewImplementation = {
@@ -41,9 +43,12 @@ type SearchViewImplementation = {
 
 	new: (SearchViewOptions) -> SearchView,
 	update: (SearchView, StyleStateHelper.TransitionSpeed) -> (),
+	captureFocus: (SearchView) -> (),
+
 	animateIn: (SearchView) -> (),
 	animateOut: (SearchView) -> (),
-	captureFocus: (SearchView) -> (),
+
+	setResult: (SearchView, result: ViewerTypes.SearchResult) -> (),
 	destroy: (SearchView) -> (),
 }
 
@@ -78,6 +83,9 @@ function SearchView.new(options)
 			options.closeClicked()
 		end
 	end)
+	self._styleStates.textBox.textBox:GetPropertyChangedSignal("Text"):Connect(function()
+		options.searchChanged(self._styleStates.textBox.textBox.Text)
+	end)
 
 	self._frame.Position = options.position
 	self._frame.AnchorPoint = options.anchorPoint
@@ -88,6 +96,8 @@ function SearchView.new(options)
 
 	self._dead = false
 	self._isAnimating = false
+
+	self:setResult({ kind = "none" })
 
 	return self
 end
@@ -177,6 +187,17 @@ end
 
 function SearchView:captureFocus()
 	self._styleStates.textBox.textBox:CaptureFocus()
+end
+
+function SearchView:setResult(result)
+	if result.kind == "none" then
+		self._styleStates.matches.Visible = false
+		self._styleStates.matches.label.Text = ""
+	else
+		local suffix = if result.matches == 1 then "match" else "matches"
+		self._styleStates.matches.Visible = true
+		self._styleStates.matches.label.Text = `{result.matches} {suffix}`
+	end
 end
 
 function SearchView:destroy()

@@ -1,6 +1,7 @@
 --!strict
 
 local ViewerTypes = require(script.Parent.UI.Viewers.Types)
+local BufferViewerTypes = require(script.Parent.UI.BufferViewers.Types)
 
 local MAIN_SETTINGS_KEY = "DataDelveSetting alpha 1"
 
@@ -14,6 +15,7 @@ export type SettingsData = {
 	automaticallyList: boolean,
 	clickToOpen: boolean,
 	viewerMode: ViewerTypes.ViewerMode,
+	bufferViewerMode: BufferViewerTypes.BufferViewerMode,
 }
 
 local defaultSettings: SettingsData = {
@@ -26,6 +28,7 @@ local defaultSettings: SettingsData = {
 	automaticallyList = true,
 	clickToOpen = false,
 	viewerMode = "Tree",
+	bufferViewerMode = "Hex",
 }
 
 local Settings = {}

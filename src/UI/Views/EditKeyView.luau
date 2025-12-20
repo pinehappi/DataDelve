@@ -135,6 +135,7 @@ export type EditKeyViewImplementation = {
 	) -> { key: string, shouldDelete: boolean }?,
 	_promptSwitchingError: (EditKeyView, message: string) -> boolean,
 
+	_canSearch: (EditKeyView) -> boolean,
 	_startSearch: (EditKeyView) -> (),
 	_endSearch: (EditKeyView) -> (),
 }
@@ -168,6 +169,7 @@ export type EditKeyViewFields = {
 
 	_versionsView: VersionsView.VersionsView?,
 	_searchView: SearchView.SearchView?,
+	_searchResultsConnection: RBXScriptConnection?,
 
 	_cachedData: unknown?,
 	_cachedMetadata: unknown?,
@@ -341,6 +343,10 @@ function EditKeyView:destroy(completely)
 
 	if self._searchView then
 		self._searchView:destroy()
+	end
+
+	if self._searchResultsConnection then
+		self._searchResultsConnection:Disconnect()
 	end
 
 	StyleStateHelper.destroy(self._styleStates)
@@ -550,31 +556,50 @@ function EditKeyView:_initializeInteraction()
 				{ icon = self._theme.icons.script, text = "Deserializer" },]]
 			}
 
+			local options: { ContextMenuStyleState.Option } = {
+				{ icon = self._theme.icons.export, text = "Export to File" },
+				{ icon = self._theme.icons.import, text = "Import from File" },
+				ContextMenuStyleState.SEPARATOR,
+				{ icon = self._theme.icons.rename, text = "Duplicate/Move Key" },
+				{ icon = self._theme.icons.storage, text = "View Data Usage" },
+				ContextMenuStyleState.SEPARATOR,
+				{ text = "View Mode", options = viewModeOptions },
+			}
+
+			if self:_canSearch() then
+				table.insert(options, 1, { icon = self._theme.icons.lookup, text = "Search", hotkey = "/" })
+			end
+
+			local result: string
+			local attachment: any
 			local contextMenuStyleState, contextMenuModal =
 				ContextMenuStyleState.createMenu(self._theme, self._widget, {
 					submenuDirection = "left",
-					options = {
-						{ icon = self._theme.icons.lookup, text = "Search", hotkey = "/" },
-						{ icon = self._theme.icons.export, text = "Export to File" },
-						{ icon = self._theme.icons.import, text = "Import from File" },
-						ContextMenuStyleState.SEPARATOR,
-						{ icon = self._theme.icons.rename, text = "Duplicate/Move Key" },
-						{ icon = self._theme.icons.storage, text = "View Data Usage" },
-						ContextMenuStyleState.SEPARATOR,
-						{ text = "View Mode", options = viewModeOptions },
-					},
+					options = options,
 				})
 
 			contextMenuStyleState.frame.Name = "More Menu"
 			contextMenuStyleState.frame.Position = UDim2.fromOffset(position.X, position.Y)
 			contextMenuStyleState.frame.AnchorPoint = Vector2.new(1, 0)
-			task.spawn(contextMenuStyleState.animate, contextMenuStyleState)
+			task.spawn(function()
+				contextMenuStyleState:animate()
+				if not result then
+					attachment = PopupHelper.attach(contextMenuStyleState.frame, self._styleStates.more.button, {
+						anchor = Vector2.new(1, 1),
+						offset = Vector2.new(0, 6),
+					})
+				end
+			end)
 
 			self._styleStates.more:setSelecting(true):update()
 
-			local result = self._modalState:wrap(function()
+			result = self._modalState:wrap(function()
 				return contextMenuStyleState.selected:Wait()
 			end)
+
+			if attachment then
+				attachment:destroy()
+			end
 
 			contextMenuModal:destroy()
 			contextMenuStyleState:destroy(true)
@@ -582,10 +607,12 @@ function EditKeyView:_initializeInteraction()
 			-- Respond
 			if not self._transactor.locked then
 				if result == "Search" then
-					if self._searchView then
-						self._searchView:captureFocus()
-					else
-						self:_startSearch()
+					if self:_canSearch() then
+						if self._searchView then
+							self._searchView:captureFocus()
+						else
+							self:_startSearch()
+						end
 					end
 				elseif result == "Export to File" then
 					local valueResult = self._viewer:getValue()
@@ -1178,12 +1205,19 @@ function EditKeyView:_updateVersionsViewMode()
 	end
 end
 
+function EditKeyView:_canSearch()
+	return not not self._viewer:getSearchCapability()
+end
+
 function EditKeyView:_startSearch()
 	if self._searchView then
 		return
 	end
 
-	local searchView = SearchView.new({
+	local searchCapability = self._viewer:getSearchCapability()
+	assert(searchCapability, "no search available")
+
+	local searchView: SearchView.SearchView = SearchView.new({
 		theme = self._theme,
 		parent = self._frame.Container.SearchContainer,
 		position = UDim2.new(0, 8, 1, -8),
@@ -1194,9 +1228,17 @@ function EditKeyView:_startSearch()
 		closeClicked = function()
 			self:_endSearch()
 		end,
+		searchChanged = function(searchTerm)
+			searchCapability:setSearch(searchTerm)
+		end,
 	})
 
 	self._searchView = searchView
+	self._searchResultsConnection = searchCapability.searchResultsChanged:Connect(
+		function(result: ViewerTypes.SearchResult)
+			searchView:setResult(result)
+		end
+	)
 
 	task.spawn(function()
 		searchView:animateIn()
@@ -1208,8 +1250,21 @@ function EditKeyView:_endSearch()
 	local searchView = self._searchView
 	if searchView then
 		self._searchView = nil
-		searchView:animateOut()
-		searchView:destroy()
+		task.spawn(function()
+			searchView:animateOut()
+			searchView:destroy()
+		end)
+	end
+
+	local searchCapability = self._viewer:getSearchCapability()
+	if searchCapability then
+		searchCapability:endSearch()
+	end
+
+	local connection = self._searchResultsConnection
+	if connection then
+		connection:Disconnect()
+		self._searchResultsConnection = nil
 	end
 end
 

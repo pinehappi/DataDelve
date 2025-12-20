@@ -55,6 +55,7 @@ export type Viewer = {
 
 	getHistoryCapability: (Viewer) -> HistoryCapability?,
 	getKeyInfoCapability: (Viewer) -> KeyInfoCapability?,
+	getSearchCapability: (Viewer) -> SearchCapability?,
 
 	destroy: (Viewer) -> (),
 }
@@ -74,6 +75,19 @@ export type KeyInfoCapability = {
 		{ number }, --[[metadata]]
 		{ [string]: any }
 	),
+}
+
+export type SearchResult = {
+	kind: "success",
+	matches: number,
+} | {
+	kind: "none",
+}
+
+export type SearchCapability = {
+	setSearch: (SearchCapability, term: string) -> (),
+	endSearch: (SearchCapability) -> (),
+	searchResultsChanged: RBXScriptSignal,
 }
 
 return {}
