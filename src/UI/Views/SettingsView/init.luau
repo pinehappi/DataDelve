@@ -278,14 +278,7 @@ end
 
 function SettingsView:_updateAccentButtons(selecting: string)
 	for _, button: any in self.styleStates.accentColorButtons do
-		if Settings.data.themePreset == "studio" then
-			button:setSelecting(false)
-			button:setDisabled(true)
-			button:update()
-		else
-			button:setDisabled(false)
-			button:setSelecting(button.button.Name == selecting):update()
-		end
+		button:setSelecting(button.button.Name == selecting):update()
 	end
 end
 

@@ -1,6 +1,7 @@
 --!strict
 
 local StudioSettings = settings().Studio
+local Oklab = require(script.Oklab)
 
 local Theme = {}
 Theme.__index = Theme
@@ -20,6 +21,24 @@ Theme.accentHues = {
 	pink = 295,
 	redPink = 330,
 	neutral = 0, -- Special case
+}
+
+-- these use oklch hue
+Theme.studioAccentHues = {
+	red = math.rad(20),
+	orange = math.rad(65),
+	yellow = math.rad(100),
+	yellowGreen = math.rad(122),
+	green = math.rad(156),
+	greenBlue = math.rad(179),
+	seaGreen = math.rad(190),
+	cyan = math.rad(230),
+	blue = math.rad(266),
+	purpleBlue = math.rad(280),
+	purple = math.rad(300),
+	pink = math.rad(325),
+	redPink = math.rad(340),
+	neutral = math.rad(0), -- Special case
 }
 
 local defaultIcons = {
@@ -55,6 +74,35 @@ local defaultIcons = {
 	allScopesDatastore = "rbxassetid://18807231111",
 	globalDatastore = "rbxassetid://89897336645947",
 }
+
+local function areColorsSimilar(a: Color3, b: Color3): boolean
+	return math.abs(a.R - b.R) <= 0.01 and math.abs(a.B - b.B) <= 0.01 and math.abs(a.G - b.G) <= 0.01
+end
+
+local function getStudioThemeData(): (boolean, boolean)
+	local StudioTheme = StudioSettings.Theme :: StudioTheme
+	local isDark = Theme.getLuminance(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground)) < 0.5
+
+	-- if it's the old colors
+	local isOld = if isDark
+		then areColorsSimilar(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton), Color3.fromRGB(0, 162, 255))
+		else areColorsSimilar(
+			StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton),
+			Color3.fromRGB(228, 238, 254)
+		)
+
+	return isDark, isOld
+end
+
+local function applyAccentToStudioColor(color: Color3, accent: string): Color3
+	local lab = Oklab.fromColor3(color)
+	if accent == "neutral" then
+		return Oklab.oklch(lab.x, 0, 0)
+	else
+		local c = math.sqrt(lab.y ^ 2 + lab.z ^ 2)
+		return Oklab.oklch(lab.x, c, math.deg(Theme.studioAccentHues[accent]))
+	end
+end
 
 -- Reference: https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
 function Theme.srgbToLinear(colorChannel: number)
@@ -117,8 +165,9 @@ end
 function Theme.getAccentComponents(preset: string, accent: string): (number, number, number)
 	local StudioTheme = StudioSettings.Theme :: StudioTheme
 	if preset == "studio" then
-		return StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Default)
-			:ToHSV()
+		local defaultAccent =
+			StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Default)
+		return applyAccentToStudioColor(defaultAccent, accent):ToHSV()
 	elseif preset == "light" then
 		if accent == "neutral" then
 			return 0, 0, 0
@@ -134,10 +183,6 @@ end
 
 function Theme.getAccentColor(preset: string, accent: string)
 	return Color3.fromHSV(Theme.getAccentComponents(preset, accent))
-end
-
-local function areColorsSimilar(a: Color3, b: Color3): boolean
-	return math.abs(a.R - b.R) <= 0.01 and math.abs(a.B - b.B) <= 0.01 and math.abs(a.G - b.G) <= 0.01
 end
 
 function Theme.generatePreset(preset: string, accent: string)
@@ -459,18 +504,7 @@ function Theme.generatePreset(preset: string, accent: string)
 		return colors
 	elseif preset == "studio" then
 		local StudioTheme = StudioSettings.Theme :: StudioTheme
-		local isDark = Theme.getLuminance(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground)) < 0.5
-
-		-- if it's the old colors
-		local isOld = if isDark
-			then areColorsSimilar(
-				StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton),
-				Color3.fromRGB(0, 162, 255)
-			)
-			else areColorsSimilar(
-				StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton),
-				Color3.fromRGB(228, 238, 254)
-			)
+		local isDark, isOld = getStudioThemeData()
 
 		return {
 			button = {
@@ -498,47 +532,77 @@ function Theme.generatePreset(preset: string, accent: string)
 						),
 					},
 					body = {
-						select = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Selected
+						select = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Selected
+							),
+							accent
 						),
-						disable = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Disabled
+						disable = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Disabled
+							),
+							accent
 						),
-						default = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Default
+						default = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Default
+							),
+							accent
 						),
-						hover = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Hover
+						hover = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Hover
+							),
+							accent
 						),
-						press = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Pressed
+						press = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Pressed
+							),
+							accent
 						),
 					},
 					outline = {
-						select = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Selected
+						select = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Selected
+							),
+							accent
 						),
-						disable = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Disabled
+						disable = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Disabled
+							),
+							accent
 						),
-						default = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Default
+						default = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Default
+							),
+							accent
 						),
-						hover = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Hover
+						hover = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Hover
+							),
+							accent
 						),
-						press = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Pressed
+						press = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.DialogMainButton,
+								Enum.StudioStyleGuideModifier.Pressed
+							),
+							accent
 						),
 					},
 				},
@@ -566,9 +630,12 @@ function Theme.generatePreset(preset: string, accent: string)
 						),
 					},
 					body = {
-						select = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.Button,
-							Enum.StudioStyleGuideModifier.Selected
+						select = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.Button,
+								Enum.StudioStyleGuideModifier.Selected
+							),
+							accent
 						),
 						disable = StudioTheme:GetColor(
 							Enum.StudioStyleGuideColor.Button,
@@ -664,9 +731,12 @@ function Theme.generatePreset(preset: string, accent: string)
 						),
 					},
 					outline = {
-						select = StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.InputFieldBorder,
-							Enum.StudioStyleGuideModifier.Selected
+						select = applyAccentToStudioColor(
+							StudioTheme:GetColor(
+								Enum.StudioStyleGuideColor.InputFieldBorder,
+								Enum.StudioStyleGuideModifier.Selected
+							),
+							accent
 						),
 						disable = StudioTheme:GetColor(
 							Enum.StudioStyleGuideColor.InputFieldBorder,
@@ -688,9 +758,12 @@ function Theme.generatePreset(preset: string, accent: string)
 				},
 				transparent = {
 					baseColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					selectColor = StudioTheme:GetColor(
-						Enum.StudioStyleGuideColor.DialogMainButton,
-						Enum.StudioStyleGuideModifier.Selected
+					selectColor = applyAccentToStudioColor(
+						StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Selected
+						),
+						accent
 					),
 
 					select = 0.5,
@@ -736,7 +809,7 @@ function Theme.generatePreset(preset: string, accent: string)
 
 			error = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ErrorText),
 			warn = StudioTheme:GetColor(Enum.StudioStyleGuideColor.WarningText),
-			success = accentColor,
+			success = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton),
 
 			text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
 			disabledText = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DimmedText),
@@ -809,13 +882,17 @@ end
 -- Interface
 
 function Theme:setAccent(accent: string)
-	self.accent = accent
-	self:_updateColors()
+	if self.accent ~= accent then
+		self.accent = accent
+		self:_updateColors()
+	end
 end
 
 function Theme:setPreset(presetName: string)
-	self.preset = presetName
-	self:_updateColors()
+	if self.preset ~= presetName then
+		self.preset = presetName
+		self:_updateColors()
+	end
 end
 
 Theme.global = Theme.new()

@@ -111,7 +111,7 @@ local function generateThemes(theme: Theme.Theme): (HexEditor.ThemeData, DataIns
 
 		keyText = theme.colors.text,
 		valueText = theme.colors.text,
-		invalidValueText = theme.colors.disabledText,
+		lightValueText = theme.colors.disabledText,
 		keyValuePadding = 24,
 		rowPadding = 4,
 

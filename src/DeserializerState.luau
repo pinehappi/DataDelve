@@ -57,6 +57,13 @@ local function takePath(path: { string }): Instance?
 	return current
 end
 
+function DeserializeState.getDefaultDeserializerScript(): Instance?
+	if placeSettings.defaultDeserializer then
+		return takePath(placeSettings.defaultDeserializer)
+	end
+	return nil
+end
+
 -- returns modules script or error message if none
 function DeserializeState.getDefaultDeserializer(): ({ name: string, deserializer: Deserializer }?, string?)
 	if placeSettings.defaultDeserializer then

@@ -32,7 +32,9 @@ function LabelStyleState.fromDescendants(theme, ancestor: GuiObject, options: La
 	local styleStates = {}
 	for _, descendant in ancestor:GetDescendants() do
 		if
-			(not descendant.Parent:IsA("GuiButton")) and (descendant:IsA("TextLabel") or descendant:IsA("ImageLabel"))
+			(not descendant.Parent:IsA("GuiButton"))
+			and (descendant:IsA("TextLabel") or descendant:IsA("ImageLabel"))
+			and (not descendant:GetAttribute("ExcludeStyleState"))
 		then
 			assert(not styleStates[descendant.Name], `Duplicate label name: {descendant:GetFullName()}`)
 			styleStates[descendant.Name] = LabelStyleState.from(theme, descendant, options)

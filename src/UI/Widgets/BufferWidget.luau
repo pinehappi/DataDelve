@@ -30,7 +30,7 @@ local WIDGET_INFO = DockWidgetPluginGuiInfo.new(
 local BufferWidget = {}
 BufferWidget.__index = BufferWidget
 
-function BufferWidget.new(theme: Theme.Theme, b: buffer)
+function BufferWidget.new(theme: Theme.Theme, name: string, b: buffer)
 	local self = setmetatable({}, BufferWidget)
 	self.dead = false
 	self.id = tostring(b)
@@ -38,7 +38,7 @@ function BufferWidget.new(theme: Theme.Theme, b: buffer)
 	self.theme = theme
 	self.widget = plugin:CreateDockWidgetPluginGui(self.id, WIDGET_INFO) :: PluginGui & typeof(Assets.HexEditorWidget)
 	self.widget.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	self.widget.Title = tostring(b)
+	self.widget.Title = `"{name}" buffer`
 	self.widget.Name = "DataDelve HexEditor"
 
 	self.uiMessages = UIMessages.new(self.theme)
@@ -189,5 +189,5 @@ function BufferWidget:destroy()
 	self.widget:Destroy()
 end
 
-export type BufferWidget = typeof(BufferWidget.new({} :: any, buffer.create(0)))
+export type BufferWidget = typeof(BufferWidget.new({} :: any, "", buffer.create(0)))
 return BufferWidget

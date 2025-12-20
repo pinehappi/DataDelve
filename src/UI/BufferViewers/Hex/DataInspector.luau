@@ -20,7 +20,7 @@ export type ThemeData = {
 
 	keyText: Color3,
 	valueText: Color3,
-	invalidValueText: Color3,
+	lightValueText: Color3,
 	keyValuePadding: number,
 	rowPadding: number,
 
@@ -92,8 +92,20 @@ export type DataInspector = typeof(setmetatable({} :: DataInspectorFields, {} ::
 type RowInfo = { name: string, strategy: RowStrategy }
 export type RowStrategy = {
 	requiredBytes: number,
-	func: (buffer: buffer, offset: number) -> unknown,
+	func: (buffer: buffer, offset: number) -> { text: string, isLight: boolean } | string | number | nil,
 }
+
+local SPECIAL_ASCII = {
+	[string.byte("\0")] = "\\0",
+	[string.byte("\n")] = "\\n",
+	[string.byte("\r")] = "\\r",
+	[string.byte("\t")] = "\\t",
+	[string.byte("\v")] = "\\v",
+	[string.byte("\a")] = "\\a",
+	[string.byte("\b")] = "\\b",
+	[string.byte("\f")] = "\\f",
+}
+
 local builtInRows: { RowInfo } = {
 	{
 		name = "ascii",
@@ -105,8 +117,10 @@ local builtInRows: { RowInfo } = {
 					return nil
 				elseif HexEditor.isCharacterPrintable(ascii) then
 					return string.char(ascii)
+				elseif SPECIAL_ASCII[ascii] then
+					return { text = SPECIAL_ASCII[ascii], isLight = true }
 				else
-					return "non-printable"
+					return { text = "non-printable", isLight = true }
 				end
 			end,
 		},
@@ -331,7 +345,7 @@ function DataInspector:_buildRow(rowName: string)
 	value.BackgroundTransparency = 1
 	value.FontFace = self._theme.font
 	value.TextXAlignment = Enum.TextXAlignment.Left
-	value.TextColor3 = self._theme.invalidValueText
+	value.TextColor3 = self._theme.lightValueText
 	value.TextEditable = false
 	value.TextSize = self._theme.textSize
 	value.ClearTextOnFocus = false
@@ -366,12 +380,13 @@ function DataInspector:_updateRows()
 
 		if result == nil then
 			frame.value.Text = "none"
-			frame.value.TextColor3 = self._theme.invalidValueText
+			frame.value.TextColor3 = self._theme.lightValueText
+		elseif typeof(result) == "table" then
+			frame.value.Text = result.text
+			frame.value.TextColor3 = if result.isLight then self._theme.lightValueText else self._theme.valueText
 		else
 			frame.value.Text = tostring(result)
-			frame.value.TextColor3 = if result == "non-printable"
-				then self._theme.invalidValueText
-				else self._theme.valueText
+			frame.value.TextColor3 = self._theme.valueText
 		end
 	end
 end

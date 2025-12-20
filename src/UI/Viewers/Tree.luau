@@ -2030,6 +2030,7 @@ function Tree:_updateBranchFrame(frame, branch, index)
 end
 
 export type EditBufferOptions = {
+	name: string,
 	buffer: buffer,
 	position: Vector2,
 	onInitialize: (() -> ())?,
@@ -2042,7 +2043,7 @@ function Tree:_promptEditBuffer(options: EditBufferOptions): buffer?
 	local copy = buffer.create(buffer.len(options.buffer))
 	buffer.copy(copy, 0, options.buffer)
 
-	local bufferWidget = BufferWidget.new(self.theme, copy)
+	local bufferWidget = BufferWidget.new(self.theme, options.name, copy)
 
 	local editingFrame = script.EditingBufferPage:Clone()
 	local editingWrapper = StyleStateWrapper.new(self.theme, {
@@ -2319,6 +2320,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 				isEditingBuffer = true
 
 				local newBuffer = self:_promptEditBuffer({
+					name = options.key,
 					position = options.position,
 					buffer = defaultValues["buffer"],
 					onInitialize = function()
@@ -2832,6 +2834,7 @@ function Tree:_promptEditValue(index: number)
 		end
 
 		local newBuffer = self:_promptEditBuffer({
+			name = branch[1],
 			position = Vector2.new(frame.Value.AbsolutePosition.X, frame.Value.AbsolutePosition.Y),
 			buffer = branch[2],
 		})
