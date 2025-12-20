@@ -11,11 +11,13 @@ local PopupHelper = require(script.Parent.Parent.PopupHelper)
 local JSONHelper = require(script.Parent.Parent.Parent.JSONHelper)
 local Validators = require(script.Parent.Parent.Parent.Validators)
 local Tooltip = require(script.Parent.Parent.Tooltip)
+local ModalState = require(script.Parent.Parent.ModalState)
 
 local StyleState = script.Parent.Parent.StyleState
 local Assets = script.Parent.Parent.Assets
 
 local VersionsView = require(script.Parent.VersionsView)
+local SearchView = require(script.Parent.SearchView)
 
 local StyleStateWrapper = require(StyleState.StyleStateWrapper)
 local StyleStateHelper = require(StyleState.StyleStateHelper)
@@ -37,6 +39,10 @@ local TreeViewer = require(script.Parent.Parent.Viewers.Tree)
 local CodeViewer = require(script.Parent.Parent.Viewers.Code)
 
 local rfmt = require(script.Parent.Parent.Parent.rfmt)
+
+local SEARCH_KEYCODE = Enum.KeyCode.Slash
+local CLOSE_SEARCH_KEYCODE = Enum.KeyCode.Escape
+local VERSIONS_MODAL_ID = "versions"
 
 --[==[ THINGS THAT HAVE TO COME FIRST SO THEY CAN BE USED LATER ]==]
 
@@ -128,6 +134,9 @@ export type EditKeyViewImplementation = {
 		isAllScopes: boolean
 	) -> { key: string, shouldDelete: boolean }?,
 	_promptSwitchingError: (EditKeyView, message: string) -> boolean,
+
+	_startSearch: (EditKeyView) -> (),
+	_endSearch: (EditKeyView) -> (),
 }
 
 export type EditKeyViewFields = {
@@ -146,6 +155,7 @@ export type EditKeyViewFields = {
 	_uiMessages: UIMessages.UIMessages,
 	_styleStates: typeof(getStyleStates(({} :: any) :: Theme.Theme, {} :: EditFrame, false)),
 	_tooltipDestructors: { Tooltip.TooltipDestructor },
+	_modalState: ModalState.ModalState,
 
 	_frame: EditFrame,
 	_inputReceiver: Frame,
@@ -155,7 +165,9 @@ export type EditKeyViewFields = {
 
 	_viewerMode: ViewerTypes.ViewerMode,
 	_viewer: ViewerTypes.Viewer,
+
 	_versionsView: VersionsView.VersionsView?,
+	_searchView: SearchView.SearchView?,
 
 	_cachedData: unknown?,
 	_cachedMetadata: unknown?,
@@ -204,6 +216,7 @@ function EditKeyView.from(params)
 	self._frame = params.frame
 	self._inputReceiver = params.inputReceiver
 	self._styleStates = getStyleStates(params.theme, params.frame, (self :: any):_shouldDeleteBeDisabled())
+	self._modalState = ModalState.new()
 	self._widget = params.frame:FindFirstAncestorWhichIsA("PluginGui")
 
 	self._connections = {}
@@ -237,7 +250,7 @@ function EditKeyView.from(params)
 		self._theme.colorsChanged:Connect(function()
 			task.wait()
 
-			StyleStateHelper.update(self._styleStates, "slow")
+			self:update("slow")
 		end)
 	)
 
@@ -253,6 +266,38 @@ function EditKeyView.from(params)
 		self._frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 			if self._versionsView then
 				self:_updateVersionsViewMode()
+			end
+		end)
+	)
+
+	table.insert(
+		self._connections,
+		self._inputReceiver.InputBegan:Connect(function(input)
+			if self._modalState.isInside then
+				return
+			end
+
+			if input.KeyCode == SEARCH_KEYCODE then
+				local searchView = (self :: any)._searchView :: SearchView.SearchView?
+				if searchView then
+					local connection: RBXScriptConnection
+					connection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
+						if input.UserInputState ~= Enum.UserInputState.Change then
+							connection:Disconnect()
+							if (self :: any)._searchView == searchView then
+								-- wait a bit so the `/` doesn't get typed
+								task.delay(0.05, function()
+									searchView:captureFocus()
+								end)
+							end
+						end
+					end)
+				else
+					self:_startSearch()
+				end
+			elseif input.KeyCode == CLOSE_SEARCH_KEYCODE then
+				-- escape doesn't seem to fire an event, so this doesn't work at the moment
+				self:_endSearch()
 			end
 		end)
 	)
@@ -276,6 +321,9 @@ end
 
 function EditKeyView:update(speed: StyleStateHelper.TransitionSpeed)
 	StyleStateHelper.update(self._styleStates, speed)
+	if self._searchView then
+		self._searchView:update(speed)
+	end
 end
 
 function EditKeyView:destroy(completely)
@@ -289,6 +337,10 @@ function EditKeyView:destroy(completely)
 
 	if self._versionsView then
 		self._versionsView:destroy(true)
+	end
+
+	if self._searchView then
+		self._searchView:destroy()
 	end
 
 	StyleStateHelper.destroy(self._styleStates)
@@ -502,6 +554,7 @@ function EditKeyView:_initializeInteraction()
 				ContextMenuStyleState.createMenu(self._theme, self._widget, {
 					submenuDirection = "left",
 					options = {
+						{ icon = self._theme.icons.lookup, text = "Search", hotkey = "/" },
 						{ icon = self._theme.icons.export, text = "Export to File" },
 						{ icon = self._theme.icons.import, text = "Import from File" },
 						ContextMenuStyleState.SEPARATOR,
@@ -518,14 +571,23 @@ function EditKeyView:_initializeInteraction()
 			task.spawn(contextMenuStyleState.animate, contextMenuStyleState)
 
 			self._styleStates.more:setSelecting(true):update()
-			local result = contextMenuStyleState.selected:Wait()
+
+			local result = self._modalState:wrap(function()
+				return contextMenuStyleState.selected:Wait()
+			end)
 
 			contextMenuModal:destroy()
 			contextMenuStyleState:destroy(true)
 
 			-- Respond
 			if not self._transactor.locked then
-				if result == "Export to File" then
+				if result == "Search" then
+					if self._searchView then
+						self._searchView:captureFocus()
+					else
+						self:_startSearch()
+					end
+				elseif result == "Export to File" then
 					local valueResult = self._viewer:getValue()
 					if valueResult.kind == "failure" then
 						self._uiMessages:error(valueResult.message)
@@ -544,10 +606,12 @@ function EditKeyView:_initializeInteraction()
 				elseif result == "Import from File" then
 					local passed = true
 					if self._viewer.isDirty then
-						local confirmed = ConfirmDialogStyleState.confirm(self._theme, self._widget, position, {
-							title = "Import from file?",
-							message = "This will override any changes made.",
-						})
+						local confirmed = self._modalState:wrap(function()
+							return ConfirmDialogStyleState.confirm(self._theme, self._widget, position, {
+								title = "Import from file?",
+								message = "This will override any changes made.",
+							})
+						end)
 
 						if not confirmed then
 							passed = false
@@ -577,8 +641,9 @@ function EditKeyView:_initializeInteraction()
 								.. "Wait and make fewer requests so that there can be budget for this."
 						)
 					else
-						local duplicateAction =
-							self:_promptDuplicateMoveKey(position, self._session.connection.type == "allScopes")
+						local duplicateAction = self._modalState:wrap(function()
+							return self:_promptDuplicateMoveKey(position, self._session.connection.type == "allScopes")
+						end)
 						if duplicateAction then
 							if duplicateAction.key == self._session.currentKey then
 								self._uiMessages:error(`The key is already named <b>{self._session.currentKey}</b>`)
@@ -761,8 +826,11 @@ function EditKeyView:_createDataUsageCard(keyUsage, metadataUsage)
 	updateBar(metadataUsage, METADATA_MAX_SIZE, wrapper.styleStates.metadataLabel.label, card.MetadataBar)
 
 	local modal = PopupHelper.modal(card, self._widget)
+	self._modalState:push()
 
 	local function cleanup()
+		self._modalState:pop()
+
 		modal:destroy()
 		wrapper:destroy()
 		card:Destroy()
@@ -991,7 +1059,9 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 
 		dirty = isDirty,
 		readOnly = false,
+
 		inputReceiver = self._inputReceiver,
+		modalState = self._modalState,
 	}
 
 	if self._viewerMode == "Tree" then
@@ -1092,16 +1162,54 @@ function EditKeyView:_updateVersionsViewMode()
 		self._frame.Container.Position = UDim2.fromOffset(0, 0)
 		self._frame.Container.Size = UDim2.fromScale(1, 1)
 		self._frame.Container.LeftTopbar.Versions.Visible = true
+		self._modalState:popId(VERSIONS_MODAL_ID)
 	elseif self._frame.AbsoluteSize.X > 700 then
 		self._versionsView:setViewMode("drawer")
 		self._frame.Container.Position = UDim2.fromOffset(self._versionsView.frame.AbsoluteSize.X, 0)
 		self._frame.Container.Size = UDim2.new(1, -self._versionsView.frame.AbsoluteSize.X, 1, 0)
 		self._frame.Container.LeftTopbar.Versions.Visible = false
+		self._modalState:popId(VERSIONS_MODAL_ID)
 	else
 		self._versionsView:setViewMode("popup")
 		self._frame.Container.Position = UDim2.fromOffset(0, 0)
 		self._frame.Container.Size = UDim2.fromScale(1, 1)
 		self._frame.Container.LeftTopbar.Versions.Visible = true
+		self._modalState:pushId(VERSIONS_MODAL_ID)
+	end
+end
+
+function EditKeyView:_startSearch()
+	if self._searchView then
+		return
+	end
+
+	local searchView = SearchView.new({
+		theme = self._theme,
+		parent = self._frame.Container.SearchContainer,
+		position = UDim2.new(0, 8, 1, -8),
+		anchorPoint = Vector2.new(0, 1),
+
+		nextClicked = function() end,
+		prevClicked = function() end,
+		closeClicked = function()
+			self:_endSearch()
+		end,
+	})
+
+	self._searchView = searchView
+
+	task.spawn(function()
+		searchView:animateIn()
+		searchView:captureFocus()
+	end)
+end
+
+function EditKeyView:_endSearch()
+	local searchView = self._searchView
+	if searchView then
+		self._searchView = nil
+		searchView:animateOut()
+		searchView:destroy()
 	end
 end
 

@@ -147,6 +147,11 @@ function Theme.improveContrast(color: Color3, backgroundColor: Color3)
 	return originalColor
 end
 
+function Theme.lighten(color: Color3, amount: number): Color3
+	local lab = Oklab.fromColor3(color)
+	return Oklab.toColor3(vector.create(lab.x + amount, lab.y, lab.z))
+end
+
 function Theme.new(): Theme
 	local self = setmetatable({
 		accent = "red",
@@ -309,7 +314,7 @@ function Theme.generatePreset(preset: string, accent: string)
 			background = Color3.fromRGB(26, 26, 26), --Color3.fromRGB(40, 40, 40),
 			backgroundOutline = Color3.fromRGB(62, 62, 62),
 
-			popupBackground = Color3.fromRGB(40, 40, 40),
+			popupBackground = Color3.fromRGB(36, 36, 36),
 			popupBackgroundOutline = Color3.fromRGB(62, 62, 62),
 
 			scrollbar = Color3.fromRGB(150, 150, 150),
@@ -505,6 +510,9 @@ function Theme.generatePreset(preset: string, accent: string)
 	elseif preset == "studio" then
 		local StudioTheme = StudioSettings.Theme :: StudioTheme
 		local isDark, isOld = getStudioThemeData()
+		local separatorColor = if isDark and not isOld
+			then Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Separator), 0.025)
+			else StudioTheme:GetColor(Enum.StudioStyleGuideColor.Separator)
 
 		return {
 			button = {
@@ -795,10 +803,15 @@ function Theme.generatePreset(preset: string, accent: string)
 					background = Color3.fromRGB(24, 24, 24),
 					outline = Color3.fromRGB(24, 24, 24),
 				}
+				elseif isDark then {
+					text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
+					background = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip),
+					outline = Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip), -0.03),
+				}
 				else {
-					text = Color3.fromRGB(250, 250, 250),
-					background = Color3.fromRGB(24, 24, 24),
-					outline = Color3.fromRGB(43, 43, 43),
+					text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
+					background = Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip), -0.03),
+					outline = Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip), -0.08),
 				},
 
 			floatingAction = {
@@ -819,9 +832,14 @@ function Theme.generatePreset(preset: string, accent: string)
 			background = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
 			backgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
 
-			popupBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
-			popupBackgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground)
-				:Lerp(Color3.new(0, 0, 0), if isDark then 0.3 else 0.12),
+			popupBackground = if not isOld and isDark
+				then Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground), 0.02)
+				elseif (not isOld) and not isDark then Theme.lighten(
+					StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
+					-0.025
+				)
+				else StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
+			popupBackgroundOutline = separatorColor,
 
 			scrollbar = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DimmedText),
 
@@ -830,9 +848,7 @@ function Theme.generatePreset(preset: string, accent: string)
 			imageBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ViewPortBackground),
 			imageBackgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ViewPortBackground),
 
-			separator = if isDark and not isOld
-				then Color3.fromRGB(37, 40, 45)
-				else StudioTheme:GetColor(Enum.StudioStyleGuideColor.Separator),
+			separator = separatorColor,
 
 			mainAccent = accentColor,
 

@@ -250,18 +250,24 @@ function PopupHelper.attachDropShadow(object: GuiObject)
 	dropShadow.ZIndex = object.ZIndex - 1
 
 	local function update()
-		dropShadow.Position = UDim2.fromOffset(object.AbsolutePosition.X - 15, object.AbsolutePosition.Y - 9)
-		dropShadow.Size = UDim2.fromOffset(object.AbsoluteSize.X + 30, object.AbsoluteSize.Y + 26)
+		if dropShadow.Parent then
+			dropShadow.Position = UDim2.fromOffset(
+				(object.AbsolutePosition.X - dropShadow.Parent.AbsolutePosition.X) - 15,
+				(object.AbsolutePosition.Y - dropShadow.Parent.AbsolutePosition.Y) - 9
+			)
+			dropShadow.Size = UDim2.fromOffset(object.AbsoluteSize.X + 30, object.AbsoluteSize.Y + 26)
+		end
 	end
 
+	dropShadow.Parent = object.Parent
 	update()
+
 	object:GetPropertyChangedSignal("AbsoluteSize"):Connect(update)
 	object:GetPropertyChangedSignal("AbsolutePosition"):Connect(update)
 	object.Destroying:Connect(function()
 		dropShadow:Destroy()
 	end)
 
-	dropShadow.Parent = object.Parent
 	return dropShadow
 end
 

@@ -12,7 +12,7 @@ ContextMenuStyleState.__index = ContextMenuStyleState
 
 ContextMenuStyleState.SEPARATOR = newproxy()
 
-export type Option = | string | { icon: string, text: string } | { icon: string?, options: { Option } }
+export type Option = | string | { icon: string, text: string, hotkey: string? } | { icon: string?, options: { Option } }
 
 export type ContextMenuOptions = {
 	options: { Option },
@@ -91,10 +91,12 @@ function ContextMenuStyleState.from(theme, contextMenu: typeof(script.ContextMen
 		else
 			local icon = ""
 			local text = option
+			local hotkey = nil
 			local suboptions: { Option }? = nil
 			if typeof(option) == "table" then
 				text = option.text
 				icon = option.icon
+				hotkey = option.hotkey
 				suboptions = option.options
 			end
 
@@ -107,6 +109,13 @@ function ContextMenuStyleState.from(theme, contextMenu: typeof(script.ContextMen
 				button.Icon.Image = icon or ""
 
 				button.UIPadding.PaddingLeft = UDim.new(0, 3)
+			end
+
+			if hotkey then
+				button.Hotkey.Visible = true
+				button.Hotkey.Text = hotkey
+			else
+				button.Hotkey.Visible = false
 			end
 
 			if suboptions then
@@ -301,6 +310,9 @@ function ContextMenuStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 		})
 		StyleStateHelper.tween(button.TextLabel, tweenInfo, {
 			TextColor3 = self.theme.colors.text,
+		})
+		StyleStateHelper.tween(button.Hotkey, tweenInfo, {
+			TextColor3 = if hovering then self.theme.colors.text else self.theme.colors.disabledText,
 		})
 		if self._hasIcons then
 			StyleStateHelper.tween(button.Icon, tweenInfo, {

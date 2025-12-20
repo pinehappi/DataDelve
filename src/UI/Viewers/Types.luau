@@ -3,6 +3,7 @@
 local JSONHelper = require(script.Parent.Parent.Parent.JSONHelper)
 local Theme = require(script.Parent.Parent.Theme)
 local UIMessages = require(script.Parent.Parent.UIMessages)
+local ModalState = require(script.Parent.Parent.ModalState)
 
 export type ViewerMode = "Tree" | "Code"
 
@@ -18,6 +19,8 @@ export type NewOptions = {
 	data: JSONHelper.JSONValue,
 	keyInfo: KeyInfo?,
 	dirty: boolean?, -- If it's dirty by default
+
+	modalState: ModalState.ModalState,
 
 	readOnly: boolean, -- default: false
 

@@ -120,7 +120,9 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 		_colors = getHighlightColors(theme),
 
 		_inModal = false,
+		_modalState = options.modalState,
 		_inRightClick = false,
+
 		_hoveringBranchIndex = nil,
 		_selectingBranchIndex = nil,
 		_selectingBranchVisibleIndex = nil,
@@ -227,7 +229,7 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 				if not checkTrulyVisible(self.frame) then
 					return
 				end
-				if self._inModal or self._inRightClick then
+				if self._modalState.isInside or self._inRightClick then
 					return
 				end
 
@@ -604,6 +606,24 @@ function Tree:_getAmountOfUserIds(): number
 		end
 		return (index - self._userIdsIndex) - 1
 	end
+end
+
+function Tree:_canDeleteBranch(index: number): boolean
+	local branch = self._flatBranches[index]
+	return not (branch.LOCKVALUE or branch.LOCKKEY or branch.ISROOT)
+end
+
+function Tree:_canInsertAfter(index: number): boolean
+	local branch = self._flatBranches[index]
+	local depth = self._flatDepths[index]
+	return depth >= 1 and not branch.LOCKVALUE
+end
+
+function Tree:_canInsertInto(index: number): boolean
+	local branch = self._flatBranches[index]
+	return ((branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL) and not branch.LOCKVALUE)
+		or branch.ISUSERIDS
+		or branch.ISMETADATA
 end
 
 -- Utilities for manipulating branches
@@ -2054,6 +2074,7 @@ function Tree:_promptEditBuffer(options: EditBufferOptions): buffer?
 	editingFrame.Position = UDim2.fromOffset(options.position.X, options.position.Y)
 
 	local modal = PopupHelper.modal(editingFrame, self.gui)
+	PopupHelper.clamp(editingFrame, self._gui)
 
 	editingWrapper.styleStates.cancel.button.Activated:Connect(function()
 		resultEvent:Fire(nil)
@@ -2434,7 +2455,7 @@ function Tree:_promptPrecisionMenu(options: PrecisionMenuOptions): promptKeyValu
 end
 
 function Tree:_promptEditMenu(index: number, options: { captureValueTextBox: boolean?, position: Vector2 })
-	self:_setInModal(true)
+	self._modalState:push()
 
 	local branch = self._flatBranches[index]
 	local lockKey = (typeof(branch[1]) == "number") or branch.LOCKKEY
@@ -2556,7 +2577,7 @@ function Tree:_promptEditMenu(index: number, options: { captureValueTextBox: boo
 		end,
 	})
 
-	self:_setInModal(false)
+	self._modalState:pop()
 end
 
 function Tree:_promptInsertForm(options: {
@@ -2766,14 +2787,14 @@ function Tree:_promptEditKey(index: number)
 		return
 	end
 
-	self:_setInModal(true)
+	self._modalState:push()
 
 	local userResponse, newKey = self:_promptModalTextBox(frame, "key", {
 		defaultText = frame.Key.Text,
 		locked = locked,
 	})
 
-	self:_setInModal(false)
+	self._modalState:pop()
 
 	if userResponse == "empty" then
 		self.uiMessages:error("Key was empty.")
@@ -2811,7 +2832,7 @@ function Tree:_promptEditValue(index: number)
 		self.uiMessages:warn("Cannot edit this value.")
 	end
 
-	self:_setInModal(true)
+	self._modalState:push()
 
 	local userResponse, newValue, newValueIsArray
 
@@ -2855,7 +2876,7 @@ function Tree:_promptEditValue(index: number)
 		})
 	end
 
-	self:_setInModal(false)
+	self._modalState:pop()
 
 	if userResponse == "empty" then
 		self.uiMessages:error("Value was empty.")
@@ -2876,12 +2897,12 @@ function Tree:_promptInsertInto(index: number, position: Vector2)
 		local amount = self:_getAmountOfUserIds()
 		if amount >= 4 then
 			self.uiMessages:error("Max number of UserIds is 4.")
-			self:_setInModal(false)
+			self._modalState:pop()
 			return
 		end
 	end
 
-	self:_setInModal(true)
+	self._modalState:push()
 
 	local result = self:_promptInsertForm({
 		title = "Insert Into",
@@ -2897,7 +2918,7 @@ function Tree:_promptInsertInto(index: number, position: Vector2)
 		position = position,
 	})
 
-	self:_setInModal(false)
+	self._modalState:pop()
 	if result then
 		local valueIsArray = (result.type == "array")
 
@@ -2933,12 +2954,12 @@ function Tree:_promptInsertAfter(index: number, position: Vector2)
 		local amount = self:_getAmountOfUserIds()
 		if amount >= 4 then
 			self.uiMessages:error("Max number of UserIds is 4.")
-			self:_setInModal(false)
+			self._modalState:pop()
 			return
 		end
 	end
 
-	self:_setInModal(true)
+	self._modalState:push()
 
 	local result = self:_promptInsertForm({
 		title = "Insert After",
@@ -2954,7 +2975,7 @@ function Tree:_promptInsertAfter(index: number, position: Vector2)
 		position = position,
 	})
 
-	self:_setInModal(false)
+	self._modalState:pop()
 
 	if result then
 		if result then
@@ -3019,7 +3040,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		if self.disabled then
 			return
 		end
-		if self._inModal then
+		if self._modalState.isInside and not self._inRightClick then
 			return
 		end
 		if self.readOnly then
@@ -3255,7 +3276,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 	end
 
 	local function onSingleClick()
-		if self._inModal then
+		if self._modalState.isInside and not self._inRightClick then
 			return
 		end
 
@@ -3272,14 +3293,17 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		if self.readOnly then
 			return
 		end
-		if self._inModal then
+		if self._modalState.isInside and not self._inRightClick then
 			return
 		end
 		if self._selectingIsDragging then
 			return
 		end
 
-		self:_setInModal(true, "rightClick")
+		-- wait for the previous right click to close if it is there
+		task.wait()
+
+		self:_setInRightClick(true)
 
 		self:_selectBranch(index, true)
 
@@ -3289,20 +3313,15 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			table.insert(options, { icon = self.theme.icons.edit, text = "Edit" })
 		end
 
-		if not (branch.LOCKVALUE or branch.LOCKKEY or branch.ISROOT) then
+		if self:_canDeleteBranch(index) then
 			table.insert(options, { icon = self.theme.icons.delete, text = "Delete" })
 		end
 
-		if depth >= 1 and not branch.LOCKVALUE then
+		if self:_canInsertAfter(index) then
 			table.insert(options, { icon = self.theme.icons.insert, text = "Insert After" })
 		end
 
-		-- Special case for user ids, should be able to insert ids
-		if
-			((branch[2] == ARRAY_SENTINEL or branch[2] == OBJECT_SENTINEL) and not branch.LOCKVALUE)
-			or branch.ISUSERIDS
-			or branch.ISMETADATA
-		then
+		if self:_canInsertInto(index) then
 			table.insert(options, { icon = self.theme.icons.insert, text = "Insert Into" })
 		end
 
@@ -3339,7 +3358,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 		end
 
 		if #options == 0 then
-			self:_setInModal(false)
+			self:_setInRightClick(false)
 			return
 		end
 
@@ -3372,7 +3391,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			self:_updateBranchFrame(frame, branch, index)
 		end
 
-		self:_setInModal(false)
+		self:_setInRightClick(false)
 	end
 
 	self._frameConnections[index] = {
@@ -3423,7 +3442,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			if self.disabled then
 				return
 			end
-			if self._inModal then
+			if self._modalState.isInside and not self._inRightClick then
 				return false
 			end
 
@@ -3439,7 +3458,7 @@ function Tree:_initializeBranchFrame(frame, index: number)
 			if self.disabled then
 				return
 			end
-			if self._inModal then
+			if self._modalState.isInside and not self._inRightClick then
 				return false
 			end
 
@@ -3729,10 +3748,9 @@ function Tree:_tryAddHierarchyBarsUpTo(amount: number)
 	end
 end
 
-function Tree:_setInModal(inModal: boolean, inRightClick: "rightClick"?)
-	self._inModal = inModal
+function Tree:_setInRightClick(inRightClick)
 	self._inRightClick = not not inRightClick
-	self.frame.ScrollingEnabled = not inModal
+	self.frame.ScrollingEnabled = not inRightClick
 
 	if self._hoveringBranchIndex and not inRightClick then
 		local hoveringIndex = self._hoveringBranchIndex
@@ -3755,7 +3773,7 @@ function Tree:_updateBranchFrameBackgroundColor(index: boolean, frame: Frame?)
 end
 
 function Tree:_setHovering(index: number?)
-	if self._inModal and not self._inRightClick then
+	if self._modalState.isInside and not self._inRightClick then
 		return
 	end
 	if self._selectingIsDragging then
@@ -4025,8 +4043,9 @@ function Tree:tryDeleteSelected(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
-	if self._inModal then
-		return false
+
+	if not self:_canDeleteBranch(self._selectingBranchIndex) then
+		return
 	end
 
 	self:_deleteBranch({ index = self._selectingBranchIndex, pushAction = true })
@@ -4037,9 +4056,6 @@ end
 
 function Tree:tryOpenSelected(): boolean
 	if not self._selectingBranchIndex then
-		return false
-	end
-	if self._inModal then
 		return false
 	end
 
@@ -4064,9 +4080,6 @@ function Tree:tryCloseSelected(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
-	if self._inModal then
-		return false
-	end
 
 	local branch = self._flatBranches[self._selectingBranchIndex]
 	if branch[2] ~= ARRAY_SENTINEL and branch[2] ~= OBJECT_SENTINEL then
@@ -4085,9 +4098,6 @@ function Tree:trySelectNext(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
-	if self._inModal then
-		return false
-	end
 
 	local nextVisibleIndex = self._selectingBranchVisibleIndex + 1
 	local nextIndex = self._visibleIndexes[nextVisibleIndex]
@@ -4102,9 +4112,6 @@ end
 
 function Tree:trySelectPrevious(): boolean
 	if not self._selectingBranchIndex then
-		return false
-	end
-	if self._inModal then
 		return false
 	end
 
@@ -4123,9 +4130,6 @@ function Tree:tryEditKeySelected(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
-	if self._inModal then
-		return false
-	end
 
 	self:_promptEditKey(self._selectingBranchIndex)
 	return true
@@ -4135,17 +4139,18 @@ function Tree:tryInsertSelected(): boolean
 	if not self._selectingBranchIndex then
 		return false
 	end
-	if self._inModal then
-		return false
-	end
 
 	local frame = self._frames[self._selectingBranchIndex]
 	local branch = self._flatBranches[self._selectingBranchIndex]
 	if branch and frame then
 		if branch[2] == OBJECT_SENTINEL or branch[2] == ARRAY_SENTINEL then
-			self:_promptInsertInto(self._selectingBranchIndex, frame.Value.AbsolutePosition)
+			if self:_canInsertInto(self._selectingBranchIndex) then
+				self:_promptInsertInto(self._selectingBranchIndex, frame.Value.AbsolutePosition)
+			end
 		else
-			self:_promptInsertAfter(self._selectingBranchIndex, frame.Value.AbsolutePosition)
+			if self:_canInsertAfter(self._selectingBranchIndex) then
+				self:_promptInsertAfter(self._selectingBranchIndex, frame.Value.AbsolutePosition)
+			end
 		end
 	end
 

@@ -14,6 +14,7 @@ local Settings = require(script.Parent.Parent.Parent.Settings)
 local Theme = require(script.Parent.Parent.Theme)
 local UIMessages = require(script.Parent.Parent.UIMessages)
 local Tooltip = require(script.Parent.Parent.Tooltip)
+local ModalState = require(script.Parent.Parent.ModalState)
 
 local Tree = require(script.Parent.Parent.Viewers.Tree)
 
@@ -317,6 +318,7 @@ function SettingsView:beforeOpen()
 		},
 		readOnly = true,
 		allOpen = true,
+		modalState = ModalState.new(),
 	})
 end
 
