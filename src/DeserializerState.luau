@@ -15,10 +15,21 @@ type DeserializationSettings = {
 	[--[[placeId:]]string]: PlaceSettings,
 }
 
-export type Deserializer = {
+export type FunctionDeserializer = {
+	type: "function",
 	deserialize: (buf: buffer) -> unknown,
 	serialize: (data: unknown) -> buffer,
 }
+export type Editor = {
+	object: GuiObject,
+	getValue: () -> buffer?,
+	cleanup: (() -> ())?,
+}
+export type EditorDeserializer = {
+	type: "editor",
+	createEditor: (buf: buffer) -> Editor,
+}
+export type Deserializer = FunctionDeserializer | EditorDeserializer
 
 local DeserializeState = {}
 
@@ -70,7 +81,7 @@ function DeserializeState.getDefaultDeserializer(): ({ name: string, deserialize
 		local name = table.concat(placeSettings.defaultDeserializer, ".")
 		local got = takePath(placeSettings.defaultDeserializer)
 		if got and got:IsA("ModuleScript") then
-			local deserializer, err = DeserializeState.tryGetDeserializer(got)
+			local deserializer, err = DeserializeState.tryLoadDeserializer(got)
 			if err then
 				return nil, `Invalid value for {name}. {err}`
 			end
@@ -112,7 +123,7 @@ function DeserializeState.trySetDefaultDeserializer(module: ModuleScript)
 	plugin:SetSetting(DESERIALIZATION_KEY, newKey)
 end
 
-function DeserializeState.tryGetDeserializer(module: ModuleScript): (Deserializer?, string?)
+function DeserializeState.tryLoadDeserializer(module: ModuleScript): (Deserializer?, string?)
 	local success, result = pcall(function()
 		return require(module) :: any
 	end)
@@ -124,7 +135,20 @@ function DeserializeState.tryGetDeserializer(module: ModuleScript): (Deserialize
 		return nil, "Must return a table."
 	end
 
-	local got = {
+	local createEditor = result.createEditor or result.CreateEditor
+	if createEditor then
+		if typeof(createEditor) ~= "function" then
+			return nil, "`getEditor` must be a function."
+		end
+
+		return {
+			type = "editor",
+			createEditor = createEditor,
+		}
+	end
+
+	local got: FunctionDeserializer = {
+		type = "function",
 		deserialize = result.deserialize or result.Deserialize,
 		serialize = result.serialize or result.Serialize,
 	}

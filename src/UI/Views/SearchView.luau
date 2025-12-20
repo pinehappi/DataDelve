@@ -60,6 +60,7 @@ type SearchViewFields = {
 
 	_dead: boolean,
 	_isAnimating: boolean,
+	_lastSearch: string,
 }
 
 export type SearchView = typeof(setmetatable({} :: SearchViewFields, {} :: SearchViewImplementation))
@@ -74,6 +75,19 @@ function SearchView.new(options)
 
 	self._frame = Assets.Views.Search:Clone()
 	self._styleStates = getStyleStates(self._theme, self._frame)
+
+	self._frame.Position = options.position
+	self._frame.AnchorPoint = options.anchorPoint
+	self._frame.ZIndex = 10
+	self._frame.Parent = options.parent
+
+	self._dropShadow = PopupHelper.attachDropShadow(self._frame)
+
+	self._dead = false
+	self._isAnimating = false
+	self._lastSearch = ""
+
+	self:setResult({ kind = "none" })
 
 	self._styleStates.next.button.Activated:Connect(options.nextClicked)
 	self._styleStates.prev.button.Activated:Connect(options.prevClicked)
@@ -93,22 +107,11 @@ function SearchView.new(options)
 		-- remove newlines if they pressed enter
 		if self._styleStates.textBox.textBox.Text:find("[\n\r]+$") then
 			self._styleStates.textBox.textBox.Text = self._styleStates.textBox.textBox.Text:gsub("[\n\r]+$", "")
-		else
+		elseif self._styleStates.textBox.textBox.Text ~= self._lastSearch then
+			self._lastSearch = self._styleStates.textBox.textBox.Text
 			options.searchChanged(self._styleStates.textBox.textBox.Text)
 		end
 	end)
-
-	self._frame.Position = options.position
-	self._frame.AnchorPoint = options.anchorPoint
-	self._frame.ZIndex = 10
-	self._frame.Parent = options.parent
-
-	self._dropShadow = PopupHelper.attachDropShadow(self._frame)
-
-	self._dead = false
-	self._isAnimating = false
-
-	self:setResult({ kind = "none" })
 
 	return self
 end

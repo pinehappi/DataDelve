@@ -4,12 +4,14 @@ local SelectionService = game:GetService("Selection")
 local ScriptEditorService = game:GetService("ScriptEditorService")
 
 local Types = require(script.Parent.Types)
+local ViewerTypes = require(script.Parent.Parent.Viewers.Types)
 local UIMessages = require(script.Parent.Parent.UIMessages)
 local Theme = require(script.Parent.Parent.Theme)
 local Tooltip = require(script.Parent.Parent.Tooltip)
 local PopupHelper = require(script.Parent.Parent.PopupHelper)
 local rfmt = require(script.Parent.Parent.Parent.rfmt)
 local DeserializerState = require(script.Parent.Parent.Parent.DeserializerState)
+local ModalState = require(script.Parent.Parent.ModalState)
 
 local StyleState = script.Parent.Parent.StyleState
 local Assets = script.Parent.Parent.Assets
@@ -48,6 +50,7 @@ export type DeserializerImplementation = {
 	_setError: (Deserializer, message: string) -> (),
 	_tryUseSelection: (Deserializer) -> (),
 	_setDeserializer: (Deserializer, name: string, DeserializerState.Deserializer, buf: buffer?) -> (),
+	_cleanupEditor: (Deserializer) -> (),
 
 	_showHelpPopup: (Deserializer) -> (),
 	_closeHelpPopup: (Deserializer) -> (),
@@ -67,8 +70,7 @@ export type DeserializerFields = {
 	_helpTooltipDestructor: Tooltip.TooltipDestructor,
 
 	_originalValue: buffer,
-	_viewer: any,
-	_viewerHistoryConnection: RBXScriptConnection?,
+	_editor: (DeserializerState.Editor & { viewer: any? })?,
 
 	_deserializerName: string?,
 	_deserializer: DeserializerState.Deserializer?,
@@ -96,9 +98,8 @@ function Deserializer.from(buf: buffer, container: Frame, options: Types.BufferV
 	self._frame.Parent = container
 	self._styleStates = getStyleStates(options.theme, self._frame)
 
-	self._viewer = nil
 	self._originalValue = buf
-	self._viewerHistoryConnection = nil
+	self._editor = nil
 
 	self._helpTooltipDestructor = Tooltip.bindButtonGeneric(self._theme, self._styleStates.help.button, "Help")
 
@@ -151,7 +152,7 @@ function Deserializer._tryUseSelection(self: Deserializer)
 		return
 	end
 
-	local deserializer, err = DeserializerState.tryGetDeserializer(module)
+	local deserializer, err = DeserializerState.tryLoadDeserializer(module)
 	if err then
 		self._uiMessages:error(err)
 		return
@@ -197,49 +198,109 @@ function Deserializer._setDeserializer(
 	deserializer: DeserializerState.Deserializer,
 	buf: buffer?
 )
-	if self._viewer then
-		self._viewer:destroy()
-		self._viewer = nil
-
-		self._frame.Container.Content.Visible = false
-		self._frame.Container.Error.Visible = true
-	end
-
-	if self._viewerHistoryConnection then
-		self._viewerHistoryConnection:Disconnect()
-	end
+	self:_cleanupEditor()
 
 	self._deserializerName = name
 	self._deserializer = deserializer
 	self._styleStates.deserializer.label.Text = `Deserializer: {name}`
 
-	local value: unknown
-	local success, err = pcall(function()
-		value = deserializer.deserialize(buf or self:getValue())
-	end)
+	self._frame.Container.Error.Visible = false
+	self._frame.Container.Content.Visible = true
 
-	if not success then
-		self:_setError(`Deserializer error: {err}`)
-		return
+	if deserializer.type == "function" then
+		local value: unknown
+		local success, err = pcall(function()
+			value = deserializer.deserialize(buf or self:getValue())
+		end)
+
+		if not success then
+			self:_setError(`Deserializer error: {err}`)
+			return
+		end
+
+		if hasMixedTable(value) then
+			self:_setError("Deserializer error: Mixed tables are not allowed!")
+			return
+		end
+
+		-- circular dependency...
+		local Tree = require(script.Parent.Parent.Viewers.Tree) :: any
+
+		local container = Instance.new("Frame")
+		container.BackgroundTransparency = 1
+		container.Size = UDim2.fromScale(1, 1)
+		container.Parent = self._frame.Container.Content
+
+		local viewer = Tree.new(self._theme, self._uiMessages, container, {
+			data = value,
+			readOnly = false,
+			showKeyInfo = false,
+			inputReceiver = self._inputReceiver,
+			modalState = ModalState.new(),
+		})
+
+		local connection = viewer.historyChanged:Connect(function()
+			self._historyChanged:Fire()
+		end)
+
+		self._editor = {
+			object = container :: any,
+			getValue = function()
+				local result = viewer:getValue()
+				if result.kind == "success" then
+					return deserializer.serialize(result.value)
+				end
+
+				return nil :: any
+			end,
+			cleanup = function()
+				viewer:destroy()
+			end,
+			viewer = viewer :: any,
+		}
+	elseif deserializer.type == "editor" then
+		local editor: DeserializerState.Editor
+		local success, err = pcall(function()
+			local gotEditor: any = deserializer.createEditor(buf or self:getValue())
+
+			if typeof(gotEditor) ~= "table" then
+				error("Deserializer error: expected `createEditor` to return a table.", 0)
+			end
+
+			if typeof(gotEditor.object) ~= "Instance" then
+				error("Deserializer error: expected editor to contain `object` key of type Instance.", 0)
+			end
+
+			if typeof(gotEditor.getValue) ~= "function" then
+				error("Deserializer error: expected editor to contain `getValue` key of type `() -> buffer?`.", 0)
+			end
+
+			if gotEditor.cleanup and typeof(gotEditor.cleanup) ~= "function" then
+				error("Deserializer error: expected editor to contain `getValue` key of type `() -> buffer?`.", 0)
+			end
+
+			editor = gotEditor
+		end)
+
+		-- TODO: the error might belong to the serializer of the previous editor. Need a better way to separate the error in `createEditor` and `getValue`
+		if not success then
+			self:_setError(`Deserializer error: {err}`)
+			return
+		end
+
+		editor.object.Parent = self._frame.Container.Content
+		self._editor = editor :: any
 	end
 
-	if hasMixedTable(value) then
-		self:_setError("Deserializer error: Mixed tables are not allowed!")
-		return
-	end
-
-	local Tree = require(script.Parent.Parent.Viewers.Tree) :: any
-	self._viewer = Tree.new(self._theme, self._uiMessages, self._frame.Container.Content, {
-		data = value,
-		readOnly = false,
-		showKeyInfo = false,
-		inputReceiver = self._inputReceiver,
-	})
-
-	self._viewer.historyChanged:Connect(function()
-		self._historyChanged:Fire()
-	end)
 	self._historyChanged:Fire()
+end
+
+function Deserializer._cleanupEditor(self: Deserializer)
+	if self._editor and self._editor.cleanup then
+		self._editor.cleanup()
+		self._editor.object:Destroy()
+	end
+	self._editor = nil
 end
 
 function Deserializer._showHelpPopup(self: Deserializer)
@@ -280,19 +341,18 @@ function Deserializer._closeHelpPopup(self: Deserializer)
 end
 
 function Deserializer.getValue(self: Deserializer): buffer
-	if self._viewer and self._deserializer then
-		local buf: buffer
+	if self._editor then
+		local buf: buffer?
 		local success, err = pcall(function()
-			local viewerValue = self._viewer:getValue()
-			buf = self._deserializer.serialize(viewerValue)
+			buf = self._editor.getValue()
 		end)
 
 		if not success then
-			warn(err)
+			self._uiMessages:error(err)
 			return self._originalValue
 		end
 
-		return buf
+		return buf or self._originalValue
 	else
 		return self._originalValue
 	end
@@ -308,41 +368,35 @@ function Deserializer.setValue(self: Deserializer, buf: buffer)
 end
 
 function Deserializer.canUndo(self: Deserializer)
-	if self._viewer then
-		return self._viewer:canUndo()
+	if self._editor and self._editor.viewer then
+		return self._editor.viewer:canUndo()
 	else
 		return false
 	end
 end
 
 function Deserializer.canRedo(self: Deserializer)
-	if self._viewer then
-		return self._viewer:canRedo()
+	if self._editor and self._editor.viewer then
+		return self._editor.viewer:canRedo()
 	else
 		return false
 	end
 end
 
 function Deserializer.undo(self: Deserializer)
-	if self._viewer then
-		self._viewer:undo()
+	if self._editor and self._editor.viewer then
+		self._editor.viewer:undo()
 	end
 end
 
 function Deserializer.redo(self: Deserializer)
-	if self._viewer then
-		self._viewer:redo()
+	if self._editor and self._editor.viewer then
+		self._editor.viewer:redo()
 	end
 end
 
 function Deserializer.destroy(self: Deserializer)
-	if self._viewer then
-		self._viewer:destroy()
-	end
-
-	if self._viewerHistoryConnection then
-		self._viewerHistoryConnection:Disconnect()
-	end
+	self:_cleanupEditor()
 
 	for _, v in self._styleStates do
 		(v :: any):destroy()

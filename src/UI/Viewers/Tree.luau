@@ -2144,7 +2144,7 @@ function Tree:_promptEditBuffer(options: EditBufferOptions): buffer?
 	if shouldSubmit then
 		local copy = bufferWidget:getFreshBuffer()
 		bufferWidget:destroy()
-		return bufferWidget:getFreshBuffer()
+		return copy
 	end
 
 	bufferWidget:destroy()
