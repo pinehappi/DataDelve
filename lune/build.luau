@@ -10,7 +10,7 @@ local util = require("./_util")
 local processArgs, parsePath, bold, dim, pending, ok, fail =
 	util.processArgs, util.parsePath, util.bold, util.dim, util.pending, util.ok, util.fail
 
-local args, flags = processArgs({ "release", "fastMode" })
+local args, flags = processArgs({ "release" })
 
 type BuildType = "dev" | "release"
 
@@ -28,7 +28,6 @@ local function help()
 	print(
 		`  {bold("--release")}   Whether to build for release. In release mode, tests will not be added to the output, and the canary flag will be set to false`
 	)
-	print(`  {bold("--fastMode")}  Sync without artifical delays that improve the viewing experience.`)
 end
 
 -- Build
@@ -160,10 +159,6 @@ local function build(outputFile: string, buildType: BuildType)
 		ok()
 		stdio.write("\n")
 
-		if not flags.fastMode then
-			task.wait(math.random() * 0.3)
-		end
-
 		if buildType == "dev" then
 			stdio.write(`Building {bold("tests/")}  {pending()}`)
 			success, err = pcall(function()
@@ -177,14 +172,6 @@ local function build(outputFile: string, buildType: BuildType)
 			ok()
 			stdio.write("\n")
 
-			if not flags.fastMode then
-				task.wait(math.random() * 0.3)
-			end
-
-			if not flags.fastMode then
-				task.wait(math.random() * 0.3)
-			end
-
 			stdio.write(`Building {bold("assets/")}  {pending()}`)
 
 			success, err = pcall(function()
@@ -197,10 +184,6 @@ local function build(outputFile: string, buildType: BuildType)
 				ok()
 				stdio.write("\n")
 
-				if not flags.fastMode then
-					task.wait(math.random() * 0.3)
-				end
-
 				stdio.write(`Adding flags  {pending()}`)
 
 				local isCanaryRelease = roblox.Instance.new("BoolValue")
@@ -210,10 +193,6 @@ local function build(outputFile: string, buildType: BuildType)
 
 				ok()
 				stdio.write("\n")
-
-				if not flags.fastMode then
-					task.wait(math.random() * 0.3)
-				end
 
 				stdio.write(`Writing to {bold(outputFilePath)}  {pending()}`)
 				success, err = pcall(function()
@@ -231,7 +210,6 @@ local function build(outputFile: string, buildType: BuildType)
 	stdio.write("\n")
 
 	local elapsed = datetime.now().unixTimestampMillis - start
-	local mode = if flags.fastMode then "fast mode" else "enjoyable mode"
 	stdio.write(`Build status  `)
 	if err then
 		fail()
@@ -239,7 +217,7 @@ local function build(outputFile: string, buildType: BuildType)
 		ok()
 	end
 
-	stdio.write(dim(`({elapsed}ms {mode})`))
+	stdio.write(dim(`({elapsed}ms)`))
 
 	if err then
 		stdio.write("\n\n")

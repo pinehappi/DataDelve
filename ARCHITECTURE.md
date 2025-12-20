@@ -37,10 +37,7 @@ If you would like to work with DataDelve using Rojo or another syncing tool, you
 
 Use the `sync` Lune script to sync. Here is how to use it:
 ```bash
-# Enjoyable mode (has artifical pauses to improve viewing experience)
 lune run sync [path_to_plugin_file]
-# Fast mode
-lune run sync [path_to_plugin_file] -- --fastMode
 ```
 
 This will sync the directory up with the provided plugin file. You can sync directly with the plugin file in your local plugins folder.

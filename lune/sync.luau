@@ -11,15 +11,12 @@ local util = require("./_util")
 local processArgs, parsePath, bold, dim, pending, ok, fail, skip =
 	util.processArgs, util.parsePath, util.bold, util.dim, util.pending, util.ok, util.fail, util.skip
 
-local args, flags = processArgs({ "fastMode" })
+local args = processArgs({})
 
 local function help()
 	print("Syncs this project directory with a .rbxm of the plugin. Prints fancy tree to look cool.")
 	print("")
 	print(`{bold("Usage:")} lune run sync [plugin file]`)
-	print("")
-	print(`{bold("Options:")}`)
-	print(`  {bold("--fastMode")}  Sync without artifical delays that improve the viewing experience.`)
 end
 
 -- Syncing
@@ -78,10 +75,6 @@ function syncInstance(instance: roblox.Instance, path: PathInfo)
 	local newAssetPath = `{path.assetPath}/{instance.Name}`
 	local depth = #(newSourcePath:split("/"))
 	stdio.write(`\n┠{("──"):rep(depth - 1)} {instance.Name}  {pending()}`)
-
-	if not flags.fastMode then
-		task.wait(0.1 * math.random()) -- To enjoy the view
-	end
 
 	if instance:IsA("Folder") then
 		local hasScripts = doesInstanceHaveScriptsInside(instance)
@@ -302,10 +295,6 @@ function sync(filePath: string)
 
 		stdio.write("Starting sync...\n")
 
-		if not flags.fastMode then
-			task.wait(0.5 * math.random())
-		end
-
 		stdio.write("\x1B[1A") -- Goes back one line
 
 		stdio.write("Sync started    ")
@@ -330,8 +319,7 @@ function sync(filePath: string)
 		ok()
 
 		local elapsed = datetime.now().unixTimestampMillis - start
-		local mode = if flags.fastMode then "fast mode" else "enjoyable mode"
-		stdio.write(dim(`({math.floor(elapsed)}ms {mode})`))
+		stdio.write(dim(`({math.floor(elapsed)}ms)`))
 		stdio.write("\n")
 	else
 		fail()
