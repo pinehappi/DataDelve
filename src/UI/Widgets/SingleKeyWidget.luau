@@ -14,6 +14,7 @@ local Assets = script.Parent.Parent.Assets
 local StyleState = script.Parent.Parent.StyleState
 
 local EditKeyView = require(script.Parent.Parent.Views.EditKeyView)
+local VersionsView = require(script.Parent.Parent.Views.VersionsView)
 
 local StyleStateHelper = require(StyleState.StyleStateHelper)
 local BackgroundStyleState = require(StyleState.BackgroundStyleState)
@@ -79,7 +80,7 @@ function SingleKeyWidget.new(params)
 
 	self._theme = params.theme
 	self._id = HttpService:GenerateGUID()
-	self._widget = plugin:CreateDockWidgetPluginGui(self._id, WIDGET_INFO)
+	self._widget = plugin:CreateDockWidgetPluginGuiAsync(self._id, WIDGET_INFO)
 	self._widget.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	self._widget.Name = `Single Key Widget {self._id}`
 	self._widget.Enabled = false
@@ -143,8 +144,36 @@ function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?, 
 		return false, err
 	end
 
+	local versionsView = nil
+
 	if self._editKeyView then
+		-- preserve the versions view if it is the same session
+		if self._editKeyView.session == session then
+			versionsView = self._editKeyView.versionsView
+			versionsView:hide(true)
+		else
+			self._editKeyView.versionsView:destroy()
+		end
+
 		self._editKeyView:destroy()
+	end
+
+	if not versionsView then
+		versionsView = VersionsView.new({
+			theme = self._theme,
+			uiMessages = self._uiMessages,
+			widget = self._widget,
+			container = self._editKeyFrame,
+			session = forkedSession,
+			loadVersion = function(version: string)
+				local editKeyView = self._editKeyView
+				if not editKeyView then
+					return false
+				end
+
+				return editKeyView:handleLoadVersion(version)
+			end,
+		})
 	end
 
 	local editKeyView = EditKeyView.from({
@@ -154,6 +183,7 @@ function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?, 
 		inputReceiver = self._frame.HotkeyInputReceiver,
 		session = forkedSession,
 		transactor = self._transactor,
+		versionsView = versionsView,
 		swapCallback = function(keyName, version, session)
 			return self:_trySwapEditKeyView(keyName, version, session)
 		end,

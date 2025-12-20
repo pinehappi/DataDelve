@@ -35,6 +35,7 @@ local ContextMenuStyleState = require(script.Parent.UI.StyleState.Utility.Contex
 local SingleKeyWidget = require(script.Parent.UI.Widgets.SingleKeyWidget)
 local EditKeyView = require(script.Parent.UI.Views.EditKeyView)
 local HistoryView = require(script.Parent.UI.Views.HistoryView)
+local VersionsView = require(script.Parent.UI.Views.VersionsView)
 
 local Theme = require(script.Parent.UI.Theme).global
 local UI = require(script.Parent.UI)
@@ -91,7 +92,7 @@ function App.new(id: string)
 		_isUpdatingKey = false,
 	}, App)
 
-	self.widget = plugin:CreateDockWidgetPluginGui(id, WIDGET_INFO)
+	self.widget = plugin:CreateDockWidgetPluginGuiAsync(id, WIDGET_INFO)
 	self.widget.Title = id
 	self.widget.Name = id
 	self.widget.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -747,8 +748,36 @@ function App._trySwapEditKeyView(
 		return false, err
 	end
 
+	local versionsView = nil
+
 	if self.editKeyView then
+		-- preserve the versions view if it is the same session
+		if self.editKeyView.session == options.session then
+			versionsView = self.editKeyView.versionsView
+			versionsView:hide(true)
+		else
+			self.editKeyView.versionsView:destroy()
+		end
+
 		self.editKeyView:destroy()
+	end
+
+	if not versionsView then
+		versionsView = VersionsView.new({
+			theme = Theme,
+			uiMessages = self.uiMessages,
+			widget = self.widget,
+			container = self.ui.gui.EditKey,
+			session = forkedSession,
+			loadVersion = function(version: string)
+				local editKeyView = self.editKeyView
+				if not editKeyView then
+					return false
+				end
+
+				return editKeyView:handleLoadVersion(version)
+			end,
+		})
 	end
 
 	local editKeyView = EditKeyView.from({
@@ -758,6 +787,7 @@ function App._trySwapEditKeyView(
 		inputReceiver = self.ui.gui.HotkeyInputReceiver,
 		session = forkedSession,
 		transactor = self._keyTransactor,
+		versionsView = versionsView,
 		swapCallback = function(keyName, version, session)
 			return self:_trySwapEditKeyView(keyName, {
 				popCurrentCrumb = true,

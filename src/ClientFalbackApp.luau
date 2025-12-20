@@ -25,7 +25,7 @@ function ClientFallbackApp.new(id: string)
 		id = id,
 	}, ClientFallbackApp)
 
-	self.widget = plugin:CreateDockWidgetPluginGui(id, WIDGET_INFO)
+	self.widget = plugin:CreateDockWidgetPluginGuiAsync(id, WIDGET_INFO)
 	self.widget.Title = id
 	self.widget.Name = id
 	self.widget.ZIndexBehavior = Enum.ZIndexBehavior.Sibling

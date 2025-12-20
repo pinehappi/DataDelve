@@ -43,16 +43,15 @@ export type VersionsViewFromParams = {
 	uiMessages: UIMessages.UIMessages,
 	widget: PluginGui,
 	container: GuiObject, -- used in drawer mode
-	frame: typeof(Assets.Views.VersionsPopup),
 	session: Session.Session,
 	loadVersion: LoadVersionCallback,
 }
 
-function VersionsView.from(params: VersionsViewFromParams)
+function VersionsView.new(params: VersionsViewFromParams)
 	local self = setmetatable({}, VersionsView)
+	self.frame = Assets.Views.VersionsPopup:Clone()
 	self.theme = params.theme
 	self.uiMessages = params.uiMessages
-	self.frame = params.frame
 	self.widget = params.widget
 	self.container = params.container
 	self.connections = {}
@@ -62,6 +61,8 @@ function VersionsView.from(params: VersionsViewFromParams)
 	self._session = params.session
 	self._loadVersionCallback = params.loadVersion
 	self._transactor = Transactor.new()
+
+	self._loaded = false
 
 	self.order = params.session.versionPagesOrder or Enum.SortDirection.Descending
 	self.minDate = nil
@@ -142,7 +143,7 @@ function VersionsView.from(params: VersionsViewFromParams)
 					-- it knows to make sure to disable this
 					styleState.SECRET_ACTUALLY_DISABLE = true
 				end
-				return styleState
+				return styleState, info.Version
 			end,
 		}),
 
@@ -151,6 +152,7 @@ function VersionsView.from(params: VersionsViewFromParams)
 	}
 
 	self.mode = "popup"
+	self.visible = false
 	self._modal = nil
 	self._modalConnection = nil
 	self:setViewMode(self.mode :: any)
@@ -177,11 +179,12 @@ function VersionsView.from(params: VersionsViewFromParams)
 		self.styleStates.order.button.Activated:Connect(function()
 			if self.order == Enum.SortDirection.Ascending then
 				self.order = Enum.SortDirection.Descending
+				self.styleStates.order.button.ImageLabel.Image = DESCENDING_ICON
 			else
 				self.order = Enum.SortDirection.Ascending
+				self.styleStates.order.button.ImageLabel.Image = ASCENDING_ICON
 			end
 
-			self:_updateOrderIcon()
 			self:_reload()
 		end)
 	)
@@ -259,7 +262,7 @@ function VersionsView.from(params: VersionsViewFromParams)
 			if self._transactor.locked then
 				return
 			end
-			self:destroy(true)
+			self:hide()
 		end)
 	)
 
@@ -290,18 +293,47 @@ function VersionsView.from(params: VersionsViewFromParams)
 		),]]
 	}
 
-	task.spawn(function()
-		self:_updateOrderIcon()
-		self:_reload(true)
-	end)
-
 	return self
 end
 
-function VersionsView:setViewMode(viewMode: "drawer" | "popup")
+function VersionsView:show()
+	self.visible = true
+	self:_updateViewMode()
+
+	if not self._loaded then
+		task.spawn(function()
+			self:_reload()
+		end)
+	else
+		for version, styleState in self.styleStates.loadMore.itemStyleStates do
+			local versionText = styleState.button.Version
+			if version == self._session.currentVersion then
+				versionText.FontFace =
+					Font.new(versionText.FontFace.Family, Enum.FontWeight.Bold, versionText.FontFace.Style)
+			else
+				versionText.FontFace =
+					Font.new(versionText.FontFace.Family, Enum.FontWeight.Regular, versionText.FontFace.Style)
+			end
+		end
+	end
+end
+
+function VersionsView:hide(dontEmitEvent: boolean?)
+	self.visible = false
+	self:_updateViewMode()
+	if not dontEmitEvent then
+		self._closed:Fire()
+	end
+end
+
+function VersionsView:_updateViewMode()
 	self:_cleanupModal()
 
-	if viewMode == "drawer" then
+	if not self.visible then
+		self.frame.Visible = false
+		self.frame.Parent = nil
+	elseif self.mode == "drawer" then
+		self.frame.Visible = true
 		self.frame.AnchorPoint = Vector2.new(0, 0)
 		self.frame.Size = UDim2.new(0, 338, 1, 0)
 		self.frame.Position = UDim2.fromOffset(0, 0)
@@ -312,6 +344,7 @@ function VersionsView:setViewMode(viewMode: "drawer" | "popup")
 		self.styleStates.rightSeparator.separator.Visible = true
 		self.frame.Parent = self.container
 	else
+		self.frame.Visible = true
 		self.frame.AnchorPoint = Vector2.new(0.5, 0.5)
 		self.frame.Size = UDim2.fromScale(0.9, 0.8)
 		self.frame.Position = UDim2.fromScale(0.5, 0.5)
@@ -329,11 +362,14 @@ function VersionsView:setViewMode(viewMode: "drawer" | "popup")
 			if self._transactor.locked then
 				return
 			end
-			self:destroy(true)
+			self:hide()
 		end)
 	end
+end
 
-	self.mode = viewMode
+function VersionsView:setViewMode(viewMode: "drawer" | "popup")
+	self.mode = viewMode;
+	(self :: any):_updateViewMode()
 end
 
 function VersionsView:_loadVersion(version: string)
@@ -353,8 +389,9 @@ function VersionsView:_loadVersion(version: string)
 			end
 		end)
 
-		if success then
-			self:destroy(true)
+		if success and self.visible and self.mode == "popup" then
+			self.visible = false
+			self:_updateViewMode()
 		end
 	end
 end
@@ -408,27 +445,14 @@ function VersionsView:_deleteVersion(version: string)
 	end)
 end
 
-function VersionsView:_updateOrderIcon()
-	if self.order == Enum.SortDirection.Ascending then
-		self.styleStates.order.button.ImageLabel.Image = ASCENDING_ICON
-	else
-		self.styleStates.order.button.ImageLabel.Image = DESCENDING_ICON
-	end
-end
+function VersionsView:_reload()
+	self._loaded = true
 
-function VersionsView:_reload(useCache: boolean?)
 	self.styleStates.loadMore:clear()
 	self.styleStates.loadMore:setLoadMoreVisible(false)
 
 	self:_runOperation(function()
-		local success, err
-		if not (useCache and self._session.versionPages) then
-			success, err = self._session:tryCreateVersionPages(self.order, self.minDate, self.maxDate)
-		else
-			-- wait a little for tweenservice race conditions :(
-			task.wait()
-			success, err = true, nil
-		end
+		local success, err = self._session:tryCreateVersionPages(self.order, self.minDate, self.maxDate)
 
 		if not success then
 			self.uiMessages:reportDataStoreError(err)
@@ -463,14 +487,13 @@ end
 function VersionsView:_deleteVersionRow(version: string)
 	for _, styleState in self.styleStates.loadMore.itemStyleStates do
 		if styleState.button.Name == version then
-			styleState.button.Deleted.Text = "Yes"
 			styleState.SECRET_ACTUALLY_DISABLE = true
 			styleState:setDisabled(true):update("instant")
 		end
 	end
 end
 
-function VersionsView:destroy(completely: boolean)
+function VersionsView:destroy()
 	local self = self :: any
 	if self._dead then
 		return
@@ -492,14 +515,12 @@ function VersionsView:destroy(completely: boolean)
 
 	self._transactor:destroy()
 
-	if completely then
-		self.frame:Destroy()
-	end
+	self.frame:Destroy()
 
 	self._closed:Destroy()
 	table.clear(self)
 	self._dead = true
 end
 
-export type VersionsView = typeof(VersionsView.from({} :: VersionsViewFromParams))
+export type VersionsView = typeof(VersionsView.new({} :: VersionsViewFromParams))
 return VersionsView

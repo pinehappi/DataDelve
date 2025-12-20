@@ -93,6 +93,7 @@ export type EditKeyViewFromParams = {
 	inputReceiver: Frame,
 	session: Session.Session,
 	transactor: Transactor.Transactor,
+	versionsView: VersionsView.VersionsView,
 	swapCallback: SwapCallback,
 	isVersionLoaded: boolean,
 
@@ -124,6 +125,7 @@ export type EditKeyViewImplementation = {
 	_switchViewerMode: (EditKeyView, mode: ViewerTypes.ViewerMode) -> (),
 	_setViewer: (EditKeyView, data: any, userIds: { number }?, metadata: unknown?, isDirty: boolean?) -> (),
 	_tryOpenVersionsView: (EditKeyView) -> (),
+	handleLoadVersion: (EditKeyView, version: string) -> (boolean, nil | () -> (boolean, string?)),
 	_updateVersionsViewMode: (EditKeyView) -> (),
 	_getKeyInfo: (EditKeyView) -> ({ number }?, unknown?),
 
@@ -149,7 +151,7 @@ export type EditKeyViewFields = {
 	idLookedUp: RBXScriptSignal,
 	_idLookedUp: BindableEvent,
 
-	_session: Session.Session,
+	session: Session.Session,
 	_transactor: Transactor.Transactor,
 
 	_theme: Theme.Theme,
@@ -168,7 +170,7 @@ export type EditKeyViewFields = {
 	_viewer: ViewerTypes.Viewer,
 
 	_isVersionLoaded: boolean,
-	_versionsView: VersionsView.VersionsView?,
+	versionsView: VersionsView.VersionsView,
 	_searchView: SearchView.SearchView?,
 	_searchResultsConnection: RBXScriptConnection?,
 
@@ -190,6 +192,7 @@ function EditKeyView.from(params)
 	local self = setmetatable({}, EditKeyView)
 	self._dead = false
 	self._isVersionLoaded = params.isVersionLoaded
+	self.versionsView = params.versionsView
 
 	-- Events
 
@@ -201,17 +204,16 @@ function EditKeyView.from(params)
 
 	-- State
 
+	self.session = params.session
 	self._swapCallback = params.swapCallback
-	self._session = params.session
 	self._transactor = params.transactor
 
 	self._viewerMode = Settings.data.viewerMode :: any
 	self._viewer = nil :: any
-	self._versionsView = nil
 
-	self._cachedData = self._session.currentValue
-	self._cachedMetadata = self._session.currentKeyInfo and self._session.currentKeyInfo:GetMetadata()
-	self._cachedUserIds = self._session.currentKeyInfo and self._session.currentKeyInfo:GetUserIds()
+	self._cachedData = self.session.currentValue
+	self._cachedMetadata = self.session.currentKeyInfo and self.session.currentKeyInfo:GetMetadata()
+	self._cachedUserIds = self.session.currentKeyInfo and self.session.currentKeyInfo:GetUserIds()
 
 	-- UI
 
@@ -268,9 +270,14 @@ function EditKeyView.from(params)
 	table.insert(
 		self._connections,
 		self._frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-			if self._versionsView then
-				self:_updateVersionsViewMode()
-			end
+			self:_updateVersionsViewMode()
+		end)
+	)
+
+	table.insert(
+		self._connections,
+		self.versionsView.closed:Connect(function()
+			self:_updateVersionsViewMode()
 		end)
 	)
 
@@ -309,7 +316,7 @@ function EditKeyView.from(params)
 	)
 
 	local userIds, metadata = self:_getKeyInfo()
-	self:_setViewer(self._session.currentValue, userIds, metadata)
+	self:_setViewer(self.session.currentValue, userIds, metadata)
 
 	-- fix ui update race condition
 	task.delay(0, function()
@@ -339,10 +346,6 @@ function EditKeyView:destroy(completely)
 
 	if self._viewer then
 		self._viewer:destroy()
-	end
-
-	if self._versionsView then
-		self._versionsView:destroy(true)
 	end
 
 	if self._searchView then
@@ -409,7 +412,7 @@ function EditKeyView:_initializeInteraction()
 				end
 			end
 
-			if self._session:trySeeKeyChanged() == "changed" then
+			if self.session:trySeeKeyChanged() == "changed" then
 				if
 					not ConfirmDialogStyleState.confirm(
 						self._theme,
@@ -430,7 +433,7 @@ function EditKeyView:_initializeInteraction()
 			local userIds, metadata = self:_getKeyInfo()
 
 			self:_runOperation(function()
-				local success, err = self._session:trySaveCurrentKey(valueResult.value, userIds, metadata)
+				local success, err = self.session:trySaveCurrentKey(valueResult.value, userIds, metadata)
 				if not success then
 					self._uiMessages:reportDataStoreError(err)
 				else
@@ -456,7 +459,7 @@ function EditKeyView:_initializeInteraction()
 					self._widget:GetRelativeMousePosition(),
 					{
 						title = "Refresh key?",
-						message = if self._session.currentVersion
+						message = if self.session.currentVersion
 							then "This will delete any changes made. It will also reset to the latest version"
 							else "This will delete any changes made.",
 					}
@@ -468,8 +471,8 @@ function EditKeyView:_initializeInteraction()
 			end
 
 			self:_runOperation(function()
-				--local success, err = self:tryGetKey(self._session.currentKey, { popCurrentCrumb = true })
-				local success, err = self._swapCallback(self._session.currentKey)
+				--local success, err = self:tryGetKey(self.session.currentKey, { popCurrentCrumb = true })
+				local success, err = self._swapCallback(self.session.currentKey)
 				if not success then
 					self._uiMessages:reportDataStoreError(err)
 				else
@@ -496,7 +499,7 @@ function EditKeyView:_initializeInteraction()
 
 				local confirmedAgain = ConfirmDialogStyleState.confirm(self._theme, self._widget, popupPosition, {
 					title = "Confirm again",
-					message = `You are going to delete the key <b>{self._session.currentKey}</b>.`,
+					message = `You are going to delete the key <b>{self.session.currentKey}</b>.`,
 				})
 
 				if confirmedAgain then
@@ -505,8 +508,8 @@ function EditKeyView:_initializeInteraction()
 					end
 
 					self:_runOperation(function()
-						local keyName = self._session.currentKey
-						local success, err = self._session:tryDeleteCurrentKey()
+						local keyName = self.session.currentKey
+						local success, err = self.session:tryDeleteCurrentKey()
 
 						if success then
 							self._uiMessages:success(`Deleted <b>{keyName}</b>.`)
@@ -568,7 +571,7 @@ function EditKeyView:_initializeInteraction()
 				{ icon = self._theme.icons.export, text = "Export to File" },
 				{ icon = self._theme.icons.import, text = "Import from File" },
 				ContextMenuStyleState.SEPARATOR,
-				{ icon = self._theme.icons.rename, text = "Duplicate/Move Key" },
+				{ icon = self._theme.icons.copy, text = "Duplicate/Move Key" },
 				{ icon = self._theme.icons.storage, text = "View Data Usage" },
 				ContextMenuStyleState.SEPARATOR,
 				{ text = "View Mode", options = viewModeOptions },
@@ -627,9 +630,9 @@ function EditKeyView:_initializeInteraction()
 					if valueResult.kind == "failure" then
 						self._uiMessages:error(valueResult.message)
 					else
-						local name = if self._session.connection.scope
-							then `{self._session.connection.scope}_{self._session.connection.name}_{self._session.currentKey}`
-							else `{self._session.connection.name}_{self._session.currentKey}`
+						local name = if self.session.connection.scope
+							then `{self.session.connection.scope}_{self.session.connection.name}_{self.session.currentKey}`
+							else `{self.session.connection.name}_{self.session.currentKey}`
 						local exported, err = ExportImportHelper.export(name, valueResult.value)
 
 						if exported then
@@ -670,18 +673,18 @@ function EditKeyView:_initializeInteraction()
 						end
 					end
 				elseif result == "Duplicate/Move Key" then
-					if not self._session:hasBudgetFor("move") then
+					if not self.session:hasBudgetFor("move") then
 						self._uiMessages:warn(
 							"You are unable to duplicate/move the key at this moment because the requests will be throttled. "
 								.. "Wait and make fewer requests so that there can be budget for this."
 						)
 					else
 						local duplicateAction = self._modalState:wrap(function()
-							return self:_promptDuplicateMoveKey(position, self._session.connection.type == "allScopes")
+							return self:_promptDuplicateMoveKey(position, self.session.connection.type == "allScopes")
 						end)
 						if duplicateAction then
-							if duplicateAction.key == self._session.currentKey then
-								self._uiMessages:error(`The key is already named <b>{self._session.currentKey}</b>`)
+							if duplicateAction.key == self.session.currentKey then
+								self._uiMessages:error(`The key is already named <b>{self.session.currentKey}</b>`)
 							else
 								local valueResult = self._viewer:getValue()
 								if valueResult.kind == "failure" then
@@ -692,7 +695,7 @@ function EditKeyView:_initializeInteraction()
 									local userIds, metadata = self:_getKeyInfo()
 
 									self:_runOperation(function()
-										local success, err = self._session:tryDuplicateKey({
+										local success, err = self.session:tryDuplicateKey({
 											data = valueResult.value,
 											metadata = metadata,
 											userIds = userIds,
@@ -757,7 +760,7 @@ function EditKeyView:_initializeInteraction()
 end
 
 function EditKeyView:_shouldDeleteBeDisabled()
-	return not self._session.currentKeyInfo
+	return not self.session.currentKeyInfo
 end
 
 function EditKeyView:_updateDisabled()
@@ -1107,10 +1110,10 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 
 	local options = {
 		data = data,
-		keyInfo = self._session.currentKeyInfo and {
-			CreatedTime = self._session.currentKeyInfo.CreatedTime,
-			UpdatedTime = self._session.currentKeyInfo.UpdatedTime,
-			Version = self._session.currentKeyInfo.Version,
+		keyInfo = self.session.currentKeyInfo and {
+			CreatedTime = self.session.currentKeyInfo.CreatedTime,
+			UpdatedTime = self.session.currentKeyInfo.UpdatedTime,
+			Version = self.session.currentKeyInfo.Version,
 			UserIds = userIds,
 			Metadata = metadata,
 		},
@@ -1151,85 +1154,61 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 	end)
 end
 
-function EditKeyView:_tryOpenVersionsView()
-	if self._versionsView then
-		return
-	end
-
-	local versionsFrame = Assets.Views.VersionsPopup:Clone()
-	local versionsView = VersionsView.from({
-		theme = self._theme,
-		uiMessages = self._uiMessages,
-		widget = self._widget,
-		container = self._frame,
-		frame = versionsFrame,
-		session = self._session,
-		loadVersion = function(version: string)
-			if self._viewer then
-				local continueCallback = function()
-					if self._transactor.locked or not self._viewer then
-						return false
-					end
-
-					local swapResult: boolean
-					self._transactor:transact(function()
-						swapResult = self._swapCallback(
-							self._session.currentKey,
-							version,
-							if self._versionsView and self._versionsView.mode == "drawer" then self._session else nil
-						)
-					end)
-					return swapResult
-				end
-
-				if not self:_shouldPromptConfirmation() then
-					return true, continueCallback
-				else
-					local confirmed = ConfirmDialogStyleState.confirm(
-						self._theme,
-						self._widget,
-						self._widget:GetRelativeMousePosition(),
-						{
-							title = "Load version?",
-							message = "This will delete any changes made.",
-						}
-					)
-
-					if confirmed then
-						return true, continueCallback
-					end
-				end
+function EditKeyView:handleLoadVersion(version: string)
+	if self._viewer then
+		local continueCallback = function()
+			if self._transactor.locked or not self._viewer then
+				return false
 			end
 
-			return false, nil
-		end,
-	})
-
-	versionsView.closed:Connect(function()
-		if (self._versionsView == versionsView) and not self._dead then
-			self._versionsView = nil
-			self:_updateVersionsViewMode()
+			local swapResult: boolean
+			self._transactor:transact(function()
+				swapResult = self._swapCallback(
+					self.session.currentKey,
+					version,
+					if self.versionsView.visible and self.versionsView.mode == "drawer" then self.session else nil
+				)
+			end)
+			return swapResult
 		end
-	end)
 
-	self._versionsView = versionsView
+		if not self:_shouldPromptConfirmation() then
+			return true, continueCallback
+		else
+			local confirmed =
+				ConfirmDialogStyleState.confirm(self._theme, self._widget, self._widget:GetRelativeMousePosition(), {
+					title = "Load version?",
+					message = "This will delete any changes made.",
+				})
+
+			if confirmed then
+				return true, continueCallback
+			end
+		end
+	end
+
+	return false, nil
+end
+
+function EditKeyView:_tryOpenVersionsView()
+	(self.versionsView :: any):show()
 	self:_updateVersionsViewMode()
 end
 
 function EditKeyView:_updateVersionsViewMode()
-	if not self._versionsView then
+	if not self.versionsView.visible then
 		self._frame.Container.Position = UDim2.fromOffset(0, 0)
 		self._frame.Container.Size = UDim2.fromScale(1, 1)
 		self._frame.Container.LeftTopbar.Versions.Visible = true
 		self._modalState:popId(VERSIONS_MODAL_ID)
 	elseif self._frame.AbsoluteSize.X > 700 then
-		self._versionsView:setViewMode("drawer")
-		self._frame.Container.Position = UDim2.fromOffset(self._versionsView.frame.AbsoluteSize.X, 0)
-		self._frame.Container.Size = UDim2.new(1, -self._versionsView.frame.AbsoluteSize.X, 1, 0)
+		self.versionsView:setViewMode("drawer")
+		self._frame.Container.Position = UDim2.fromOffset(self.versionsView.frame.AbsoluteSize.X, 0)
+		self._frame.Container.Size = UDim2.new(1, -self.versionsView.frame.AbsoluteSize.X, 1, 0)
 		self._frame.Container.LeftTopbar.Versions.Visible = false
 		self._modalState:popId(VERSIONS_MODAL_ID)
 	else
-		self._versionsView:setViewMode("popup")
+		self.versionsView:setViewMode("popup")
 		self._frame.Container.Position = UDim2.fromOffset(0, 0)
 		self._frame.Container.Size = UDim2.fromScale(1, 1)
 		self._frame.Container.LeftTopbar.Versions.Visible = true

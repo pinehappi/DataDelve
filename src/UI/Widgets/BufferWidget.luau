@@ -37,7 +37,8 @@ function BufferWidget.new(theme: Theme.Theme, name: string, b: buffer)
 	self.id = tostring(b)
 
 	self.theme = theme
-	self.widget = plugin:CreateDockWidgetPluginGui(self.id, WIDGET_INFO) :: PluginGui & typeof(Assets.HexEditorWidget)
+	self.widget =
+		plugin:CreateDockWidgetPluginGuiAsync(self.id, WIDGET_INFO) :: PluginGui & typeof(Assets.HexEditorWidget)
 	self.widget.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	self.widget.Title = `"{name}" buffer`
 	self.widget.Name = "DataDelve HexEditor"

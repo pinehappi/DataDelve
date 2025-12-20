@@ -26,7 +26,6 @@ function Session.new()
 		currentVersion = nil :: string?,
 		isLoadedVersion = false :: boolean,
 		versionPages = nil :: Pages.Pages?,
-		versionPagesOrder = nil :: Enum.SortDirection?,
 	}, Session)
 
 	return self
@@ -43,10 +42,11 @@ end
 
 -- Methods
 
-function Session:fork(keepVersionPages: boolean?)
+function Session:fork()
 	local forked = setmetatable(table.clone(self), Session)
 	forked.dataStorePages = nil
 	forked.keyPages = nil
+	forked.versionPages = nil
 	return forked
 end
 
@@ -156,7 +156,6 @@ function Session:resetKey()
 	self.currentKeyInfo = nil
 	self.currentVersion = nil
 	self.versionPages = nil
-	self.versionPagesOrder = nil
 end
 
 function Session:trySeeKeyChanged(): "changed" | "failed" | "unchanged"
@@ -308,7 +307,6 @@ function Session:tryCreateVersionPages(
 		return false, err
 	else
 		self.versionPages = pages
-		self.versionPagesOrder = order
 		return true
 	end
 end
