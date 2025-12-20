@@ -11,6 +11,7 @@ local GAME_ICON = { selected = "rbxassetid://18745845370", unselected = "rbxasse
 local DATASTORE_ICON = { selected = "rbxassetid://18745840750", unselected = "rbxassetid://17650834077" }
 local ORDERED_DATASTORE_ICON = { selected = "rbxassetid://18745847447", unselected = "rbxassetid://18467184552" }
 local ALL_SCOPES_DATASTORE_ICON = { selected = "rbxassetid://18807229788", unselected = "rbxassetid://18807231111" }
+local GLOBAL_DATASTORE_ICON = { selected = "rbxassetid://80462707681481", unselected = "rbxassetid://89897336645947" }
 local KEY_ICON = { selected = "rbxassetid://18745602938", unselected = "rbxassetid://17650831214" }
 
 local rfmt = require(script.Parent.rfmt)
@@ -111,7 +112,7 @@ function App.new(id: string)
 
 	-- Connect form
 
-	self:_updateConnectButton()
+	self:_updateConnectButton("instant")
 	self.ui.gui.ConnectDataStore.Content.Form.DataStoreName.TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 		self:_updateConnectButton()
 	end)
@@ -147,6 +148,7 @@ function App.new(id: string)
 
 	self.ui.styleStates.connect.dataStoreTypeSelect.changed:Connect(function()
 		self.ui:updateConnectOptions()
+		self:_updateConnectButton()
 	end)
 
 	self.ui.gui.ConnectDataStore.Content.Form.Connect.Connect.Activated:Connect(function()
@@ -179,14 +181,7 @@ function App.new(id: string)
 		end
 	)
 	self.historyView.connectionRecordLoaded:Connect(function(record: Types.DataStoreConnectionRecord)
-		self.ui.styleStates.connect.dataStoreTypeSelect:setSelection(
-			if record.connection.allScopes
-				then "AllScopes"
-				elseif record.connection.isOrdered then "Ordered"
-				else "Normal"
-		)
-		self.ui.styleStates.connect.dataStoreNameTextBox.textBox.Text = record.connection.name
-		self.ui.styleStates.connect.dataStoreScopeTextBox.textBox.Text = record.connection.scope or ""
+		self:_loadConnectionRecord(record)
 		self.ui.styleStates.connect.tabs:select("Connect")
 		self.ui.gui.ConnectDataStore.Content.CanvasPosition = Vector2.new(0, 0)
 		self.uiMessages:success("Loaded connection.")
@@ -221,9 +216,9 @@ function App.new(id: string)
 
 	self.ui.dataStoreInfoSelected:Connect(function(info: DataStoreInfo)
 		self:tryConnect({
+			type = "normal",
 			name = info.DataStoreName,
 			scope = nil,
-			isOrdered = false,
 		})
 	end)
 
@@ -247,7 +242,7 @@ function App.new(id: string)
 		if #text == 0 then
 			self.ui.styleStates.browse.key:setError(nil):update("veryFast")
 		else
-			local validator = if self.session.connection.allScopes
+			local validator = if self.session.connection.type == "allScopes"
 				then Validators.allScopesKey
 				else Validators.dataStoreKey
 			local valid, err = validator(text)
@@ -563,15 +558,33 @@ function App.new(id: string)
 	self.ui.styleStates.breadcrumbs:setCrumbNameVisibleSafe(1, not Settings.get("hideGameName")) -- Hide the crumb name for the game if the setting says to
 	task.defer(self.ui.updateSettingsButtonPosition, self.ui)
 
+	-- load the first history item
+	local loadingRecord = nil
+	for _, v in History.global.connectionRecords do
+		if v.pinned then
+			loadingRecord = v
+			break
+		end
+	end
+
+	if not loadingRecord then
+		loadingRecord = History.global.connectionRecords[1]
+	end
+
+	if loadingRecord then
+		self:_loadConnectionRecord(loadingRecord, "instant")
+	end
+
 	return self
 end
 
-function App._updateConnectButton(self: App)
-	local disabled = (self.ui.styleStates.connect.dataStoreNameTextBox.textBox.Text == "")
+function App._updateConnectButton(self: App, transitionSpeed: StyleStateHelper.TransitionSpeed)
+	local invalidName = (self.ui.styleStates.connect.dataStoreNameTextBox.textBox.Text == "")
 		or self.ui.styleStates.connect.dataStoreNameTextBox.error
 		or self.ui.styleStates.connect.dataStoreScopeTextBox.error
+	local disabled = self.ui.styleStates.connect.dataStoreTypeSelect.selection:lower() ~= "global" and invalidName
 
-	self.ui.styleStates.connect.connectButton:setDisabled(disabled):update()
+	self.ui.styleStates.connect.connectButton:setDisabled(disabled):update(transitionSpeed)
 end
 
 function App.tryConnect(self: App, connection: Types.DataStoreConnection)
@@ -582,8 +595,8 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 		return
 	end
 
-	if connection.allScopes then
-		(connection :: any).scope = "" -- Has to be to work
+	if connection.type == "global" then
+		connection.name = "global"
 	end
 
 	local success, err = self.session:tryConnect(connection)
@@ -600,7 +613,7 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 	end
 
 	-- Reset ui
-	if connection.isOrdered then
+	if connection.type == "ordered" then
 		self.ui.orderedDataStoreView:reset()
 	else
 		self.ui.gui.BrowseKeys.Keys.Empty.Visible = false
@@ -611,16 +624,17 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 	end
 
 	self.ui.styleStates.breadcrumbs:addCrumb(
-		if connection.allScopes
+		if connection.type == "allScopes"
 			then ALL_SCOPES_DATASTORE_ICON
-			elseif connection.isOrdered then ORDERED_DATASTORE_ICON
+			elseif connection.type == "ordered" then ORDERED_DATASTORE_ICON
+			elseif connection.type == "global" then GLOBAL_DATASTORE_ICON
 			else DATASTORE_ICON,
-		if connection.isOrdered then "orderedDatastore" else "datastore",
+		if connection.type == "ordered" then "orderedDatastore" else "datastore",
 		crumbName
 	)
 
 	if Settings.get("automaticallyList") then
-		if connection.isOrdered then
+		if connection.type == "ordered" then
 			if (not self.session.keyPages) and (self.session:hasBudgetFor("listOrdered")) then
 				self:_tryListOrderedKeys()
 			end
@@ -633,13 +647,15 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 end
 
 function App._submitConnectForm(self: App)
+	local datastoreType = self.ui.styleStates.connect.dataStoreTypeSelect.selection
+
 	local dataStoreName = self.ui.styleStates.connect.dataStoreNameTextBox:getText(function(err: string)
 		self.uiMessages:error(err)
 	end)
 	local dataStoreScope = self.ui.styleStates.connect.dataStoreScopeTextBox:getText(function(err: string)
 		self.uiMessages:error(err)
 	end)
-	if dataStoreName == "" then
+	if datastoreType:lower() ~= "global" and dataStoreName == "" then
 		self.uiMessages:error("PUT A NAME!")
 		return
 	end
@@ -647,16 +663,13 @@ function App._submitConnectForm(self: App)
 		dataStoreScope = nil
 	end
 
-	local datastoreType = self.ui.styleStates.connect.dataStoreTypeSelect.selection:lower()
-
 	self.ui.gui.ConnectDataStore.Content.Form.DataStoreName.TextBox.Text = ""
 	self.ui.gui.ConnectDataStore.Content.Form.DataStoreScope.TextBox.Text = ""
 
 	self:tryConnect({
+		type = self.ui.styleStates.connect.dataStoreTypeSelect.selection:gsub("^.", string.lower),
 		name = dataStoreName,
 		scope = dataStoreScope,
-		isOrdered = datastoreType == "ordered",
-		allScopes = datastoreType == "allscopes",
 	})
 end
 
@@ -794,6 +807,21 @@ function App._onKeyDeleted(self: App, keyName: string, connection: Types.DataSto
 		self.ui.styleStates.breadcrumbs:popCrumb()
 		self.session:resetKey()
 	end
+end
+
+function App._loadConnectionRecord(
+	self: App,
+	record: Types.DataStoreConnection,
+	transitionSpeed: StyleStateHelper.TransitionSpeed
+)
+	local dataStoreType = record.connection.type:gsub("^.", string.upper)
+	self.ui.styleStates.connect.dataStoreTypeSelect:setSelection(dataStoreType)
+	self.ui.styleStates.connect.dataStoreNameTextBox.textBox.Text = if dataStoreType == "Global"
+		then ""
+		else record.connection.name
+	self.ui.styleStates.connect.dataStoreScopeTextBox.textBox.Text = record.connection.scope or ""
+	self.ui:updateConnectOptions()
+	self:_updateConnectButton(transitionSpeed)
 end
 
 function App.listKeys(self: App, prefix: string?)

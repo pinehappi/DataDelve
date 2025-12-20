@@ -32,7 +32,7 @@ function Session.new()
 end
 
 function Session.areConnectionsSame(a: Types.DataStoreConnection, b: Types.DataStoreConnection): boolean
-	for i, v in a do
+	for i, v in a :: any do
 		if b[i] ~= v then
 			return false
 		end
@@ -67,7 +67,7 @@ end
 
 function Session:tryConnect(connection: Types.DataStoreConnection): (boolean, string?)
 	local datastore = nil
-	if connection.isOrdered then
+	if connection.type == "ordered" then
 		local success, err = pcall(function()
 			datastore = DataStoreService:GetOrderedDataStore(connection.name, connection.scope)
 		end)
@@ -80,13 +80,15 @@ function Session:tryConnect(connection: Types.DataStoreConnection): (boolean, st
 		self.datastore = datastore
 	else
 		local params = Instance.new("DataStoreOptions")
-		params.AllScopes = not not connection.allScopes
-		if connection.allScopes then
-			connection.scope = "" -- Has to be to work
-		end
+		params.AllScopes = connection.type == "allScopes"
+		local scope = if connection.type == "allScopes" then "" else connection.scope
 
 		local success, err = pcall(function()
-			datastore = DataStoreService:GetDataStore(connection.name, connection.scope, params)
+			if connection.type == "global" then
+				datastore = DataStoreService:GetGlobalDataStore()
+			else
+				datastore = DataStoreService:GetDataStore(connection.name, scope, params)
+			end
 		end)
 
 		if not success then
@@ -107,7 +109,7 @@ function Session:tryLoadKey(key: string): (boolean, string?)
 	local params = Instance.new("DataStoreGetOptions")
 	params.UseCache = false
 
-	local value, keyInfo = nil
+	local value, keyInfo = nil, nil
 	local success, err = pcall(function()
 		value, keyInfo = self.datastore:GetAsync(key, params)
 	end)
@@ -128,9 +130,9 @@ function Session:tryLoadKey(key: string): (boolean, string?)
 end
 
 function Session:tryLoadVersion(key: string, version: string): (boolean, string?)
-	assert(not self.connection.isOrdered)
+	assert(self.connection.type ~= "ordered")
 
-	local value, keyInfo = nil
+	local value, keyInfo = nil, nil
 	local success, err = pcall(function()
 		value, keyInfo = self.datastore:GetVersionAsync(key, version)
 	end)
@@ -157,7 +159,7 @@ function Session:resetKey()
 end
 
 function Session:trySeeKeyChanged(): "changed" | "failed" | "unchanged"
-	assert(not self.connection.isOrdered)
+	assert(self.connection.type ~= "ordered")
 
 	if self.isLoadedVersion then
 		-- Loading a version will always have the UpdatedTime before the latest UpdatedTime,
@@ -175,13 +177,15 @@ function Session:trySeeKeyChanged(): "changed" | "failed" | "unchanged"
 
 	if success then
 		if self.currentKeyInfo then
-			if self.currentKeyInfo.UpdatedTime + 1 < gotKeyInfo.UpdatedTime then
+			if (self.currentKeyInfo :: any).UpdatedTime + 1 < gotKeyInfo.UpdatedTime then
 				return "changed"
 			else
 				return "unchanged"
 			end
 		elseif gotKeyInfo then
 			return "changed"
+		else
+			return "failed"
 		end
 	else
 		return "failed"
@@ -189,7 +193,7 @@ function Session:trySeeKeyChanged(): "changed" | "failed" | "unchanged"
 end
 
 function Session:trySaveCurrentKey(value: any, userIds: { number }, metadata: { [string]: any })
-	assert(not self.connection.isOrdered)
+	assert(self.connection.type ~= "ordered")
 
 	local newValue, newKeyInfo = nil, nil
 	local success, err = pcall(function()
@@ -198,7 +202,7 @@ function Session:trySaveCurrentKey(value: any, userIds: { number }, metadata: { 
 			if self.currentKeyInfo then
 				return value, userIds or self.currentKeyInfo:GetUserIds(), metadata or self.currentKeyInfo:GetMetadata()
 			else
-				return value
+				return value, nil :: any, nil :: any
 			end
 		end)
 	end)
@@ -251,7 +255,7 @@ export type DuplicateKeyOptions = {
 
 -- Must call tryLoadKey after to load the transferred key.
 function Session:tryDuplicateKey(options: DuplicateKeyOptions): (boolean, string?)
-	assert(not self.connection.isOrdered)
+	assert(self.connection.type ~= "ordered")
 	assert(self.datastore)
 
 	local success, err = pcall(function()
@@ -279,7 +283,7 @@ function Session:tryDuplicateKey(options: DuplicateKeyOptions): (boolean, string
 end
 
 function Session:tryDeleteCurrentKeyVersion(version: string)
-	assert(not self.connection.isOrdered)
+	assert(self.connection.type ~= "ordered")
 
 	local success, err = pcall(function()
 		self.datastore:RemoveVersionAsync(self.currentKey, version)
@@ -293,7 +297,7 @@ function Session:tryCreateVersionPages(
 	minDate: number?,
 	maxDate: number?
 ): (boolean, string?)
-	assert(not self.connection.isOrdered)
+	assert(self.connection.type ~= "ordered")
 
 	local pages, err = Pages.wrapListing(function()
 		return self.datastore:ListVersionsAsync(self.currentKey, order, minDate, maxDate, 16)
@@ -322,7 +326,8 @@ function Session:tryCreateDataStorePages(prefix: string?): (boolean, string?)
 end
 
 function Session:tryCreateKeyPages(prefix: string?): (boolean, string?)
-	assert(not self.connection.isOrdered)
+	assert(self.connection.type ~= "ordered")
+
 	-- TODO: if all keys are deleted in the page, nothing will happen
 	--       user should be informed that all the keys were deleted
 	local pages, err = Pages.wrapListing(function()
@@ -343,7 +348,7 @@ function Session:tryCreateOrderedKeyPages(
 	min: number?,
 	max: number?
 ): (boolean, string?)
-	assert(self.connection.isOrdered)
+	assert(self.connection.type == "ordered")
 
 	local pages, err = Pages.wrapListing(function()
 		return self.datastore:GetSortedAsync(order == "ascending", 50, min, max)
@@ -358,7 +363,7 @@ function Session:tryCreateOrderedKeyPages(
 end
 
 function Session:trySetOrderedKey(key: string, value: number): (boolean, string?)
-	assert(self.connection.isOrdered)
+	assert(self.connection.type == "ordered")
 
 	local success, err = pcall(function()
 		self.datastore:SetAsync(key, value)
@@ -372,7 +377,7 @@ function Session:trySetOrderedKey(key: string, value: number): (boolean, string?
 end
 
 function Session:tryRemoveOrderedKey(key: string): (boolean, string?)
-	assert(self.connection.isOrdered)
+	assert(self.connection.type == "ordered")
 
 	local success, err = pcall(function()
 		self.datastore:RemoveAsync(key)
@@ -386,7 +391,7 @@ function Session:tryRemoveOrderedKey(key: string): (boolean, string?)
 end
 
 function Session:tryGetOrderedKey(key: string): (number?, string?)
-	assert(self.connection.isOrdered)
+	assert(self.connection.type == "ordered")
 
 	local value = nil
 	local success, err = pcall(function()

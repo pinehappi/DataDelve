@@ -448,8 +448,9 @@ function EditKeyView:_initializeInteraction()
 				return
 			end
 
-			if self._viewer.isHistoryCapable then
-				self._viewer:undo()
+			local historyCapability = self._viewer:getHistoryCapability()
+			if historyCapability then
+				historyCapability:undo()
 			end
 		end),
 
@@ -458,8 +459,9 @@ function EditKeyView:_initializeInteraction()
 				return
 			end
 
-			if self._viewer.isHistoryCapable then
-				self._viewer:redo()
+			local historyCapability = self._viewer:getHistoryCapability()
+			if historyCapability then
+				historyCapability:redo()
 			end
 		end),
 
@@ -567,7 +569,7 @@ function EditKeyView:_initializeInteraction()
 						)
 					else
 						local duplicateAction =
-							self:_promptDuplicateMoveKey(position, self._session.connection.allScopes)
+							self:_promptDuplicateMoveKey(position, self._session.connection.type == "allScopes")
 						if duplicateAction then
 							if duplicateAction.key == self._session.currentKey then
 								self._uiMessages:error(`The key is already named <b>{self._session.currentKey}</b>`)
@@ -871,12 +873,14 @@ function EditKeyView:_promptDuplicateMoveKey(position, isAllScopes)
 end
 
 function EditKeyView:_updateUndoRedoButtons(speed: StyleStateHelper.TransitionSpeed)
-	self._styleStates.undo.button.Visible = self._viewer.isHistoryCapable
-	self._styleStates.redo.button.Visible = self._viewer.isHistoryCapable
+	local historyCapability = self._viewer:getHistoryCapability()
 
-	if self._viewer.isHistoryCapable then
-		self._styleStates.undo:setDisabled(not self._viewer:canUndo()):update(speed)
-		self._styleStates.redo:setDisabled(not self._viewer:canRedo()):update(speed)
+	self._styleStates.undo.button.Visible = not not historyCapability
+	self._styleStates.redo.button.Visible = not not historyCapability
+
+	if historyCapability then
+		self._styleStates.undo:setDisabled(not historyCapability:canUndo()):update(speed)
+		self._styleStates.redo:setDisabled(not historyCapability:canRedo()):update(speed)
 	end
 end
 
@@ -927,8 +931,9 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 
 	self:_updateUndoRedoButtons("instant")
 
-	if self._viewer.isHistoryCapable then
-		self._viewer.historyChanged:Connect(function()
+	local historyCapabiity = self._viewer:getHistoryCapability()
+	if historyCapabiity then
+		historyCapabiity.historyChanged:Connect(function()
 			self:_updateUndoRedoButtons()
 		end)
 	end
@@ -1030,8 +1035,9 @@ function EditKeyView:_updateVersionsViewMode()
 end
 
 function EditKeyView:_getKeyInfo()
-	if self._viewer and self._viewer.isKeyInfoCapable then
-		return self._viewer:getKeyInfo()
+	local keyInfoCapability = self._viewer and self._viewer:getKeyInfoCapability()
+	if keyInfoCapability then
+		return keyInfoCapability:getKeyInfo()
 	elseif self._session.currentKeyInfo then
 		return self._session.currentKeyInfo:GetUserIds(), self._session.currentKeyInfo:GetMetadata()
 	else

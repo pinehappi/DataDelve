@@ -94,6 +94,41 @@ function History:removeConnectionRecord(connection: Types.DataStoreConnection)
 	end
 end
 
+local function convertOldConnectionToNew(connection: Types.OldDataStoreConnection): Types.DataStoreConnection
+	if connection.allScopes then
+		return {
+			type = "allScopes",
+			name = connection.name,
+		}
+	elseif connection.isOrdered then
+		return {
+			type = "ordered",
+			name = connection.name,
+			scope = connection.scope,
+		}
+	else
+		return {
+			type = "normal",
+			name = connection.name,
+			scope = connection.scope,
+		}
+	end
+end
+
+local function convertRecordsToNew(records)
+	local newRecords = {}
+
+	for _, v in records do
+		table.insert(newRecords, {
+			connection = convertOldConnectionToNew(v.connection),
+			lastAccess = v.lastAccess,
+			pinned = v.pinned,
+		})
+	end
+
+	return newRecords
+end
+
 function History:load(plugin: Plugin)
 	local loadedData = plugin:GetSetting(MAIN_HISTORY_KEY) or {
 		games = {},
@@ -102,12 +137,15 @@ function History:load(plugin: Plugin)
 	local gameLoadedData = loadedData.games[self.gameId]
 	if not gameLoadedData then
 		gameLoadedData = {
+			isNew = true,
 			connectionRecords = {},
 		}
 		loadedData.games[self.gameId] = gameLoadedData
 	end
 
-	self.connectionRecords = gameLoadedData.connectionRecords
+	self.connectionRecords = if gameLoadedData.isNew
+		then gameLoadedData.connectionRecords
+		else convertRecordsToNew(gameLoadedData.connectionRecords)
 end
 
 function History:save(plugin: Plugin)
@@ -116,9 +154,11 @@ function History:save(plugin: Plugin)
 	}
 
 	loadedData.games[self.gameId] = {
+		isNew = true,
 		connectionRecords = self.connectionRecords,
 	}
 
+	-- TODO: undo this!!
 	plugin:SetSetting(MAIN_HISTORY_KEY, loadedData)
 end
 

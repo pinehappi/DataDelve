@@ -40,42 +40,37 @@ export type ViewerClass = {
 
 export type GetValueResult = | { kind: "success", value: unknown, hasNil: boolean } | { kind: "failure", message: string }
 
-export type BaseViewer = {
+export type Viewer = {
 	dirtyChanged: RBXScriptSignal,
 	isDirty: boolean,
 	idLookedUp: RBXScriptSignal,
 
-	setDisabled: (BaseViewer, disabled: boolean) -> (),
-	undirty: (BaseViewer) -> (),
+	setDisabled: (Viewer, disabled: boolean) -> (),
+	undirty: (Viewer) -> (),
 
-	getValue: (BaseViewer) -> GetValueResult,
+	getValue: (Viewer) -> GetValueResult,
 
-	destroy: (BaseViewer) -> (),
+	getHistoryCapability: (Viewer) -> HistoryCapability?,
+	getKeyInfoCapability: (Viewer) -> KeyInfoCapability?,
+
+	destroy: (Viewer) -> (),
 }
 
-export type HistoryCapableViewer = BaseViewer & {
+export type HistoryCapability = {
 	historyChanged: RBXScriptSignal,
 
-	canUndo: (Viewer) -> (),
-	undo: (Viewer) -> (),
+	canUndo: (HistoryCapability) -> (),
+	undo: (HistoryCapability) -> (),
 
-	canRedo: (Viewer) -> (),
-	redo: (Viewer) -> (),
-
-	isHistoryCapable: true,
-	isKeyInfoCapable: false, -- this is not actually true, it is just for the type narrowing
+	canRedo: (HistoryCapability) -> (),
+	redo: (HistoryCapability) -> (),
 }
 
-export type KeyInfoCapableViewer = BaseViewer & {
-	getKeyInfo: (Viewer) -> (--[[userIds:]]
+export type KeyInfoCapability = {
+	getKeyInfo: (KeyInfoCapability) -> (--[[userIds:]]
 		{ number }, --[[metadata]]
 		{ [string]: any }
 	),
-
-	isHistoryCapable: false, -- this is not actually true, it is just for the type narrowing
-	isKeyInfoCapable: true,
 }
-
-export type Viewer = KeyInfoCapableViewer | HistoryCapableViewer
 
 return {}

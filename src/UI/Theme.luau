@@ -52,6 +52,7 @@ local defaultIcons = {
 	datastore = "rbxassetid://17650834077",
 	orderedDatastore = "rbxassetid://18467184552",
 	allScopesDatastore = "rbxassetid://18807231111",
+	globalDatastore = "rbxassetid://89897336645947",
 }
 
 -- Reference: https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color

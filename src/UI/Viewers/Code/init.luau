@@ -20,9 +20,6 @@ local CODE_EDITOR_CUTOFF = 20_000
 local MAX_TEXTBOX_CHARACTERS = 200_000
 
 export type CodeViewerFields = {
-	isHistoryCapable: false,
-	isKeyInfoCapable: false,
-
 	_dirtyChanged: BindableEvent,
 	dirtyChanged: RBXScriptSignal,
 
@@ -41,6 +38,9 @@ export type CodeViewerFields = {
 export type CodeViewerImplementation = {
 	__index: CodeViewerImplementation,
 	new: (Theme.Theme, UIMessages.UIMessages, GuiObject, Types.NewOptions) -> CodeViewer,
+
+	getHistoryCapability: (CodeViewer) -> Types.HistoryCapability?,
+	getKeyInfoCapability: (CodeViewer) -> Types.KeyInfoCapability?,
 
 	getValue: (CodeViewer) -> Types.GetValueResult,
 	setDisabled: (CodeViewer, disabled: boolean) -> (),
@@ -92,9 +92,6 @@ function CodeViewer.new(
 	options: Types.NewOptions
 )
 	local self = setmetatable({}, CodeViewer)
-	self.isHistoryCapable = false :: any
-	self.isKeyInfoCapable = false :: any
-
 	self._theme = theme
 
 	self._container = script.Container:Clone()
@@ -125,6 +122,14 @@ function CodeViewer.new(
 	self:_updateTextEditorFrom(options.data)
 
 	return self
+end
+
+function CodeViewer:getHistoryCapability()
+	return nil
+end
+
+function CodeViewer:getKeyInfoCapability()
+	return nil
 end
 
 function CodeViewer:getValue()

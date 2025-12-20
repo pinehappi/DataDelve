@@ -64,7 +64,7 @@ function SelectStyleState.from(
 	self._changed = Instance.new("BindableEvent")
 	self.changed = self._changed.Event
 
-	button.Activated:Connect(function()
+	self._clickConnection = button.Activated:Connect(function()
 		self:setOpen(not self.open)
 	end)
 
@@ -242,8 +242,9 @@ function SelectStyleState:_fitSelectedText()
 		textBoundsParams.Size = self.button.Selection.TextSize
 		textBoundsParams.Width = math.huge
 
+		-- add 2 extra padding because it's sometimes too tight
 		local bounds = TextService:GetTextBoundsAsync(textBoundsParams)
-		longestX = math.max(longestX, bounds.X)
+		longestX = math.max(longestX, bounds.X + 2)
 	end
 
 	self.button.Selection.Size =
@@ -325,6 +326,7 @@ function SelectStyleState:update(...)
 end
 
 function SelectStyleState:destroy(completely: boolean)
+	self._clickConnection:Disconnect()
 	self.buttonStyleState:destroy()
 	self._changed:Destroy()
 	if self.menu then

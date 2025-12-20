@@ -20,7 +20,7 @@ export type OldDataStoreConnection = OldAllScopesDataStoreConnection | OldNormal
 export type NormalDataStoreConnection = {
 	type: "normal",
 	name: string,
-	scope: string,
+	scope: string?,
 }
 export type OrderedDataStoreConnection = {
 	type: "ordered",
@@ -31,7 +31,16 @@ export type AllScopesDataStoreConnection = {
 	type: "allScopes",
 	name: string,
 }
-export type DataStoreConnection = NormalDataStoreConnection | OrderedDataStoreConnection | AllScopesDataStoreConnection
+export type GlobalDataStoreConnection = {
+	type: "global",
+	-- this is just for the UI so we don't have to special-case this
+	name: "global",
+}
+export type DataStoreConnection =
+	NormalDataStoreConnection
+	| OrderedDataStoreConnection
+	| AllScopesDataStoreConnection
+	| GlobalDataStoreConnection
 
 export type DataStoreConnectionRecord = {
 	connection: DataStoreConnection,

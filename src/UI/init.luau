@@ -95,6 +95,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 						{ icon = theme.icons.datastore, name = "Normal" },
 						{ icon = theme.icons.orderedDatastore, name = "Ordered" },
 						{ icon = theme.icons.allScopesDatastore, name = "AllScopes" },
+						{ icon = theme.icons.globalDatastore, name = "Global" },
 					},
 				}
 			),
@@ -431,6 +432,7 @@ end
 function UI:updateConnectOptions()
 	local datastoreType = self.styleStates.connect.dataStoreTypeSelect.selection:lower()
 	self.gui.ConnectDataStore.Content.Form.DataStoreType.Visible = true
+	self.gui.ConnectDataStore.Content.Form.DataStoreType.Size = UDim2.fromOffset(200, 0)
 	if datastoreType == "normal" then
 		self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = true
 		self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = true
@@ -440,6 +442,11 @@ function UI:updateConnectOptions()
 	elseif datastoreType == "allscopes" then
 		self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = true
 		self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = false
+	elseif datastoreType == "global" then
+		self.gui.ConnectDataStore.Content.Form.DataStoreName.Visible = false
+		self.gui.ConnectDataStore.Content.Form.DataStoreScope.Visible = false
+		-- stop it from shrinking since the form alignment will change
+		self.gui.ConnectDataStore.Content.Form.Size = UDim2.fromOffset(360, 0)
 	end
 end
 

@@ -18,8 +18,8 @@ export type SettingsData = {
 
 local defaultSettings: SettingsData = {
 	themePreset = "studio",
-	themeAccent = "neutral",
-	hideGameName = false,
+	themeAccent = "blue",
+	hideGameName = true,
 	highlightColors = "Default",
 	useAlternatingKeyColors = false,
 	listDeletedKeys = false,

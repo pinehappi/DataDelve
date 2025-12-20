@@ -381,7 +381,7 @@
           <int name="SelectionOrder">0</int>
           <UDim2 name="Size">
             <XS>1</XS>
-            <XO>-1</XO>
+            <XO>-2</XO>
             <YS>1</YS>
             <YO>0</YO>
           </UDim2>
@@ -2377,7 +2377,7 @@
             <int name="SelectionOrder">0</int>
             <UDim2 name="Size">
               <XS>0</XS>
-              <XO>0</XO>
+              <XO>200</XO>
               <YS>0</YS>
               <YO>0</YO>
             </UDim2>
@@ -5961,7 +5961,7 @@
               <int name="SelectionOrder">0</int>
               <UDim2 name="Size">
                 <XS>0</XS>
-                <XO>0</XO>
+                <XO>333</XO>
                 <YS>0</YS>
                 <YO>28</YO>
               </UDim2>
@@ -6370,7 +6370,7 @@
                   </Vector2>
                   <BinaryString name="AttributesSerialize"></BinaryString>
                   <bool name="AutoLocalize">true</bool>
-                  <token name="AutomaticSize">1</token>
+                  <token name="AutomaticSize">0</token>
                   <Color3 name="BackgroundColor3">
                     <R>1</R>
                     <G>1</G>
@@ -6428,7 +6428,7 @@
                   <int name="SelectionOrder">0</int>
                   <UDim2 name="Size">
                     <XS>0</XS>
-                    <XO>0</XO>
+                    <XO>50</XO>
                     <YS>1</YS>
                     <YO>0</YO>
                   </UDim2>
@@ -6451,7 +6451,7 @@
                   </Color3>
                   <float name="TextStrokeTransparency">1</float>
                   <float name="TextTransparency">0</float>
-                  <token name="TextTruncate">1</token>
+                  <token name="TextTruncate">0</token>
                   <bool name="TextWrapped">false</bool>
                   <token name="TextXAlignment">0</token>
                   <token name="TextYAlignment">1</token>

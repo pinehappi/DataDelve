@@ -146,9 +146,6 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 		_undoStackPosition = 0,
 
 		_isTesting = options.isTesting,
-
-		isHistoryCapable = true,
-		isKeyInfoCapable = true,
 	}, Tree)
 
 	--
@@ -254,6 +251,14 @@ function Tree.new(theme, uiMessages, container: GuiObject, options: Types.NewOpt
 		)
 	end
 
+	return self
+end
+
+function Tree:getHistoryCapability()
+	return self
+end
+
+function Tree:getKeyInfoCapability()
 	return self
 end
 
@@ -550,7 +555,7 @@ local validUniversalTimeRanges = {
 	Millisecond = { 0, 999 },
 }
 local reverseTimeOrder = { "Millisecond", "Second", "Minute", "Hour", "Day", "Month", "Year" }
--- NOTE: note used at the moment
+-- NOTE: not used at the moment
 function Tree:_getUniversalTimeTable(index: number)
 	local branch = self._flatBranches[index]
 	assert(branch[2] == OBJECT_SENTINEL)

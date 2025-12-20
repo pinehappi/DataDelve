@@ -60,7 +60,7 @@
       <token name="Style">0</token>
       <BinaryString name="Tags"></BinaryString>
       <bool name="Visible">false</bool>
-      <int name="ZIndex">1</int>
+      <int name="ZIndex">3</int>
     </Properties>
     <Item class="UIGradient" referent="1">
       <Properties>

@@ -128,10 +128,7 @@ function HistoryView:_updateConnectionsHistory()
 		else
 			row.DataStore.Text = record.connection.name
 		end
-		row.ConnectionType.Text = if record.connection.allScopes
-			then "AllScopes"
-			elseif record.connection.isOrdered then "Ordered"
-			else "Normal"
+		row.ConnectionType.Text = record.connection.type:gsub("^.", string.upper)
 		row.LastAccess.Text = DateTime.fromUnixTimestamp(record.lastAccess):FormatUniversalTime("ll LT", "en-us")
 		row.LayoutOrder = if record.pinned then 0 else 1
 		updateConnectionRowPinVisual(row, self._theme, record.pinned)
