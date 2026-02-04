@@ -23,7 +23,7 @@ lune run [script name]
 
 To build the plugin, run this command:
 ```bash
-# Build for development
+# Build for development (include tests)
 lune run build my_test_build
 # Build for release
 lune run build my_test_build -- --release
