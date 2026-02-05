@@ -23,8 +23,6 @@ If you want the latest features, get the canary version:
 # Contributing
 You can contribute by creating issues for bugs or feature requests. You may also contribute code.
 
-DataDelve uses custom syncing and building scripts made with Lune.
-
 See the [architecture overview](./ARCHITECTURE.md) for an overview of how this plugin is structured and how to build it.
 
 See the [contributing guide](./CONTRIBUTING.md) for more on how to contribute.
