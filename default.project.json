@@ -1,0 +1,11 @@
+{
+  "name": "DataDelve",
+  "tree": {
+    "$className": "DataModel",
+    "ServerStorage": {
+      "DataDelve": {
+        "$path": "src"
+      }
+    }
+  }
+}

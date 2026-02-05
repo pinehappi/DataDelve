@@ -1,71 +1,39 @@
-> NOTE: This document may become out of date. Check the last updated date.
-
 # Building
 
-DataDelve was first built exclusively in Roblox Studio, so the workflow for developing this plugin is centered around Studio. All the UI is manually made with instances.
+This project uses Rojo syncback which requires Rojo 7.7.0.
 
-To build a copy of the plugin, you must first have Lune installed. DataDelve uses [Rokit](https://github.com/rojo-rbx/rokit) as the toolchain manager. Once you have Rokit installed, use this command to install Lune as well as the other tools:
+You can install it using [Rokit](https://github.com/rojo-rbx/rokit) which DataDelve uses for its toolchain manager. Once you install Rokit, you can run `rokit install` which will install the right version of Rojo.
 
-```bash
-rokit install
-```
+With Rojo installed, you can build the plugin with `rojo build plugin.project.json --output datadelve.rbxm`.
 
-You can also install Lune by other means if you don't want to use Rokit (https://lune-org.github.io/docs/getting-started/1-installation).
+You can then import the .rbxm into Studio and then install it as a local plugin.
 
-Here is a quick guide to using Lune:
-
-```bash
-# See list of Lune scripts for this project.
-lune list
-# Run a Lune script
-lune run [script name]
-```
-
-To build the plugin, run this command:
-```bash
-# Build for development (include tests)
-lune run build my_test_build
-# Build for release
-lune run build my_test_build -- --release
-```
-
-This will create a file called `my_test_build.rbxm` in the `build` directory. You can then install the plugin by adding it to your local plugins directory or by dragging it into Studio, right clicking, and pressing `Save as Local Plugin`. You can begin making modifications to the plugin with this file as well (make sure you built for development).
-
-If you would like to work with DataDelve using Rojo or another syncing tool, you can use those too. You have to manually set up the project files, though. I couldn't get it to work, so I gave up, but if you can get it to work, a contribution with those files would be appreciated.
+Alternatively, you can run `rojo build plugin.project.json --project datadelve.rbxm` which will automatically add the plugin to your local plugins folder.
 
 # Syncing
 
-Use the `sync` Lune script to sync. Here is how to use it:
-```bash
-lune run sync [path_to_plugin_file]
-```
+I only edit the plugin studio, so Rojo is only used for syncing with the file system.
 
-This will sync the directory up with the provided plugin file. You can sync directly with the plugin file in your local plugins folder.
+To sync, what I do is right click the plugin (in Studio) and press "Save > Save to File". Then I will save it somewhere accessible. A good place is just the repository's folder itself.
 
-If you run into an issue like `missing directory assets/test` or whatever, add the directory manually then re-run the script.
+Once you have the rbxm saved, run this command `rojo syncback plugin.project.json --input path/to/rbxm.rbxm`.
 
-# Development Workflow
+Now everything should be synced!
 
-This is the workflow I use which you can use if you want:
-1. Make changes in Studio.
-2. Export the plugin to a file.
-3. Run the sync script on that file.
-4. Run StyLua.
-5. Commit changes.
+## Syncing Alternative
 
-The build script is just for bootstrapping the process and making release builds.
+You can also use the `default.project.json` for the traditional Rojo experience.
+
+Make sure to still run syncback if you make changes the gui objects.
+
+# Other tooling
+
+This project does not work with the new type solver.
 
 # Running and writing tests
-Most of the tests in DataDelve are done manually, but I have also included some automatic ones for peace of mind.
+Most of the testing for DataDelve is done manually, but I have also included some automatic ones for peace of mind.
 
-To run the tests, build the plugin in development mode so the tests are included, then run the plugin. If there are no errors then the tests ran successfuly. To add a test, add a script in the `tests` folder and have it error if something goes wrong. Note that tests may be affected by global state such as the settings.
-
-# Overview of Directory Structure
-The directory structure is just for easy browsing and does not reflect the structure of the `.rbxmx` of the plugin.
-
-- `assets/` contains `.rbxmx` files of all the UI instances used.
-- `tests/` contains tests that are ran when the plugin starts.
-- `src/` contains all the source code.
+To run the tests, build the plugin in development mode so the tests are included, then run the plugin. If there are no errors then the tests ran successfuly. To add a test, add a script in the `src/tests` folder and have it error if something goes wrong. Note that tests may be affected by global state such as the settings.
 
 <br>
 <hr>
@@ -93,17 +61,18 @@ flowchart TD
 ```
 
 ## Entry Point/App
+
 The entry point is the script called `main`. It interfaces with an `App` object by enabling and disabling it. The `App` object does all the main stuff. Each `App` object has its own ID which is used in case in the future multiple instances of the plugin should be started (like if tab tearing is ever added).
 
 The two apps are currently `App` and `ClientFallbackApp`.
 
-`ClientFallbackApp` appears when the user tries to use the plugin in a play test on the client.
+`ClientFallbackApp` appears when the user tries to use the plugin in a play-test on the client.
 
 ## DataStore Interface
+
 The main interfaces for DataStores are `Session` and `Pages`. Each app has its own Session object which stores state about what DataStore/key/version is being viewed and is used to send requests.
 
 ## UI
-DataDelve handles UI in an imperative manner.
 
 The main app creates an instance of the `UI` object. It also creates an instance of the `UIMessages` object. `UIMessages` is used to send toasts and alerts. `UI` sets up the UI and has an assortment of convenience functions for manipulating it. Right now `App` and `UI` are tightly coupled.
 
@@ -113,7 +82,7 @@ A `Theme` object contains all the colors used in the UI. It has an event to list
 ### StyleState
 This is what I decided to call my components. StyleStates are objects that wrap around Roblox UI instances with extra state so it knows how to style it. For example, `TextBoxStyleState` has extra state about an errors in the input so it knows to display as red. There is a type definition for StyleStates in `UI.StyleState.StyleStateHelper`. Every StyleState has an `#update(speed)` function which will update the UI based on its state at the given speed using `TweenService`.
 
-> NOTE: If a StyleState is updated multiple times in a single frame, there may be styling errors because `TweenService` will not pick the latest tween to play. All StyleStates should use the `#tween` function in `StyleStateHelper` which will have a fix for this in the future (if I feel like it). You may also see random `task.wait()/task.delay(0, ...)` in the code for this reason.
+> NOTE: If a StyleState is updated multiple times in a single frame, there may be styling errors because `TweenService` will not pick the latest tween to play. All StyleStates should use the `#tween` function in `StyleStateHelper` which will have a fix for this in the future (if I feel like it). You may also see random `task.wait()/task.delay(0, ...)` in the code for this reason. It is quite unfortunate.
 
 When you want to listen to an event on a StyleState, if the underlying object already has that event, it will be in the object which you can access by looking at the source of the StyleState (usually its in a field called `button/textBox/frame`). For example, to see if `ButtonStyleState` was clicked, you do 
 ```lua
@@ -137,16 +106,13 @@ When working with StyleStates, I usually put them into a tree to reflect the str
 `UI.StyleState.Utilities` contains some utility StyleStates. These don't go in any trees because they are usually only used for modals or short-lived UI effects (loading bar, skeleton effect).
 
 ### Viewers
-Viewers are used to view JSON data. Every `App` has exactly one (this will change once tabs are added). There is only one viewer right now (the tree one).
+Viewers are used to view JSON data. Every `App` has exactly one (this will change once tabs are added).
 
 ### Views
-You can see there some module scripts that end in `View` inside `UI` (e.g `VersionsView`, `OrderedDataStoreView`). This is when the `UI` ModuleScript was getting too big, and I decided to stop adding to it. They are basically their only mini `UI`, but only concerned with a single part of the UI. They also have a `#reset` method which is called to reset them to their original state if the user re-opens them with different data.
-
-### The Views Refactor
-I am planning on splitting everything into views to decouple the UI code more. Views will also go from `#from` and `#reset` to `#new` and `#destroy`. This is so multiple can be created for one `App` which will help with implementing tabs.
+You can see there some module scripts that end in `View` inside `UI` (e.g `VersionsView`, `OrderedDataStoreView`). This is when the `UI` ModuleScript was getting too big, and I decided to stop adding to it. They are basically their only mini `UI`, but only concerned with a single part of the UI.
 
 ## Assets
-In `UI` there is a folder called `Assets` which has all the Gui objects used by the `UI` object. Other scripts may have their own assets stored within as well.
+In `UI` there is a folder called `Assets` which has all the Gui objects used by the `UI` object. Other scripts may have their own assets stored within as well. It is really haphazard.
 
 ## Settings
 Settings contains global state for all the settings the user configured.
