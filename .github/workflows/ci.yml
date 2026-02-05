@@ -32,7 +32,7 @@ jobs:
 
       # thanks chatgpt
       - name: Update canary tag
-      - run: |
+        run: |
           git tag -f canary
           git push origin canary --force
 
