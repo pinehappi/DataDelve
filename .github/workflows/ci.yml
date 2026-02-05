@@ -46,5 +46,6 @@ jobs:
           overwrite: true
           body: |
             The latest and greatest release of DataDelve.
-            You can install by downloading, importing into Studio, then richt click and select "Save as Local Plugin."
+            You can install by downloading, importing into Studio, then right click and select "Save as Local Plugin."
+            MAKE SURE TO DELETE THE TESTS (you will see them inside the folder when you import) before installing, or the test suite will run each time you start Studio.
           tag: "canary"
