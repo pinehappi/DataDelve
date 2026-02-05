@@ -16,6 +16,10 @@ For more info on DataDelve, see this: https://devforum.roblox.com/t/3067950.
 
 Get it here: https://create.roblox.com/store/asset/18469510781/DataDelve-easy-free-datastore-editor
 
+Or download the canary version with the latest features: https://create.roblox.com/store/asset/17652185888/DataDelve-Canary
+
+Or download the latest build directly: https://github.com/pinehappi/DataDelve/releases/tag/canary.
+
 # Contributing
 You can contribute by creating issues for bugs or feature requests. You may also contribute code.
 

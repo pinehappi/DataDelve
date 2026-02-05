@@ -44,7 +44,6 @@ jobs:
           file: github_action_release.rbxm
           asset_name: datadelve_development_release.rbxm
           overwrite: true
-          prerelease: true
           body: |
             The latest and greatest release of DataDelve.
             You can install by downloading, importing into Studio, then richt click and select "Save as Local Plugin."
