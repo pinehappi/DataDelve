@@ -38,6 +38,5 @@ jobs:
           file: github_action_release.rbxm
           asset_name: datadelve_development_release.rbxm
           overwrite: true
-          body: "Hello, World!"
-          prerelease: true
+          body: "the latest and greatest build of datadelve"
           tag: "canary"
