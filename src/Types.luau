@@ -29,18 +29,14 @@ export type OrderedDataStoreConnection = {
 }
 export type AllScopesDataStoreConnection = {
 	type: "allScopes",
-	name: string,
+	name: string
 }
 export type GlobalDataStoreConnection = {
 	type: "global",
 	-- this is just for the UI so we don't have to special-case this
 	name: "global",
 }
-export type DataStoreConnection =
-	NormalDataStoreConnection
-	| OrderedDataStoreConnection
-	| AllScopesDataStoreConnection
-	| GlobalDataStoreConnection
+export type DataStoreConnection = NormalDataStoreConnection | OrderedDataStoreConnection | AllScopesDataStoreConnection | GlobalDataStoreConnection
 
 export type DataStoreConnectionRecord = {
 	connection: DataStoreConnection,

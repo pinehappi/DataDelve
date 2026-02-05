@@ -84,7 +84,10 @@ function UI.new(theme: Theme.Theme, uiMessages)
 				gui.ConnectDataStore.Content.Form.DataStoreScope.TextBox
 			),
 
-			dataStoreTypeTitle = LabelStyleState.from(theme, gui.ConnectDataStore.Content.Form.DataStoreType.Title),
+			dataStoreTypeTitle = LabelStyleState.from(
+				theme,
+				gui.ConnectDataStore.Content.Form.DataStoreType.Title
+			),
 			dataStoreTypeSelect = SelectStyleState.from(
 				theme,
 				gui.ConnectDataStore.Content.Form.DataStoreType.Select,
@@ -96,7 +99,7 @@ function UI.new(theme: Theme.Theme, uiMessages)
 						{ icon = theme.icons.orderedDatastore, name = "Ordered" },
 						{ icon = theme.icons.allScopesDatastore, name = "AllScopes" },
 						{ icon = theme.icons.globalDatastore, name = "Global" },
-					},
+					}
 				}
 			),
 
@@ -468,7 +471,7 @@ function UI:switchConnectTab(tab: "connect" | "list" | "history")
 	self.gui.ConnectDataStore.Content.DataStoreList.Visible = listVisible
 
 	self.gui.ConnectDataStore.Content.History.Visible = historyVisible
-
+	
 	self:_updateConnectCentering()
 end
 

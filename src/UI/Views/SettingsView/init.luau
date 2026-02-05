@@ -118,11 +118,10 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 		elseif child:IsA("TextLabel") then
 			settingLabels[child.Name] = LabelStyleState.from(theme, child)
 		end
-
+		
 		local description = child:FindFirstChild("Description")
 		if description then
-			settingLabels[child.Name .. "Description"] =
-				LabelStyleState.from(theme, description, { emphasis = "light" })
+			settingLabels[child.Name .. "Description"] = LabelStyleState.from(theme, description, { emphasis = "light" })
 		end
 	end
 
@@ -243,23 +242,23 @@ function SettingsView.from(theme: Theme.Theme, uiMessages: UIMessages.UIMessages
 	self.styleStates.clickToOpenSwitch.toggled:Connect(function(value)
 		Settings.set("clickToOpen", value)
 	end)
-
+	
 	self.styleStates.cloneButton.button.Activated:Connect(function()
 		local folder = script
 		repeat
 			folder = folder.Parent
 		until folder == nil or folder.Name:match("DataDelve")
-
+		
 		local recordingId = ChangeHistoryService:TryBeginRecording("Clone DataDelve")
 		if not recordingId then
 			return
 		end
-
+		
 		local clone = folder:Clone()
 		clone.Parent = ServerScriptService
-
-		SelectionService:Set({ clone })
-
+		
+		SelectionService:Set({clone})
+		
 		ChangeHistoryService:FinishRecording(recordingId, Enum.FinishRecordingOperation.Commit)
 	end)
 

@@ -57,7 +57,7 @@ export type DecodeOptions = {
 
 	-- Default false. Whether or not to collect the tokens in the result.
 	collectTokens: boolean?,
-
+	
 	-- Default true.
 	doesRecover: boolean?,
 }
@@ -932,7 +932,7 @@ local function decode(source: string, options: DecodeOptions?): DecodeResult
 				if options.doesRecover == false then
 					break
 				end
-
+				
 				-- Find good spot to recover
 				if not expectedEnd then
 					openingTokens = {}
@@ -1049,14 +1049,14 @@ local function encodeObject(builder: { string }, object: Object, depth: number, 
 			table.insert(builder, "{}")
 			return
 		end
-
+		
 		table.insert(builder, "{\n")
 
 		local keys = {}
 		for k in object do
 			table.insert(keys, k)
 		end
-
+		
 		table.sort(keys)
 
 		for _, k in keys do
@@ -1104,7 +1104,7 @@ local function encodeArray(builder: { string }, array: Array, depth: number, opt
 					break
 				end
 			end
-
+			
 			if (not probablyShort) and (#array == 1) and (typeof(array[1]) == "string") then
 				probablyShort = true
 			end

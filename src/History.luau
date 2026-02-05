@@ -98,7 +98,7 @@ local function convertOldConnectionToNew(connection: Types.OldDataStoreConnectio
 	if connection.allScopes then
 		return {
 			type = "allScopes",
-			name = connection.name,
+			name = connection.name
 		}
 	elseif connection.isOrdered then
 		return {
@@ -117,7 +117,7 @@ end
 
 local function convertRecordsToNew(records)
 	local newRecords = {}
-
+	
 	for _, v in records do
 		table.insert(newRecords, {
 			connection = convertOldConnectionToNew(v.connection),
@@ -125,7 +125,7 @@ local function convertRecordsToNew(records)
 			pinned = v.pinned,
 		})
 	end
-
+	
 	return newRecords
 end
 
@@ -143,8 +143,8 @@ function History:load(plugin: Plugin)
 		loadedData.games[self.gameId] = gameLoadedData
 	end
 
-	self.connectionRecords = if gameLoadedData.isNew
-		then gameLoadedData.connectionRecords
+	self.connectionRecords =
+		if gameLoadedData.isNew then gameLoadedData.connectionRecords
 		else convertRecordsToNew(gameLoadedData.connectionRecords)
 end
 

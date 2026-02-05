@@ -61,15 +61,15 @@ function VersionsView.new(params: VersionsViewFromParams)
 	self._session = params.session
 	self._loadVersionCallback = params.loadVersion
 	self._transactor = Transactor.new()
-
+	
 	self._loaded = false
 
 	self.order = params.session.versionPagesOrder or Enum.SortDirection.Descending
 	self.minDate = nil
 	self.maxDate = nil
-
+	
 	-- Events
-
+	
 	self._closed = Instance.new("BindableEvent")
 	self.closed = self._closed.Event
 
@@ -104,8 +104,7 @@ function VersionsView.new(params: VersionsViewFromParams)
 					:FormatUniversalTime("ll LT", "en-us")
 				row.Version.Text = info.Version
 				if info.Version == self._session.currentVersion then
-					row.Version.FontFace =
-						Font.new(row.Version.FontFace.Family, Enum.FontWeight.Bold, row.Version.FontFace.Style)
+					row.Version.FontFace = Font.new(row.Version.FontFace.Family, Enum.FontWeight.Bold, row.Version.FontFace.Style)
 				end
 
 				row.Name = info.Version
@@ -150,7 +149,7 @@ function VersionsView.new(params: VersionsViewFromParams)
 		listLabels = LabelStyleState.fromDescendants(self.theme, self.frame.List),
 		listSeparators = SeparatorStyleState.fromDescendants(self.theme, self.frame.List),
 	}
-
+	
 	self.mode = "popup"
 	self.visible = false
 	self._modal = nil
@@ -165,7 +164,7 @@ function VersionsView.new(params: VersionsViewFromParams)
 	})
 
 	-- Event connections
-
+	
 	table.insert(
 		self.connections,
 		self.theme.colorsChanged:Connect(function()
@@ -184,7 +183,7 @@ function VersionsView.new(params: VersionsViewFromParams)
 				self.order = Enum.SortDirection.Ascending
 				self.styleStates.order.button.ImageLabel.Image = ASCENDING_ICON
 			end
-
+			
 			self:_reload()
 		end)
 	)
@@ -299,7 +298,7 @@ end
 function VersionsView:show()
 	self.visible = true
 	self:_updateViewMode()
-
+	
 	if not self._loaded then
 		task.spawn(function()
 			self:_reload()
@@ -308,11 +307,9 @@ function VersionsView:show()
 		for version, styleState in self.styleStates.loadMore.itemStyleStates do
 			local versionText = styleState.button.Version
 			if version == self._session.currentVersion then
-				versionText.FontFace =
-					Font.new(versionText.FontFace.Family, Enum.FontWeight.Bold, versionText.FontFace.Style)
+				versionText.FontFace = Font.new(versionText.FontFace.Family, Enum.FontWeight.Bold, versionText.FontFace.Style)
 			else
-				versionText.FontFace =
-					Font.new(versionText.FontFace.Family, Enum.FontWeight.Regular, versionText.FontFace.Style)
+				versionText.FontFace = Font.new(versionText.FontFace.Family, Enum.FontWeight.Regular, versionText.FontFace.Style)
 			end
 		end
 	end
@@ -328,7 +325,7 @@ end
 
 function VersionsView:_updateViewMode()
 	self:_cleanupModal()
-
+	
 	if not self.visible then
 		self.frame.Visible = false
 		self.frame.Parent = nil
@@ -353,11 +350,11 @@ function VersionsView:_updateViewMode()
 		self.styleStates.background:update("instant")
 		self.styleStates.background.background.UIStroke.Enabled = true
 		self.styleStates.rightSeparator.separator.Visible = false
-
+		
 		local modal = PopupHelper.modal(self.frame, self.widget, {
 			scrimTransparency = 0.5,
 		})
-		self._modal = modal
+		self._modal = modal 
 		self._modalConnection = modal.cancelled:Connect(function()
 			if self._transactor.locked then
 				return
@@ -368,8 +365,8 @@ function VersionsView:_updateViewMode()
 end
 
 function VersionsView:setViewMode(viewMode: "drawer" | "popup")
-	self.mode = viewMode;
-	(self :: any):_updateViewMode()
+	self.mode = viewMode
+	;(self :: any):_updateViewMode()
 end
 
 function VersionsView:_loadVersion(version: string)
@@ -378,7 +375,7 @@ function VersionsView:_loadVersion(version: string)
 		local continueSuccess = false
 		local success = self:_runOperation(function()
 			local success, result = continueCallback()
-			if (not success) or not result then
+			if (not success) or (not result) then
 				if typeof(result) == "string" then
 					self.uiMessages:reportDataStoreError(result)
 				end
@@ -388,7 +385,7 @@ function VersionsView:_loadVersion(version: string)
 				continueSuccess = true
 			end
 		end)
-
+		
 		if success and self.visible and self.mode == "popup" then
 			self.visible = false
 			self:_updateViewMode()
@@ -447,7 +444,7 @@ end
 
 function VersionsView:_reload()
 	self._loaded = true
-
+	
 	self.styleStates.loadMore:clear()
 	self.styleStates.loadMore:setLoadMoreVisible(false)
 
@@ -498,11 +495,11 @@ function VersionsView:destroy()
 	if self._dead then
 		return
 	end
-
+	
 	self._closed:Fire()
-
+	
 	self:_cleanupModal()
-
+	
 	StyleStateHelper.destroy(self.styleStates)
 
 	for _, destructor in self._tooltipDestructors do

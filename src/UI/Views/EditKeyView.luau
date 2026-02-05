@@ -96,10 +96,10 @@ export type EditKeyViewFromParams = {
 	versionsView: VersionsView.VersionsView,
 	swapCallback: SwapCallback,
 	isVersionLoaded: boolean,
-
+	
 	-- when versions view is open in drawer mode (on the side), we want to preserve it between version loads
 	-- so you can quickly swap between them. This option will be set to true when you switched to a new view
-	-- using the verisons drawer
+	-- using the verisons drawer 
 	openWithVersionsView: boolean?,
 }
 
@@ -118,16 +118,16 @@ export type EditKeyViewImplementation = {
 	_isDirty: (EditKeyView) -> (),
 	_updateSaveDisabled: (EditKeyView, speed: StyleStateHelper.TransitionSpeed) -> (),
 	_shouldPromptConfirmation: (EditKeyView) -> boolean,
-
+	
 	_shouldDeleteBeDisabled: (EditKeyView) -> boolean,
 	_updateDisabled: (EditKeyView) -> (),
 	_updateUndoRedoButtons: (EditKeyView, speed: StyleStateHelper.TransitionSpeed) -> (),
 	_switchViewerMode: (EditKeyView, mode: ViewerTypes.ViewerMode) -> (),
-	_setViewer: (EditKeyView, data: any, userIds: { number }?, metadata: unknown?, isDirty: boolean?) -> (),
+	_setViewer: (EditKeyView, data: any, userIds: {number}?, metadata: unknown?, isDirty: boolean?) -> (),
 	_tryOpenVersionsView: (EditKeyView) -> (),
 	handleLoadVersion: (EditKeyView, version: string) -> (boolean, nil | () -> (boolean, string?)),
 	_updateVersionsViewMode: (EditKeyView) -> (),
-	_getKeyInfo: (EditKeyView) -> ({ number }?, unknown?),
+	_getKeyInfo: (EditKeyView) -> ({number}?, unknown?),
 
 	_createDataUsageCard: (EditKeyView, dataUsage: number, metadataUsage: number) -> (),
 	_promptDuplicateMoveKey: (
@@ -136,7 +136,8 @@ export type EditKeyViewImplementation = {
 		isAllScopes: boolean
 	) -> { key: string, shouldDelete: boolean }?,
 	_promptSwitchingError: (EditKeyView, message: string) -> boolean,
-
+	
+	
 	_canSearch: (EditKeyView) -> boolean,
 	_startSearch: (EditKeyView) -> (),
 	_endSearch: (EditKeyView) -> (),
@@ -168,16 +169,16 @@ export type EditKeyViewFields = {
 
 	_viewerMode: ViewerTypes.ViewerMode,
 	_viewer: ViewerTypes.Viewer,
-
+	
 	_isVersionLoaded: boolean,
 	versionsView: VersionsView.VersionsView,
 	_searchView: SearchView.SearchView?,
 	_searchResultsConnection: RBXScriptConnection?,
-
+	
 	_cachedData: unknown?,
 	_cachedMetadata: unknown?,
-	_cachedUserIds: { number }?,
-
+	_cachedUserIds: {number}?,
+	
 	_dead: boolean,
 }
 
@@ -210,7 +211,7 @@ function EditKeyView.from(params)
 
 	self._viewerMode = Settings.data.viewerMode :: any
 	self._viewer = nil :: any
-
+	
 	self._cachedData = self.session.currentValue
 	self._cachedMetadata = self.session.currentKeyInfo and self.session.currentKeyInfo:GetMetadata()
 	self._cachedUserIds = self.session.currentKeyInfo and self.session.currentKeyInfo:GetUserIds()
@@ -227,28 +228,12 @@ function EditKeyView.from(params)
 
 	self._connections = {}
 	self._tooltipDestructors = {
-		Tooltip.bindButtonGeneric(
-			self._theme,
-			self._frame.Container.LeftTopbar.Versions,
-			`Equivalent to {rfmt.code("ListVersionsAsync")}.`
-		),
-		Tooltip.bindButtonGeneric(
-			self._theme,
-			self._frame.Container.Save,
-			`Save\nEquivalent to {rfmt.code("UpdateAsync")}.`
-		),
-		Tooltip.bindButtonGeneric(
-			self._theme,
-			self._frame.Container.Refresh,
-			`Refresh\nEquivalent to {rfmt.code("GetAsync")}.`
-		),
-		Tooltip.bindButtonGeneric(
-			self._theme,
-			self._frame.Container.Delete,
-			`Delete\nEquivalent to {rfmt.code("RemoveAsync")}.`
-		),
+		Tooltip.bindButtonGeneric(self._theme, self._frame.Container.LeftTopbar.Versions, `Equivalent to {rfmt.code("ListVersionsAsync")}.`),
+		Tooltip.bindButtonGeneric(self._theme, self._frame.Container.Save, `Save\nEquivalent to {rfmt.code("UpdateAsync")}.`),
+		Tooltip.bindButtonGeneric(self._theme, self._frame.Container.Refresh, `Refresh\nEquivalent to {rfmt.code("GetAsync")}.`),
+		Tooltip.bindButtonGeneric(self._theme, self._frame.Container.Delete, `Delete\nEquivalent to {rfmt.code("RemoveAsync")}.`),
 	}
-
+	
 	self:_initializeInteraction()
 
 	table.insert(
@@ -266,31 +251,29 @@ function EditKeyView.from(params)
 			self:_updateDisabled()
 		end)
 	)
-
+	
 	table.insert(
 		self._connections,
 		self._frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 			self:_updateVersionsViewMode()
 		end)
 	)
-
+	
 	table.insert(
 		self._connections,
 		self.versionsView.closed:Connect(function()
 			self:_updateVersionsViewMode()
 		end)
 	)
-
+	
 	table.insert(
 		self._connections,
 		self._inputReceiver.InputBegan:Connect(function(input)
-			if self._modalState.isInside then
-				return
-			end
-
+			if self._modalState.isInside then return end
+			
 			if input.KeyCode == SEARCH_KEYCODE then
 				if self._viewer:getSearchCapability() then
-					local searchView = (self :: any)._searchView :: SearchView.SearchView?
+					local searchView = (self :: any)._searchView  :: SearchView.SearchView?
 					if searchView then
 						local connection: RBXScriptConnection
 						connection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
@@ -317,13 +300,13 @@ function EditKeyView.from(params)
 
 	local userIds, metadata = self:_getKeyInfo()
 	self:_setViewer(self.session.currentValue, userIds, metadata)
-
+	
 	-- fix ui update race condition
 	task.delay(0, function()
 		task.wait()
 		self:_updateDisabled()
 	end)
-
+	
 	if params.openWithVersionsView then
 		self:_tryOpenVersionsView()
 	end
@@ -347,11 +330,11 @@ function EditKeyView:destroy(completely)
 	if self._viewer then
 		self._viewer:destroy()
 	end
-
+	
 	if self._searchView then
 		self._searchView:destroy()
 	end
-
+	
 	if self._searchResultsConnection then
 		self._searchResultsConnection:Disconnect()
 	end
@@ -431,7 +414,7 @@ function EditKeyView:_initializeInteraction()
 			end
 
 			local userIds, metadata = self:_getKeyInfo()
-
+			
 			self:_runOperation(function()
 				local success, err = self.session:trySaveCurrentKey(valueResult.value, userIds, metadata)
 				if not success then
@@ -441,7 +424,7 @@ function EditKeyView:_initializeInteraction()
 					if dirtyCapability then
 						dirtyCapability:undirty()
 					end
-
+					
 					self._uiMessages:success("Save successful!")
 				end
 			end)
@@ -526,7 +509,7 @@ function EditKeyView:_initializeInteraction()
 			if self._transactor.locked then
 				return
 			end
-
+			
 			local historyCapability = self._viewer:getHistoryCapability()
 			if historyCapability then
 				historyCapability:undo()
@@ -560,23 +543,23 @@ function EditKeyView:_initializeInteraction()
 				+ Vector2.new(0, 6)
 
 			local viewModeOptions = {
-				{ icon = if self._viewerMode == "Tree" then self._theme.icons.check else "", text = "Tree" },
+				{ icon = if self._viewerMode == "Tree" then self._theme.icons.check else "" , text = "Tree" },
 				{ icon = if self._viewerMode == "Code" then self._theme.icons.check else "", text = "Code" },
 				--[[ContextMenuStyleState.SEPARATOR,
 				{ icon = self._theme.icons.hex, text = "Hex" },
 				{ icon = self._theme.icons.script, text = "Deserializer" },]]
 			}
 
-			local options: { ContextMenuStyleState.Option } = {
+			local options: {ContextMenuStyleState.Option} = {
 				{ icon = self._theme.icons.export, text = "Export to File" },
 				{ icon = self._theme.icons.import, text = "Import from File" },
 				ContextMenuStyleState.SEPARATOR,
 				{ icon = self._theme.icons.copy, text = "Duplicate/Move Key" },
 				{ icon = self._theme.icons.storage, text = "View Data Usage" },
 				ContextMenuStyleState.SEPARATOR,
-				{ text = "View Mode", options = viewModeOptions },
+				{ text = "View Mode", options = viewModeOptions }
 			}
-
+			
 			if self:_canSearch() then
 				table.insert(options, 1, { icon = self._theme.icons.lookup, text = "Search", hotkey = "/" })
 			end
@@ -601,13 +584,13 @@ function EditKeyView:_initializeInteraction()
 					})
 				end
 			end)
-
+			
 			self._styleStates.more:setSelecting(true):update()
-
+			
 			result = self._modalState:wrap(function()
 				return contextMenuStyleState.selected:Wait()
 			end)
-
+			
 			if attachment then
 				attachment:destroy()
 			end
@@ -679,9 +662,10 @@ function EditKeyView:_initializeInteraction()
 								.. "Wait and make fewer requests so that there can be budget for this."
 						)
 					else
-						local duplicateAction = self._modalState:wrap(function()
-							return self:_promptDuplicateMoveKey(position, self.session.connection.type == "allScopes")
-						end)
+						local duplicateAction =
+							self._modalState:wrap(function()
+								return self:_promptDuplicateMoveKey(position, self.session.connection.type == "allScopes")
+							end)
 						if duplicateAction then
 							if duplicateAction.key == self.session.currentKey then
 								self._uiMessages:error(`The key is already named <b>{self.session.currentKey}</b>`)
@@ -868,7 +852,7 @@ function EditKeyView:_createDataUsageCard(keyUsage, metadataUsage)
 
 	local function cleanup()
 		self._modalState:pop()
-
+		
 		modal:destroy()
 		wrapper:destroy()
 		card:Destroy()
@@ -963,7 +947,7 @@ function EditKeyView:_promptDuplicateMoveKey(position, isAllScopes)
 			resultEvent:Fire(false)
 		end
 	end)
-
+	
 	styleStates.contents.keyTextBox.textBox:CaptureFocus()
 
 	local shouldSubmit = resultEvent.Event:Wait()
@@ -997,20 +981,20 @@ function EditKeyView:_promptSwitchingError(errMessage)
 			local message = Assets.Forms.Message:Clone()
 			message.Text = "Do you want to continue switching and discard your changes?"
 			message.Parent = parent
-
+			
 			local textArea = Assets.Forms.TextArea:Clone()
 			textArea.TextEditable = false
 			textArea.Text = errMessage
 			textArea.Size = UDim2.new(1, 0, 0, 100)
 			textArea.Parent = parent
-
+			
 			return {
 				message = LabelStyleState.from(self._theme, message),
 				textArea = TextBoxStyleState.from(self._theme, textArea),
 			}
 		end,
 	})
-
+	
 	popup.frame.Position = UDim2.fromScale(0.5, 0.5)
 	popup.frame.AnchorPoint = Vector2.new(0.5, 0.5)
 	popup.frame.Size = UDim2.fromOffset(320, 0)
@@ -1019,9 +1003,9 @@ function EditKeyView:_promptSwitchingError(errMessage)
 	PopupHelper.clamp(popup.frame, self._widget, {
 		boundaryDistance = 5,
 	})
-
+	
 	local shouldContinue: boolean? = nil
-
+	
 	popup.interacted:Connect(function(action)
 		if action == "Discard and Continue" then
 			shouldContinue = true
@@ -1029,22 +1013,23 @@ function EditKeyView:_promptSwitchingError(errMessage)
 			shouldContinue = false
 		end
 	end)
-
+	
 	repeat
 		task.wait()
-	until shouldContinue ~= nil;
-	(popup :: any):destroy(true)
+	until shouldContinue ~= nil
+	
+	;(popup :: any):destroy(true)
 	modal:destroy()
-
+	
 	return shouldContinue :: boolean
 end
 
 function EditKeyView:_updateUndoRedoButtons(speed: StyleStateHelper.TransitionSpeed)
 	local historyCapability = self._viewer:getHistoryCapability()
-
+	
 	self._styleStates.undo.button.Visible = not not historyCapability
 	self._styleStates.redo.button.Visible = not not historyCapability
-
+	
 	if historyCapability then
 		self._styleStates.undo:setDisabled(not historyCapability:canUndo()):update(speed)
 		self._styleStates.redo:setDisabled(not historyCapability:canRedo()):update(speed)
@@ -1067,16 +1052,14 @@ function EditKeyView:_isDirty()
 end
 
 function EditKeyView:_updateSaveDisabled(speed)
-	self._styleStates.save
-		:setDisabled(self._transactor.locked or ((not self._isVersionLoaded) and (not self:_isDirty())))
-		:update(speed)
+	self._styleStates.save:setDisabled(self._transactor.locked or ((not self._isVersionLoaded) and (not self:_isDirty()))):update(speed)
 end
 
 function EditKeyView:_switchViewerMode(mode: ViewerTypes.ViewerMode)
 	if self._viewerMode == mode then
 		return
 	end
-
+	
 	-- TODO: retain key info changes
 	local valueResult = self._viewer:getValue()
 	local data: unknown
@@ -1090,19 +1073,19 @@ function EditKeyView:_switchViewerMode(mode: ViewerTypes.ViewerMode)
 	else
 		data = valueResult.value
 	end
-
+	
 	self._viewerMode = mode
 	Settings.data.viewerMode = mode -- Synchronize. Saving might behave funky with multiple views open.
-
+	
 	local userIds, metadata = self:_getKeyInfo()
 	self:_setViewer(data, userIds, metadata, self:_isDirty())
 end
 
-function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unknown?, isStartDirty: boolean?)
+function EditKeyView:_setViewer(data: any, userIds: {number}?, metadata: unknown?, isStartDirty: boolean?)
 	if self._viewer then
 		self._viewer:destroy()
 	end
-
+	
 	self._cachedData = data
 	self._cachedUserIds = userIds
 	self._cachedMetadata = metadata
@@ -1119,11 +1102,11 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 
 		dirty = isStartDirty,
 		readOnly = false,
-
+		
 		inputReceiver = self._inputReceiver,
 		modalState = self._modalState,
 	}
-
+	
 	if self._viewerMode == "Tree" then
 		self._viewer = TreeViewer.new(self._theme, self._uiMessages, self._frame.Container.Content, options)
 	else
@@ -1131,7 +1114,7 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 	end
 
 	self:_updateUndoRedoButtons("instant")
-
+	
 	local historyCapabiity = self._viewer:getHistoryCapability()
 	if historyCapabiity then
 		historyCapabiity.historyChanged:Connect(function()
@@ -1145,7 +1128,7 @@ function EditKeyView:_setViewer(data: any, userIds: { number }?, metadata: unkno
 			self:_updateSaveDisabled()
 		end)
 	end
-
+	
 	self:_updateSaveDisabled("instant")
 
 	self._viewer.idLookedUp:Connect(function(key)
@@ -1156,7 +1139,7 @@ end
 function EditKeyView:handleLoadVersion(version: string)
 	if self._viewer then
 		local continueCallback = function()
-			if self._transactor.locked or not self._viewer then
+			if (self._transactor.locked) or (not self._viewer) then
 				return false
 			end
 
@@ -1174,11 +1157,15 @@ function EditKeyView:handleLoadVersion(version: string)
 		if not self:_shouldPromptConfirmation() then
 			return true, continueCallback
 		else
-			local confirmed =
-				ConfirmDialogStyleState.confirm(self._theme, self._widget, self._widget:GetRelativeMousePosition(), {
+			local confirmed = ConfirmDialogStyleState.confirm(
+				self._theme,
+				self._widget,
+				self._widget:GetRelativeMousePosition(),
+				{
 					title = "Load version?",
 					message = "This will delete any changes made.",
-				})
+				}
+			)
 
 			if confirmed then
 				return true, continueCallback
@@ -1220,19 +1207,17 @@ function EditKeyView:_canSearch()
 end
 
 function EditKeyView:_startSearch()
-	if self._searchView then
-		return
-	end
-
+	if self._searchView then return end
+	
 	local searchCapability = self._viewer:getSearchCapability()
 	assert(searchCapability, "no search available")
-
+	
 	local searchView: SearchView.SearchView = SearchView.new({
 		theme = self._theme,
 		parent = self._frame.Container.SearchContainer,
 		position = UDim2.new(0, 8, 1, -8),
 		anchorPoint = Vector2.new(0, 1),
-
+		
 		nextClicked = function()
 			searchCapability:jumpNextMatch()
 		end,
@@ -1246,14 +1231,12 @@ function EditKeyView:_startSearch()
 			searchCapability:setSearch(searchTerm)
 		end,
 	})
-
+	
 	self._searchView = searchView
-	self._searchResultsConnection = searchCapability.searchResultsChanged:Connect(
-		function(result: ViewerTypes.SearchResult)
-			searchView:setResult(result)
-		end
-	)
-
+	self._searchResultsConnection = searchCapability.searchResultsChanged:Connect(function(result: ViewerTypes.SearchResult)
+		searchView:setResult(result)
+	end)
+	
 	task.spawn(function()
 		searchView:animateIn()
 		searchView:captureFocus()
@@ -1269,12 +1252,12 @@ function EditKeyView:_endSearch()
 			searchView:destroy()
 		end)
 	end
-
+	
 	local searchCapability = self._viewer:getSearchCapability()
 	if searchCapability then
 		searchCapability:endSearch()
 	end
-
+	
 	local connection = self._searchResultsConnection
 	if connection then
 		connection:Disconnect()

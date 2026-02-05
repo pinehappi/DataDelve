@@ -6,7 +6,7 @@ LabelStyleState.__index = LabelStyleState
 
 export type LabelStyleStateFromOptions = {
 	style: "text" | "error" | nil,
-	emphasis: "normal" | "light" | nil,
+	emphasis: "normal" | "light" | nil
 }
 function LabelStyleState.from(theme, label: GuiLabel, options: LabelStyleStateFromOptions?)
 	options = options or {}
@@ -32,8 +32,7 @@ function LabelStyleState.fromDescendants(theme, ancestor: GuiObject, options: La
 	local styleStates = {}
 	for _, descendant in ancestor:GetDescendants() do
 		if
-			(not descendant.Parent:IsA("GuiButton"))
-			and (descendant:IsA("TextLabel") or descendant:IsA("ImageLabel"))
+			(not descendant.Parent:IsA("GuiButton")) and (descendant:IsA("TextLabel") or descendant:IsA("ImageLabel"))
 			and (not descendant:GetAttribute("ExcludeStyleState"))
 		then
 			assert(not styleStates[descendant.Name], `Duplicate label name: {descendant:GetFullName()}`)
@@ -48,7 +47,7 @@ function LabelStyleState:update(speed: StyleStateHelper.TransitionSpeed)
 	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
 	local color = self.overridenColor
 		or self.theme.colors[if self.style == "text" then "text" elseif self.style == "error" then "error" else "text"]
-
+	
 	local property2 = if self.label:IsA("ImageLabel") then "ImageTransparency" else "TextTransparency"
 	local transparency = if self.emphasis == "normal" then 0 else 0.1
 

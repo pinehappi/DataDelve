@@ -146,7 +146,7 @@ function App.new(id: string)
 	self.ui.styleStates.connect.dataStoreScopeTextBox.errorChanged:Connect(function()
 		self:_updateConnectButton()
 	end)
-
+	
 	self.ui.styleStates.connect.dataStoreTypeSelect.changed:Connect(function()
 		self.ui:updateConnectOptions()
 		self:_updateConnectButton()
@@ -390,7 +390,7 @@ function App.new(id: string)
 			if confirmedAgain then
 				local styleState = self.ui.styleStates.browse.loadMore:get(key.KeyName)
 				styleState:setDisabled(true):update()
-
+				
 				local success, err = self.session:tryDeleteKey(key.KeyName)
 
 				if not success then
@@ -558,7 +558,7 @@ function App.new(id: string)
 	self.ui.styleStates.breadcrumbs:addCrumb(GAME_ICON, "game", gameName)
 	self.ui.styleStates.breadcrumbs:setCrumbNameVisibleSafe(1, not Settings.get("hideGameName")) -- Hide the crumb name for the game if the setting says to
 	task.defer(self.ui.updateSettingsButtonPosition, self.ui)
-
+	
 	-- load the first history item
 	local loadingRecord = nil
 	for _, v in History.global.connectionRecords do
@@ -567,15 +567,15 @@ function App.new(id: string)
 			break
 		end
 	end
-
+	
 	if not loadingRecord then
 		loadingRecord = History.global.connectionRecords[1]
 	end
-
+	
 	if loadingRecord then
 		self:_loadConnectionRecord(loadingRecord, "instant")
 	end
-
+	
 	return self
 end
 
@@ -595,7 +595,7 @@ function App.tryConnect(self: App, connection: Types.DataStoreConnection)
 		)
 		return
 	end
-
+	
 	if connection.type == "global" then
 		connection.name = "global"
 	end
@@ -649,7 +649,7 @@ end
 
 function App._submitConnectForm(self: App)
 	local datastoreType = self.ui.styleStates.connect.dataStoreTypeSelect.selection
-
+	
 	local dataStoreName = self.ui.styleStates.connect.dataStoreNameTextBox:getText(function(err: string)
 		self.uiMessages:error(err)
 	end)
@@ -663,6 +663,7 @@ function App._submitConnectForm(self: App)
 	if dataStoreScope == "" then
 		dataStoreScope = nil
 	end
+
 
 	self.ui.gui.ConnectDataStore.Content.Form.DataStoreName.TextBox.Text = ""
 	self.ui.gui.ConnectDataStore.Content.Form.DataStoreScope.TextBox.Text = ""
@@ -758,10 +759,10 @@ function App._trySwapEditKeyView(
 		else
 			self.editKeyView.versionsView:destroy()
 		end
-
+		
 		self.editKeyView:destroy()
 	end
-
+	
 	if not versionsView then
 		versionsView = VersionsView.new({
 			theme = Theme,
@@ -771,15 +772,13 @@ function App._trySwapEditKeyView(
 			session = forkedSession,
 			loadVersion = function(version: string)
 				local editKeyView = self.editKeyView
-				if not editKeyView then
-					return false
-				end
-
+				if not editKeyView then return false end
+				
 				return editKeyView:handleLoadVersion(version)
 			end,
 		})
 	end
-
+	
 	local editKeyView = EditKeyView.from({
 		theme = Theme,
 		uiMessages = self.uiMessages,
@@ -840,16 +839,10 @@ function App._onKeyDeleted(self: App, keyName: string, connection: Types.DataSto
 	end
 end
 
-function App._loadConnectionRecord(
-	self: App,
-	record: Types.DataStoreConnection,
-	transitionSpeed: StyleStateHelper.TransitionSpeed
-)
+function App._loadConnectionRecord(self: App, record: Types.DataStoreConnection, transitionSpeed: StyleStateHelper.TransitionSpeed)
 	local dataStoreType = record.connection.type:gsub("^.", string.upper)
 	self.ui.styleStates.connect.dataStoreTypeSelect:setSelection(dataStoreType)
-	self.ui.styleStates.connect.dataStoreNameTextBox.textBox.Text = if dataStoreType == "Global"
-		then ""
-		else record.connection.name
+	self.ui.styleStates.connect.dataStoreNameTextBox.textBox.Text = if dataStoreType == "Global" then "" else record.connection.name
 	self.ui.styleStates.connect.dataStoreScopeTextBox.textBox.Text = record.connection.scope or ""
 	self.ui:updateConnectOptions()
 	self:_updateConnectButton(transitionSpeed)

@@ -15,36 +15,36 @@ local DumbEditor = require(script.DumbEditor)
 
 local getHighlightColors = require(script.Parent.Parent.Utilities.getHighlightColors)
 
--- after this many characters, switch from the CodeEditor to the DumbEditor
+-- after this many characters, switch from the CodeEditor to the DumbEditor 
 local CODE_EDITOR_CUTOFF = 20_000
 local MAX_TEXTBOX_CHARACTERS = 200_000
 
 export type CodeViewerFields = {
 	_idLookedUp: BindableEvent,
 	idLookedUp: RBXScriptSignal,
-
+	
 	_container: typeof(script.Container),
 	_editor: EditorTypes.TextEditorObject?,
 	_theme: Theme.Theme,
-	_connections: { RBXScriptConnection },
+	_connections: {RBXScriptConnection},
 	_cachedData: unknown,
 }
 
 export type CodeViewerImplementation = {
 	__index: CodeViewerImplementation,
 	new: (Theme.Theme, UIMessages.UIMessages, GuiObject, Types.NewOptions) -> CodeViewer,
-
+	
 	getDirtyCapability: (CodeViewer) -> Types.DirtyCapability?,
 	getHistoryCapability: (CodeViewer) -> Types.HistoryCapability?,
 	getKeyInfoCapability: (CodeViewer) -> Types.KeyInfoCapability?,
 	getSearchCapability: (CodeViewer) -> Types.SearchCapability?,
-
+	
 	getValue: (CodeViewer) -> Types.GetValueResult,
 	setDisabled: (CodeViewer, disabled: boolean) -> (),
-
+	
 	_updateTheme: (CodeViewer) -> (),
 	_updateTextEditorFrom: (CodeViewer, data: unknown) -> (),
-
+	
 	destroy: (CodeViewer) -> (),
 }
 
@@ -56,15 +56,15 @@ CodeViewer.__index = CodeViewer
 local function getCodeEditorTheme(theme: Theme.Theme): EditorTypes.Theme
 	local highlightColors = getHighlightColors(theme)
 	local tokenColors = {}
-
+	
 	for token, group in JSONHelper.highlightGroups do
 		if group ~= "plain" then
 			tokenColors[token] = "#" .. highlightColors[group]:ToHex()
 		end
 	end
-
+	
 	return {
-		padding = { top = 2, left = 2, bottom = 2, right = 2 },
+		padding = {top=2, left=2, bottom=2, right=2},
 		textColor = highlightColors.plain,
 		disabledTextColor = highlightColors.disabled,
 		backgroundColor = highlightColors.background,
@@ -73,7 +73,7 @@ local function getCodeEditorTheme(theme: Theme.Theme): EditorTypes.Theme
 		scrollbarThickness = 6,
 		scrollbarColor = highlightColors.scrollbar,
 		gutter = {
-			padding = { left = 2, right = 8 },
+			padding = {left=2, right=8},
 			backgroundColor = highlightColors.background,
 			textColor = highlightColors.disabled,
 		},
@@ -94,7 +94,7 @@ local function enhanceErrorMessage(message: string): string
 		:gsub("comma", "','")
 end
 
-local function collectDecodeErrors(result: json5.DecodeResult): { EditorTypes.Error }
+local function collectDecodeErrors(result: json5.DecodeResult): {EditorTypes.Error}
 	local errors = {}
 	if result.kind == "failure" then
 		for _, err in result.errors do
@@ -105,12 +105,9 @@ local function collectDecodeErrors(result: json5.DecodeResult): { EditorTypes.Er
 					message = err.message or (err.token :: json5.ErrorToken).message,
 				})
 			else
-				table.insert(
-					errors,
-					{
-						message = err.message,
-					} :: any
-				)
+				table.insert(errors, {
+					message = err.message,
+				} :: any)
 			end
 		end
 	end
@@ -125,22 +122,17 @@ local function formatError(err: EditorTypes.Error): string
 	end
 end
 
-function CodeViewer.new(
-	theme: Theme.Theme,
-	uiMessages: UIMessages.UIMessages,
-	container: GuiObject,
-	options: Types.NewOptions
-)
+function CodeViewer.new(theme: Theme.Theme, uiMessages: UIMessages.UIMessages, container: GuiObject, options: Types.NewOptions)
 	local self = setmetatable({}, CodeViewer)
 	self._theme = theme
-
+	
 	self._container = script.Container:Clone()
 	self._container.Parent = container
-
+	
 	-- events
 	self._idLookedUp = Instance.new("BindableEvent")
 	self.idLookedUp = self._idLookedUp.Event :: any
-
+	
 	self._connections = {
 		theme.colorsChanged:Connect(function()
 			self:_updateTheme()
@@ -149,13 +141,13 @@ function CodeViewer.new(
 			if name == "highlightColors" then
 				self:_updateTheme()
 			end
-		end),
+		end)
 	}
-
+	
 	self:_updateTheme()
-
+	
 	self:_updateTextEditorFrom(options.data)
-
+	
 	return self
 end
 
@@ -179,7 +171,7 @@ function CodeViewer:getValue()
 	if not self._editor then
 		return { kind = "success", value = self._cachedData, hasNil = false }
 	end
-
+	
 	local text = self._editor:getText()
 	local result = json5.decode(text, {
 		mode = "permissive",
@@ -198,7 +190,7 @@ function CodeViewer:getValue()
 			for _, err in errors do
 				table.insert(text, formatError(err))
 			end
-
+			
 			return {
 				kind = "failure",
 				message = enhanceErrorMessage(table.concat(text, "\n")),
@@ -223,7 +215,7 @@ function CodeViewer:_updateTheme()
 	if self._editor then
 		self._editor:setTheme(getCodeEditorTheme(self._theme))
 	end
-
+	
 	self._container.Error.BackgroundColor3 = self._theme.colors.message.background
 	self._container.Error.UIStroke.Color = self._theme.colors.message.outline
 	self._container.Error.TextLabel.TextColor3 = self._theme.colors.message.text
@@ -235,7 +227,7 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 	if self._editor then
 		self._editor:destroy()
 	end
-
+	
 	local editorTheme = getCodeEditorTheme(self._theme)
 	local text: string
 	local success, err = pcall(function()
@@ -261,25 +253,23 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 		self._container.Error.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 		self._container.Error.TextLabel.UIFlexItem.FlexMode = Enum.UIFlexMode.None
 		self._container.EditorContainer.Visible = false
-
-		self._container.Error.TextLabel.Text = if isTooLarge
-			then "Data is too large. Use the tree view mode."
-			elseif
-				typeof(err) == "string" and err:match("unexpected type buffer")
-			then "Buffers are not supported. Use the tree view mode."
+		
+		self._container.Error.TextLabel.Text =
+			if isTooLarge then "Data is too large. Use the tree view mode."
+			elseif typeof(err) == "string" and err:match("unexpected type buffer") then "Buffers are not supported. Use the tree view mode."
 			else `There was an error. Try using the tree view mode. Error: {err}`
-
+		
 		self._editor = nil
 	elseif #text > CODE_EDITOR_CUTOFF then
 		local editor = DumbEditor({
 			theme = editorTheme,
 		})
-
+		
 		editor:setText(text)
-
+		
 		self._container.Error.Visible = true
 		self._container.Error.TextLabel.Text = "Editor features disabled due to large size of data."
-
+		
 		self._editor = editor
 	else
 		local editor = CodeEditor({
@@ -314,7 +304,7 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 			end
 		end)
 
-		editor.activeErrorsChanged:Connect(function(errors: { EditorTypes.Error })
+		editor.activeErrorsChanged:Connect(function(errors: {EditorTypes.Error})
 			if #errors == 0 then
 				self._container.Error.Visible = false
 			else
@@ -322,7 +312,7 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 				for _, err in errors do
 					table.insert(text, formatError(err))
 				end
-
+				
 				self._container.Error.Visible = true
 				self._container.Error.TextLabel.Text = enhanceErrorMessage(table.concat(text, "\n"))
 			end
@@ -332,7 +322,7 @@ function CodeViewer:_updateTextEditorFrom(data: unknown)
 
 		self._editor = editor
 	end
-
+	
 	if self._editor then
 		self._editor:setParent(self._container.EditorContainer)
 	end
@@ -342,14 +332,14 @@ function CodeViewer:destroy()
 	for _, connection in self._connections do
 		connection:Disconnect()
 	end
-
+	
 	if self._editor then
 		self._editor:destroy()
 		self._editor = nil
 	end
-
+	
 	self._container:Destroy()
-
+	
 	self._idLookedUp:Destroy()
 end
 

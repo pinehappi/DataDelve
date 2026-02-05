@@ -78,8 +78,8 @@ function ButtonStyleState:update(speed: StyleStateHelper.TransitionSpeed?)
 
 	if self.style == "transparent" then
 		StyleStateHelper.tween(self.button, tweenInfo, {
-			BackgroundColor3 = if self.selecting
-				then self.theme.colors.button.transparent.selectColor
+			BackgroundColor3 =
+				if self.selecting then self.theme.colors.button.transparent.selectColor
 				else self.theme.colors.button.transparent.baseColor,
 			BackgroundTransparency = self.theme.colors.button.transparent[state],
 		})

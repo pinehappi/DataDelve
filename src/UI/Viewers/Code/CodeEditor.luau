@@ -5,7 +5,7 @@ local Types = require(script.Parent.Types)
 
 export type NewOptions = {
 	theme: Types.Theme,
-	doLex: (source: string) -> { Token },
+	doLex: (source: string) -> {Token},
 }
 
 export type Token = {
@@ -17,7 +17,7 @@ export type Token = {
 type CodeEditorObject = Types.TextEditorObject & {
 	_textChanged: BindableEvent,
 	_activeErrorsChanged: BindableEvent,
-
+	
 	_frame: ScrollingFrame,
 	_theme: Types.Theme,
 	_textBox: TextBox,
@@ -26,14 +26,14 @@ type CodeEditorObject = Types.TextEditorObject & {
 	_gutter: TextLabel,
 	_gutterPadding: UIPadding,
 	_errorFrameContainer: Folder,
-	_errorFrames: { Frame },
+	_errorFrames: {Frame},
 	_singleCharacterBounds: Vector2,
 	_lastLineCount: number,
-	_errors: { Types.Error },
-	_errorLookups: { [number]: { Types.Error } },
+	_errors: {Types.Error},
+	_errorLookups: {[number]: {Types.Error}},
 	_disabled: boolean,
-	_connections: { RBXScriptConnection },
-	_doLex: (source: string) -> { Token },
+	_connections: {RBXScriptConnection},
+	_doLex: (source: string) -> {Token},
 }
 
 local function getSingleCharacterBounds(theme: Types.Theme)
@@ -47,7 +47,7 @@ local function getSingleCharacterBounds(theme: Types.Theme)
 end
 
 local function escapeRichText(text: string): string
-	return text:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"):gsub("'", "&apos;")
+	return text:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub("\"", "&quot;"):gsub("'", "&apos;")
 end
 
 local function updateHighlights(self: CodeEditorObject)
@@ -58,18 +58,16 @@ local function updateHighlights(self: CodeEditorObject)
 	for _, t in tokens do
 		local color = self._theme.tokenColors[t.kind]
 		if color then
-			table.insert(
-				overlayText,
-				'<font color="'
-					.. color
-					.. '">'
+			table.insert(overlayText,
+				"<font color=\"" .. color .. "\">"
 					.. escapeRichText(source:sub(t.start, t.start + t.length - 1))
 					.. "</font>"
 			)
 		else
-			table.insert(
-				overlayText,
-				'<font transparency="1">' .. escapeRichText(source:sub(t.start, t.start + t.length - 1)) .. "</font>"
+			table.insert(overlayText,
+				"<font transparency=\"1\">"
+					.. escapeRichText(source:sub(t.start, t.start + t.length - 1))
+					.. "</font>"
 			)
 		end
 	end
@@ -126,10 +124,8 @@ local function countLines(text: string, upto: number?): number
 end
 
 local function getTopAndBottomLinesInView(self: CodeEditorObject)
-	local bottomLine = math.ceil(self._frame.CanvasPosition.Y / self._singleCharacterBounds.Y)
-	local topLine = math.floor(
-		(self._frame.CanvasPosition.Y + self._frame.AbsoluteSize.Y) / self._singleCharacterBounds.Y
-	) - 1
+	local bottomLine = math.ceil(self._frame.CanvasPosition.Y / self._singleCharacterBounds.Y) 
+	local topLine = math.floor((self._frame.CanvasPosition.Y + self._frame.AbsoluteSize.Y) / self._singleCharacterBounds.Y) - 1
 	return bottomLine, topLine
 end
 
@@ -182,7 +178,7 @@ local function updateActiveErrors(self: CodeEditorObject, currentLine: number)
 end
 
 local CodeEditorMethods: Types.TextEditorMethods<CodeEditorObject> = {} :: Types.TextEditorMethods<CodeEditorObject>
-local mt = { __index = CodeEditorMethods :: any }
+local mt = {__index = CodeEditorMethods :: any}
 
 function CodeEditorMethods.setParent(self: CodeEditorObject, parent: Instance)
 	self._frame.Parent = parent
@@ -196,32 +192,29 @@ function CodeEditorMethods.setText(self: CodeEditorObject, text: string)
 	self._textBox.Text = text
 end
 
-function CodeEditorMethods.setErrors(self: CodeEditorObject, errors: { Types.Error })
+function CodeEditorMethods.setErrors(self: CodeEditorObject, errors: {Types.Error})
 	self._errors = errors
 	self._errorLookups = {}
-
+	
 	local unusedErrorFrames = self._errorFrames
 	local usedErrorFrames = {}
-
+	
 	for _, err in errors do
 		if not err.line then
 			continue
 		end
-
+		
 		if self._errorLookups[err.line] then
 			table.insert(self._errorLookups[err.line], err)
 		else
-			self._errorLookups[err.line] = { err }
+			self._errorLookups[err.line] = {err}
 		end
 	end
-
+	
 	for line, errors in self._errorLookups do
 		local errorFrame = table.remove(unusedErrorFrames) or Instance.new("Frame")
 		errorFrame.Size = UDim2.new(1, 0, 0, self._singleCharacterBounds.Y)
-		errorFrame.Position = UDim2.fromOffset(
-			0,
-			((errors[1].line :: number) - 1) * self._singleCharacterBounds.Y + self._theme.padding.top
-		)
+		errorFrame.Position = UDim2.fromOffset(0, ((errors[1].line :: number) - 1) * self._singleCharacterBounds.Y + self._theme.padding.top)
 		errorFrame.BorderSizePixel = 0
 		errorFrame.BackgroundTransparency = 0.6
 		errorFrame.BackgroundColor3 = Color3.fromHex(self._theme.tokenColors.error)
@@ -231,12 +224,12 @@ function CodeEditorMethods.setErrors(self: CodeEditorObject, errors: { Types.Err
 
 		table.insert(usedErrorFrames, errorFrame)
 	end
-
+	
 	self._errorFrames = usedErrorFrames
 	for _, v in unusedErrorFrames do
 		v:Destroy()
 	end
-
+	
 	local currentLine = getCurrentLine(self)
 	if currentLine then
 		updateActiveErrors(self, currentLine)
@@ -258,10 +251,10 @@ function CodeEditorMethods:destroy()
 	for _, c in self._connections do
 		c:Disconnect()
 	end
-
+	
 	self._textChanged:Destroy()
 	self._activeErrorsChanged:Destroy()
-
+	
 	self._frame:Destroy()
 end
 
@@ -334,7 +327,7 @@ return function(options: NewOptions): Types.TextEditorObject
 	self.activeErrorsChanged = self._activeErrorsChanged.Event :: RBXScriptSignal
 	self._errors = {}
 	self._errorLookups = {}
-	self._errorFrames = {} :: { Frame }
+	self._errorFrames = {} :: {Frame}
 	self._disabled = false
 
 	self._doLex = options.doLex
@@ -352,8 +345,7 @@ return function(options: NewOptions): Types.TextEditorObject
 
 			-- auto-indent if necessary
 			if self._textBox.CursorPosition > 0 and #self._textBox.Text > lastTextSize then
-				local addedCharacter =
-					self._textBox.Text:sub(self._textBox.CursorPosition - 1, self._textBox.CursorPosition - 1)
+				local addedCharacter = self._textBox.Text:sub(self._textBox.CursorPosition - 1, self._textBox.CursorPosition - 1)
 				if addedCharacter == "\n" then
 					local currentLine = getCurrentLine(self)
 					if currentLine then
@@ -361,7 +353,8 @@ return function(options: NewOptions): Types.TextEditorObject
 						if lastLine then
 							local indent = lastLine:match("^[\t ]*") or ""
 							if #indent > 0 then
-								self._textBox.Text = self._textBox.Text:sub(1, self._textBox.CursorPosition - 2)
+								self._textBox.Text =
+									self._textBox.Text:sub(1, self._textBox.CursorPosition - 2)
 									.. "\n"
 									.. indent
 									.. self._textBox.Text:sub(self._textBox.CursorPosition)
@@ -387,14 +380,10 @@ return function(options: NewOptions): Types.TextEditorObject
 				-- scroll the cursor into view
 				local bottomLine, topLine = getTopAndBottomLinesInView(self)
 				if currentLine < bottomLine then
-					self._frame.CanvasPosition =
-						Vector2.new(self._frame.CanvasPosition.X, (currentLine - 1) * self._singleCharacterBounds.Y)
+					self._frame.CanvasPosition = Vector2.new(self._frame.CanvasPosition.X, (currentLine - 1) * self._singleCharacterBounds.Y)
 				elseif currentLine > topLine then
 					local heightLines = math.floor(self._frame.AbsoluteSize.Y / self._singleCharacterBounds.Y)
-					self._frame.CanvasPosition = Vector2.new(
-						self._frame.CanvasPosition.X,
-						(currentLine - heightLines + 1) * self._singleCharacterBounds.Y
-					)
+					self._frame.CanvasPosition = Vector2.new(self._frame.CanvasPosition.X, (currentLine - heightLines + 1) * self._singleCharacterBounds.Y)
 				end
 
 				-- update active errors
@@ -404,7 +393,7 @@ return function(options: NewOptions): Types.TextEditorObject
 		self._frame:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(function()
 			-- UDim2.fromScale(1, 0) doesn't work for whatever reason
 			self._gutter.Size = UDim2.fromOffset(0, self._frame.AbsoluteCanvasSize.Y)
-		end),
+		end)
 	}
 
 	updateTheme(self)

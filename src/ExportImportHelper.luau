@@ -27,7 +27,7 @@ function ExportImportHelper.export(fileName: string, value: any): (boolean, stri
 	if not success then
 		return false, err
 	end
-
+	
 	local moduleScript = Instance.new("ModuleScript")
 
 	moduleScript.Archivable = false
@@ -77,7 +77,7 @@ end
 -- Returns if the user selected a valid JSON file
 -- The second return is either the JSON value or error message
 function ExportImportHelper.import(): (boolean, (string | unknown)?)
-	local file = StudioService:PromptImportFile({ "txt", "lua", "luau", "json" })
+	local file = StudioService:PromptImportFile({"txt", "lua", "luau", "json"})
 	if file then
 		local contents = file:GetBinaryContents()
 		local json: unknown?

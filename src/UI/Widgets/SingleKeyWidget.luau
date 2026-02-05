@@ -41,12 +41,7 @@ export type SingleKeyWidgetImplementation = {
 	new: (SingleKeyParamNewParams) -> (SingleKeyWidget?, string?),
 	destroy: (SingleKeyWidget) -> (),
 
-	_trySwapEditKeyView: (
-		SingleKeyWidget,
-		keyName: string,
-		version: string?,
-		session: Session.Session?
-	) -> (boolean, string?),
+	_trySwapEditKeyView: (SingleKeyWidget, keyName: string, version: string?, session: Session.Session?) -> (boolean, string?),
 }
 
 export type SingleKeyWidgetFields = {
@@ -143,7 +138,7 @@ function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?, 
 	if not success then
 		return false, err
 	end
-
+	
 	local versionsView = nil
 
 	if self._editKeyView then
@@ -167,9 +162,7 @@ function SingleKeyWidget:_trySwapEditKeyView(keyName: string, version: string?, 
 			session = forkedSession,
 			loadVersion = function(version: string)
 				local editKeyView = self._editKeyView
-				if not editKeyView then
-					return false
-				end
+				if not editKeyView then return false end
 
 				return editKeyView:handleLoadVersion(version)
 			end,

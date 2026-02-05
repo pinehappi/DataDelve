@@ -37,12 +37,11 @@ function BufferWidget.new(theme: Theme.Theme, name: string, b: buffer)
 	self.id = tostring(b)
 
 	self.theme = theme
-	self.widget =
-		plugin:CreateDockWidgetPluginGuiAsync(self.id, WIDGET_INFO) :: PluginGui & typeof(Assets.HexEditorWidget)
+	self.widget = plugin:CreateDockWidgetPluginGuiAsync(self.id, WIDGET_INFO) :: PluginGui & typeof(Assets.HexEditorWidget)
 	self.widget.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	self.widget.Title = `"{name}" buffer`
 	self.widget.Name = "DataDelve HexEditor"
-
+	
 	self.uiMessages = UIMessages.new(self.theme)
 	self.uiMessages:setParent(self.widget)
 
@@ -81,14 +80,14 @@ function BufferWidget.new(theme: Theme.Theme, name: string, b: buffer)
 	-- UI Events
 
 	self._viewer = nil :: Types.BufferViewer?
-	self._viewerConnections = {} :: { RBXScriptConnection }
+	self._viewerConnections = {} :: {RBXScriptConnection}
 
 	self._mode = self.wrapper.styleStates.mode.selection
 	self:_setMode(self._mode, b)
 	self.wrapper.styleStates.mode.changed:Connect(function(mode)
 		self:_setMode(mode, self:getFreshBuffer())
 	end)
-
+	
 	self.wrapper.styleStates.undo.button.Activated:Connect(function()
 		assert(self._viewer, "how no viewer?")
 		if self._viewer:canUndo() then
@@ -101,10 +100,10 @@ function BufferWidget.new(theme: Theme.Theme, name: string, b: buffer)
 			self._viewer:redo()
 		end
 	end)
-
+	
 	self.wrapper.styleStates.loadFile.button.Activated:Connect(function()
 		assert(self._viewer, "how??")
-
+		
 		local file: File = StudioService:PromptImportFile()
 		if file then
 			self._viewer:setValue(buffer.fromstring(file:GetBinaryContents()))
@@ -112,7 +111,7 @@ function BufferWidget.new(theme: Theme.Theme, name: string, b: buffer)
 			self.uiMessages:warn("No file selected.")
 		end
 	end)
-
+	
 	self.wrapper.styleStates.cancel.button.Activated:Connect(function()
 		self._interacted:Fire(false)
 	end)
@@ -128,7 +127,7 @@ function BufferWidget.new(theme: Theme.Theme, name: string, b: buffer)
 			(self :: any):destroy()
 		end
 	end)
-
+	
 	return self
 end
 
@@ -148,16 +147,16 @@ end
 
 function BufferWidget:_setMode(mode: Types.BufferViewerMode, buf: buffer)
 	self:_cleanupViewer()
-
+	
 	local viewer: Types.BufferViewer
 	if mode == "Hex" then
 		viewer = (HexViewer :: any) :: Types.BufferViewer
 	elseif mode == "Deserializer" then
 		viewer = (DeserializerViewer :: any) :: Types.BufferViewer
 	end
-
+	
 	Settings.set("bufferViewerMode", mode)
-
+	
 	self._mode = mode
 	self._viewer = viewer.from(buf, self.widget.Content.EditorContainer, {
 		uiMessages = self.uiMessages,
@@ -165,13 +164,13 @@ function BufferWidget:_setMode(mode: Types.BufferViewerMode, buf: buffer)
 		inputReceiver = self.widget.InputReceiver,
 		widget = self.widget,
 	}) :: Types.BufferViewer
-
+	
 	local selfAny = self :: any
 	selfAny:_updateUndoRedoButtons("instant")
 	self._viewerConnections = {
 		selfAny._viewer.historyChanged:Connect(function()
 			selfAny:_updateUndoRedoButtons()
-		end),
+		end)
 	}
 end
 

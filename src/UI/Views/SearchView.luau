@@ -31,7 +31,7 @@ export type SearchViewOptions = {
 	parent: Instance,
 	position: UDim2,
 	anchorPoint: Vector2,
-
+	
 	nextClicked: () -> (),
 	prevClicked: () -> (),
 	closeClicked: () -> (),
@@ -40,11 +40,11 @@ export type SearchViewOptions = {
 
 type SearchViewImplementation = {
 	__index: SearchViewImplementation,
-
+	
 	new: (SearchViewOptions) -> SearchView,
 	update: (SearchView, StyleStateHelper.TransitionSpeed) -> (),
 	captureFocus: (SearchView) -> (),
-
+	
 	animateIn: (SearchView) -> (),
 	animateOut: (SearchView) -> (),
 
@@ -57,7 +57,7 @@ type SearchViewFields = {
 	_styleStates: typeof(getStyleStates({} :: any)),
 	_frame: typeof(Assets.Views.Search),
 	_dropShadow: ImageLabel,
-
+	
 	_dead: boolean,
 	_isAnimating: boolean,
 	_lastSearch: string,
@@ -70,25 +70,25 @@ SearchView.__index = SearchView
 
 function SearchView.new(options)
 	local self = setmetatable({}, SearchView)
-
+	
 	self._theme = options.theme
-
+	
 	self._frame = Assets.Views.Search:Clone()
 	self._styleStates = getStyleStates(self._theme, self._frame)
-
+	
 	self._frame.Position = options.position
 	self._frame.AnchorPoint = options.anchorPoint
 	self._frame.ZIndex = 10
 	self._frame.Parent = options.parent
-
+	
 	self._dropShadow = PopupHelper.attachDropShadow(self._frame)
-
+	
 	self._dead = false
 	self._isAnimating = false
 	self._lastSearch = ""
-
+	
 	self:setResult({ kind = "none" })
-
+	
 	self._styleStates.next.button.Activated:Connect(options.nextClicked)
 	self._styleStates.prev.button.Activated:Connect(options.prevClicked)
 	self._styleStates.close.button.Activated:Connect(options.closeClicked)
@@ -112,7 +112,7 @@ function SearchView.new(options)
 			options.searchChanged(self._styleStates.textBox.textBox.Text)
 		end
 	end)
-
+	
 	return self
 end
 
@@ -122,49 +122,45 @@ end
 
 local animateTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad)
 function SearchView:animateIn()
-	if self._isAnimating then
-		return
-	end
-
+	if self._isAnimating then return end
+	
 	local canvasGroup = Instance.new("CanvasGroup")
 	canvasGroup.Size = UDim2.fromScale(1, 1)
 	canvasGroup.Position = UDim2.fromOffset(0, 16)
 	canvasGroup.BackgroundTransparency = 1
 	canvasGroup.GroupTransparency = 1
-
+	
 	canvasGroup.Parent = self._frame.Parent
 	self._frame.Parent = canvasGroup
 	self._dropShadow.Parent = canvasGroup
-
+	
 	local originalTransparency = self._dropShadow.ImageTransparency
 	self._dropShadow.ImageTransparency = 1
 	TweenService:Create(self._dropShadow, animateTweenInfo, {
-		ImageTransparency = originalTransparency,
+		ImageTransparency = originalTransparency
 	}):Play()
-
+	
 	local tween = TweenService:Create(canvasGroup, animateTweenInfo, {
 		GroupTransparency = 0,
 		Position = UDim2.fromOffset(0, 0),
 	})
 	tween:Play()
 	tween.Completed:Wait()
-
+	
 	if self._dead then
 		canvasGroup:Destroy()
 		return
 	end
-
+	
 	self._frame.Parent = canvasGroup.Parent
 	self._dropShadow.Parent = canvasGroup.Parent
 	canvasGroup:Destroy()
-
+	
 	self._isAnimating = false
 end
 
 function SearchView:animateOut()
-	if self._isAnimating then
-		return
-	end
+	if self._isAnimating then return end
 
 	local canvasGroup = Instance.new("CanvasGroup")
 	canvasGroup.Size = UDim2.fromScale(1, 1)
@@ -177,7 +173,7 @@ function SearchView:animateOut()
 	self._dropShadow.Parent = canvasGroup
 
 	TweenService:Create(self._dropShadow, animateTweenInfo, {
-		ImageTransparency = 1,
+		ImageTransparency = 1
 	}):Play()
 
 	local tween = TweenService:Create(canvasGroup, animateTweenInfo, {
@@ -208,7 +204,9 @@ function SearchView:setResult(result)
 		self._styleStates.matches.Visible = false
 		self._styleStates.matches.label.Text = ""
 	else
-		local suffix = if result.matches == 1 then "match" else "matches"
+		local suffix = 
+			if result.matches == 1 then "match"
+			else "matches"
 		self._styleStates.matches.Visible = true
 		self._styleStates.matches.label.Text = `{result.matches} {suffix}`
 	end

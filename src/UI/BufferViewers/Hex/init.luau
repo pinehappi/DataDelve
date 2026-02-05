@@ -13,7 +13,7 @@ export type HexImplementation = {
 	setValue: (Hex, buf: buffer) -> (),
 	getValue: (Hex) -> buffer,
 	destroy: (Hex) -> (),
-
+	
 	undo: (Hex) -> (),
 	redo: (Hex) -> (),
 	canUndo: (Hex) -> boolean,
@@ -22,7 +22,7 @@ export type HexImplementation = {
 
 export type HexFields = {
 	historyChanged: RBXScriptSignal,
-
+	
 	_container: Frame,
 	_editor: HexEditor.HexEditor,
 	_dataInspector: DataInspector.DataInspector,
@@ -130,9 +130,9 @@ end
 function Hex.from(buf: buffer, container: Frame, options: Types.BufferViewerFromOptions)
 	local self = setmetatable({}, Hex)
 	self._theme = options.theme
-
+	
 	self._container = container
-
+	
 	local hexEditorTheme, dataInpsectorTheme = generateThemes(options.theme)
 	self._editor = HexEditor.new(buf, {
 		container = self._container,
@@ -155,9 +155,9 @@ function Hex.from(buf: buffer, container: Frame, options: Types.BufferViewerFrom
 		sizing = "fillContainerY",
 		theme = dataInpsectorTheme,
 	})
-
+	
 	self.historyChanged = self._editor.historyChanged
-
+	
 	return self
 end
 

@@ -207,7 +207,7 @@ function Session:trySaveCurrentKey(value: any, userIds: { number }, metadata: { 
 		end)
 	end)
 
-	if success then
+	if success  then
 		self.currentValue = newValue
 		-- if there is no new keyinfo that probably means they saved null to an empty key
 		if newKeyInfo then
@@ -298,7 +298,7 @@ function Session:tryCreateVersionPages(
 	maxDate: number?
 ): (boolean, string?)
 	assert(self.connection.type ~= "ordered")
-
+	
 	local pages, err = Pages.wrapListing(function()
 		return self.datastore:ListVersionsAsync(self.currentKey, order, minDate, maxDate, 16)
 	end)
@@ -349,6 +349,7 @@ function Session:tryCreateOrderedKeyPages(
 	max: number?
 ): (boolean, string?)
 	assert(self.connection.type == "ordered")
+
 
 	local pages, err = Pages.wrapListing(function()
 		return self.datastore:GetSortedAsync(order == "ascending", 50, min, max)

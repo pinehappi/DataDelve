@@ -383,7 +383,9 @@ function DataInspector:_updateRows()
 			frame.value.TextColor3 = self._theme.lightValueText
 		elseif typeof(result) == "table" then
 			frame.value.Text = result.text
-			frame.value.TextColor3 = if result.isLight then self._theme.lightValueText else self._theme.valueText
+			frame.value.TextColor3 = if result.isLight
+				then self._theme.lightValueText
+				else self._theme.valueText
 		else
 			frame.value.Text = tostring(result)
 			frame.value.TextColor3 = self._theme.valueText

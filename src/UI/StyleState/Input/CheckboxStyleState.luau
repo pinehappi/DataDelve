@@ -26,7 +26,7 @@ function CheckboxStyleState.from(
 		value = options.default or false,
 		checkbox = checkbox,
 		theme = theme,
-
+		
 		_hovering = false,
 		_pressing = false,
 	}, CheckboxStyleState)
@@ -45,15 +45,12 @@ function CheckboxStyleState.from(
 			elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 				self._pressing = true
 				self:update()
-
+				
 				local connection: RBXScriptConnection
 				connection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
-					if
-						input.UserInputState ~= Enum.UserInputState.Begin
-						and input.UserInputState ~= Enum.UserInputState.Change
-					then
+					if input.UserInputState ~= Enum.UserInputState.Begin and input.UserInputState ~= Enum.UserInputState.Change then
 						connection:Disconnect()
-
+						
 						self._pressing = false
 						self:update()
 					end
@@ -65,17 +62,14 @@ function CheckboxStyleState.from(
 				self._hovering = false
 				self:update()
 			end
-		end),
+		end)
 	}
 	self.checkbox.Check.Visible = self.value
 
 	if options.inputPair then
-		table.insert(
-			self._connections,
-			options.inputPair.Activated:Connect(function()
-				self:setValue(not self.value)
-			end)
-		)
+		table.insert(self._connections, options.inputPair.Activated:Connect(function()
+			self:setValue(not self.value)
+		end))
 	end
 
 	self:update("instant")
@@ -84,18 +78,20 @@ end
 
 function CheckboxStyleState:update(speed: StyleStateHelper.TransitionSpeed)
 	local tweenInfo = StyleStateHelper.getTweenInfoForSpeed(speed)
-
+	
 	local style = if self.value then "primary" else "secondary"
-	local state = if self._pressing then "press" elseif self._hovering then "hover" else "default"
-
+	local state = if self._pressing then "press"
+		elseif self._hovering then "hover"
+		else "default"
+	
 	StyleStateHelper.tween(self.checkbox, tweenInfo, {
 		BackgroundColor3 = self.theme.colors.button[style].body[state],
 	})
-
+	
 	StyleStateHelper.tween(self.checkbox.UIStroke, tweenInfo, {
 		Color = self.theme.colors.button[style].outline[state],
 	})
-
+	
 	if self.checkbox.Check.Visible then
 		StyleStateHelper.tween(self.checkbox.Check, tweenInfo, {
 			ImageColor3 = self.theme.colors.button.primary.text.select,

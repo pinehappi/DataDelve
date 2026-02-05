@@ -84,13 +84,10 @@ local function getStudioThemeData(): (boolean, boolean)
 	local isDark = Theme.getLuminance(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground)) < 0.5
 
 	-- if it's the old colors
-	local isOld = if isDark
-		then areColorsSimilar(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton), Color3.fromRGB(0, 162, 255))
-		else areColorsSimilar(
-			StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton),
-			Color3.fromRGB(228, 238, 254)
-		)
-
+	local isOld =
+		if isDark then areColorsSimilar(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton), Color3.fromRGB(0, 162, 255))
+		else areColorsSimilar(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainButton), Color3.fromRGB(228, 238, 254))
+	
 	return isDark, isOld
 end
 
@@ -99,7 +96,7 @@ local function applyAccentToStudioColor(color: Color3, accent: string): Color3
 	if accent == "neutral" then
 		return Oklab.oklch(lab.x, 0, 0)
 	else
-		local c = math.sqrt(lab.y ^ 2 + lab.z ^ 2)
+		local c = math.sqrt(lab.y^2 + lab.z^2)
 		return Oklab.oklch(lab.x, c, math.deg(Theme.studioAccentHues[accent]))
 	end
 end
@@ -170,8 +167,7 @@ end
 function Theme.getAccentComponents(preset: string, accent: string): (number, number, number)
 	local StudioTheme = StudioSettings.Theme :: StudioTheme
 	if preset == "studio" then
-		local defaultAccent =
-			StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Default)
+		local defaultAccent = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton, Enum.StudioStyleGuideModifier.Default)
 		return applyAccentToStudioColor(defaultAccent, accent):ToHSV()
 	elseif preset == "light" then
 		if accent == "neutral" then
@@ -510,10 +506,10 @@ function Theme.generatePreset(preset: string, accent: string)
 	elseif preset == "studio" then
 		local StudioTheme = StudioSettings.Theme :: StudioTheme
 		local isDark, isOld = getStudioThemeData()
-		local separatorColor = if isDark and not isOld
-			then Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Separator), 0.025)
+		local separatorColor =
+			if isDark and (not isOld) then Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Separator), 0.025)
 			else StudioTheme:GetColor(Enum.StudioStyleGuideColor.Separator)
-
+		
 		return {
 			button = {
 				primary = {
@@ -540,78 +536,48 @@ function Theme.generatePreset(preset: string, accent: string)
 						),
 					},
 					body = {
-						select = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Selected
-							),
-							accent
-						),
-						disable = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Disabled
-							),
-							accent
-						),
-						default = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Default
-							),
-							accent
-						),
-						hover = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Hover
-							),
-							accent
-						),
-						press = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Pressed
-							),
-							accent
-						),
+						select = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Selected
+						), accent),
+						disable = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Disabled
+						), accent),
+						default = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Default
+						), accent),
+						hover = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Hover
+						), accent),
+						press = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Pressed
+						), accent),
 					},
 					outline = {
-						select = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Selected
-							),
-							accent
-						),
-						disable = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Disabled
-							),
-							accent
-						),
-						default = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Default
-							),
-							accent
-						),
-						hover = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Hover
-							),
-							accent
-						),
-						press = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.DialogMainButton,
-								Enum.StudioStyleGuideModifier.Pressed
-							),
-							accent
-						),
+						select = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Selected
+						), accent),
+						disable = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Disabled
+						), accent),
+						default = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Default
+						), accent),
+						hover = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Hover
+						), accent),
+						press = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.DialogMainButton,
+							Enum.StudioStyleGuideModifier.Pressed
+						), accent),
 					},
 				},
 				secondary = {
@@ -638,13 +604,10 @@ function Theme.generatePreset(preset: string, accent: string)
 						),
 					},
 					body = {
-						select = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.Button,
-								Enum.StudioStyleGuideModifier.Selected
-							),
-							accent
-						),
+						select = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.Button,
+							Enum.StudioStyleGuideModifier.Selected
+						), accent),
 						disable = StudioTheme:GetColor(
 							Enum.StudioStyleGuideColor.Button,
 							Enum.StudioStyleGuideModifier.Disabled
@@ -657,10 +620,11 @@ function Theme.generatePreset(preset: string, accent: string)
 							),
 						hover = if isDark and isOld
 							then Color3.fromRGB(77, 77, 77)
-							elseif isOld then StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.Button,
-								Enum.StudioStyleGuideModifier.Selected
-							)
+							elseif isOld then
+								StudioTheme:GetColor(
+									Enum.StudioStyleGuideColor.Button,
+									Enum.StudioStyleGuideModifier.Selected
+								)
 							else StudioTheme:GetColor(
 								Enum.StudioStyleGuideColor.Button,
 								Enum.StudioStyleGuideModifier.Hover
@@ -739,13 +703,10 @@ function Theme.generatePreset(preset: string, accent: string)
 						),
 					},
 					outline = {
-						select = applyAccentToStudioColor(
-							StudioTheme:GetColor(
-								Enum.StudioStyleGuideColor.InputFieldBorder,
-								Enum.StudioStyleGuideModifier.Selected
-							),
-							accent
-						),
+						select = applyAccentToStudioColor(StudioTheme:GetColor(
+							Enum.StudioStyleGuideColor.InputFieldBorder,
+							Enum.StudioStyleGuideModifier.Selected
+						), accent),
 						disable = StudioTheme:GetColor(
 							Enum.StudioStyleGuideColor.InputFieldBorder,
 							Enum.StudioStyleGuideModifier.Disabled
@@ -766,13 +727,10 @@ function Theme.generatePreset(preset: string, accent: string)
 				},
 				transparent = {
 					baseColor = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					selectColor = applyAccentToStudioColor(
-						StudioTheme:GetColor(
-							Enum.StudioStyleGuideColor.DialogMainButton,
-							Enum.StudioStyleGuideModifier.Selected
-						),
-						accent
-					),
+					selectColor = applyAccentToStudioColor(StudioTheme:GetColor(
+						Enum.StudioStyleGuideColor.DialogMainButton,
+						Enum.StudioStyleGuideModifier.Selected
+					), accent),
 
 					select = 0.5,
 					disable = 1,
@@ -797,26 +755,26 @@ function Theme.generatePreset(preset: string, accent: string)
 					},
 			},
 
-			message = if isOld
-				then {
-					text = Color3.fromRGB(250, 250, 250),
-					background = Color3.fromRGB(24, 24, 24),
-					outline = Color3.fromRGB(24, 24, 24),
-				}
-				elseif isDark then {
-					text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					background = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip),
-					outline = Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip), -0.03),
-				}
-				else {
-					text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					background = Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip), -0.03),
-					outline = Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip), -0.08),
-				},
+			message = if isOld then {
+				text = Color3.fromRGB(250, 250, 250),
+				background = Color3.fromRGB(24, 24, 24),
+				outline = Color3.fromRGB(24, 24, 24),
+			} elseif isDark then {
+				text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
+				background = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip),
+				outline = Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip), -0.03),
+			} else {
+				text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
+				background = Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip), -0.03),
+				outline = Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.Tooltip), -0.08),
+			},
 
 			floatingAction = {
-				background = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Button),
-				outline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground)
+				background = StudioTheme:GetColor(
+					Enum.StudioStyleGuideColor.Button
+				),
+				outline = StudioTheme
+					:GetColor(Enum.StudioStyleGuideColor.MainBackground)
 					:Lerp(Color3.new(0, 0, 0), if isDark then 0 else 0.15),
 			},
 
@@ -825,28 +783,39 @@ function Theme.generatePreset(preset: string, accent: string)
 			success = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton),
 
 			text = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainText),
-			disabledText = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DimmedText),
+			disabledText = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.DimmedText
+			),
 
-			headerBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
+			headerBackground = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.Titlebar
+			),
 
-			background = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
-			backgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
+			background = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.MainBackground
+			),
+			backgroundOutline = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.MainBackground
+			),
 
-			popupBackground = if not isOld and isDark
-				then Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground), 0.02)
-				elseif (not isOld) and not isDark then Theme.lighten(
-					StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
-					-0.025
-				)
-				else StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
+			popupBackground =
+				if (not isOld) and isDark then Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground), 0.02)
+				elseif (not isOld) and (not isDark) then Theme.lighten(StudioTheme:GetColor(Enum.StudioStyleGuideColor.MainBackground), -0.025)
+				else StudioTheme:GetColor(
+					Enum.StudioStyleGuideColor.MainBackground
+				),
 			popupBackgroundOutline = separatorColor,
 
 			scrollbar = StudioTheme:GetColor(Enum.StudioStyleGuideColor.DimmedText),
 
 			scrimTransparency = 0.6,
 
-			imageBackground = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ViewPortBackground),
-			imageBackgroundOutline = StudioTheme:GetColor(Enum.StudioStyleGuideColor.ViewPortBackground),
+			imageBackground = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.ViewPortBackground
+			),
+			imageBackgroundOutline = StudioTheme:GetColor(
+				Enum.StudioStyleGuideColor.ViewPortBackground
+			),
 
 			separator = separatorColor,
 

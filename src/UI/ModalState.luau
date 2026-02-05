@@ -4,23 +4,23 @@
 
 type ModalStateImplementation = {
 	__index: ModalStateImplementation,
-
+	
 	new: () -> ModalState,
-
+	
 	push: (ModalState) -> (),
 	pop: (ModalState) -> (),
 	wrap: <T>(ModalState, action: () -> T) -> T,
-
+	
 	pushId: (ModalState, id: string) -> (),
 	popId: (ModalState, id: string) -> (),
-
+	
 	_update: (ModalState) -> (),
 }
 
 type ModalStateFields = {
 	isInside: boolean,
 	_count: number,
-	_ids: { [string]: boolean },
+	_ids: {[string]: boolean},
 }
 
 export type ModalState = typeof(setmetatable({} :: ModalStateFields, {} :: ModalStateImplementation))

@@ -6,3 +6,4 @@
 [tools]
 lune = "lune-org/lune@0.8.7"
 StyLua = "JohnnyMorganz/StyLua@2.0.2"
+rojo = "rojo-rbx/rojo@7.7.0-rc.1"

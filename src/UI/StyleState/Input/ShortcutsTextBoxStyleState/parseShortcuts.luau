@@ -128,15 +128,15 @@ return function(source: string): ShortcutsString
 		elseif grapheme == "\\" then
 			if lastGrapheme == "\\" then
 				lastGrapheme = ""
-
+				
 				insertCurrentPiece()
 				startPiece("escapedNormal")
-
+				
 				table.insert(pieceContent, "\\\\")
-
+				
 				insertCurrentPiece()
 				startPiece("normal")
-
+				
 				continue
 			end
 		else

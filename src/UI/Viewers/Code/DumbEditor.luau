@@ -11,19 +11,19 @@ export type NewOptions = {
 export type DumbEditorObject = Types.TextEditorObject & {
 	_textChanged: BindableEvent,
 	_activeErrorsChanged: BindableEvent,
-
+	
 	_frame: ScrollingFrame,
 	_theme: Types.Theme,
 	_textBox: TextBox,
 	_textBoxPadding: UIPadding,
-
-	_connections: { RBXScriptConnection },
-
+	
+	_connections: {RBXScriptConnection},
+	
 	_disabled: boolean,
 }
 
 local DumbEditorMethods: Types.TextEditorMethods<DumbEditorObject> = {} :: Types.TextEditorMethods<DumbEditorObject>
-local mt = { __index = DumbEditorMethods :: any }
+local mt = {__index = DumbEditorMethods :: any}
 
 local function updateTheme(self: DumbEditorObject)
 	self._frame.BackgroundColor3 = self._theme.backgroundColor
@@ -78,9 +78,9 @@ end
 
 return function(options: NewOptions): Types.TextEditorObject
 	local self: DumbEditorObject = setmetatable({}, mt) :: DumbEditorObject
-
+	
 	self._theme = options.theme
-
+	
 	self._frame = Instance.new("ScrollingFrame")
 	self._frame.Size = UDim2.fromScale(1, 1)
 	self._frame.VerticalScrollBarInset = Enum.ScrollBarInset.Always
@@ -100,27 +100,27 @@ return function(options: NewOptions): Types.TextEditorObject
 	self._textBox.LayoutOrder = 1
 	self._textBox.Text = ""
 	self._textBox.Parent = self._frame
-
+	
 	self._textBoxPadding = Instance.new("UIPadding")
 	self._textBoxPadding.Parent = self._textBox
-
+	
 	-- stub, don't actually use this
 	self.activeErrors = {}
 	self._activeErrorsChanged = Instance.new("BindableEvent")
 	self.activeErrorsChanged = self._activeErrorsChanged.Event :: RBXScriptSignal
-
+	
 	self._textChanged = Instance.new("BindableEvent")
 	self.textChanged = self._textChanged.Event :: RBXScriptSignal
-
+	
 	self._disabled = false
-
+	
 	self._connections = {
 		self._textBox:GetPropertyChangedSignal("Text"):Connect(function()
 			self._textChanged:Fire(self._textBox.Text)
 		end),
 	}
-
+	
 	updateTheme(self)
-
+	
 	return self
 end

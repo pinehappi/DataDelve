@@ -17,7 +17,7 @@ export type BufferViewer = {
 	setValue: (BufferViewer, buf: buffer) -> (),
 	getValue: (BufferViewer) -> buffer,
 	destroy: (BufferViewer) -> (),
-
+	
 	undo: (BufferViewer) -> (),
 	redo: (BufferViewer) -> (),
 	canUndo: (BufferViewer) -> boolean,
